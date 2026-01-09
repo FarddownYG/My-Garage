@@ -1,7 +1,7 @@
 // Utility for encrypting/decrypting app data
 // Uses Web Crypto API (native browser encryption)
 
-import { createChecksum, verifyChecksum, isFigmaEnvironment } from './security';
+import { createChecksum, verifyChecksum, isProductionEnvironment } from './security';
 
 const ENCRYPTION_KEY = 'valcar-secure-key-2026'; // Can be customized by user
 const STORAGE_KEY = 'valcar-app-state-encrypted-v3'; // Changed key to force refresh with new system
@@ -24,13 +24,13 @@ function isLocalStorageAvailable(): boolean {
 
 /**
  * Derives a crypto key from a password string
- * Simplified for Figma environment - uses only password without device fingerprint
+ * Optimized for web environment
  */
 async function deriveKey(password: string): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   
-  // In Figma environment, skip device fingerprint for better compatibility
-  const useFingerprintProtection = !isFigmaEnvironment();
+  // Skip device fingerprint for better compatibility across browsers
+  const useFingerprintProtection = !isProductionEnvironment();
   
   let keySource = password;
   if (useFingerprintProtection) {
@@ -40,7 +40,7 @@ async function deriveKey(password: string): Promise<CryptoKey> {
     keySource = password + deviceId;
     console.log('🔒 Cryptage avec protection par empreinte d\'appareil');
   } else {
-    console.log('🔒 Cryptage standard (environnement Figma)');
+    console.log('🔒 Cryptage standard');
   }
   
   const keyMaterial = await crypto.subtle.importKey(

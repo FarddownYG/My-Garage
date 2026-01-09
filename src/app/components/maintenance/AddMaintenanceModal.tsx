@@ -35,13 +35,18 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
 
   // Filtrer les templates selon la motorisation du véhicule
   const filteredByEngine = useMemo(() => {
-    if (!vehicle?.engineType) return maintenanceTemplates;
+    const vehicleFuelType = vehicle?.engineType || vehicle?.fuelType;
+    if (!vehicleFuelType) return maintenanceTemplates;
     
     return maintenanceTemplates.filter(template => {
       // Garde tous les templates qui correspondent à la motorisation OU qui sont généraux
-      return template.engineType === vehicle.engineType || template.engineType === 'both';
+      if (template.fuelType === 'both') return true;
+      
+      // Convertir gasoline -> essence, diesel -> diesel
+      const normalizedVehicleFuel = vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType;
+      return template.fuelType === normalizedVehicleFuel;
     });
-  }, [maintenanceTemplates, vehicle?.engineType]);
+  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType]);
 
   // Filtrer par recherche
   const filteredTemplates = useMemo(() => {
@@ -87,6 +92,7 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
       vehicleId,
       type: 'other',
       customType: template?.name || selectedTemplate,
+      customIcon: template?.icon || '🔨', // Ajout de l'icône du template
       date: formData.date,
       mileage: parseInt(formData.mileage),
       cost: formData.cost ? parseFloat(formData.cost) : undefined,

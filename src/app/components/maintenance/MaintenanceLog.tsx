@@ -61,9 +61,13 @@ export function MaintenanceLog({ vehicleId, onOpenSettings }: MaintenanceLogProp
           {vehicleEntries.map((entry) => (
             <Card key={entry.id} className="bg-zinc-900 border-zinc-800 p-4 rounded-2xl shadow-soft hover-lift">
               <div className="flex items-start gap-3">
-                <div className="text-2xl">{maintenanceTypeIcons[entry.type]}</div>
+                <div className="text-2xl">
+                  {entry.customIcon || maintenanceTypeIcons[entry.type]}
+                </div>
                 <div className="flex-1">
-                  <h3 className="text-white mb-1">{maintenanceTypeLabels[entry.type]}</h3>
+                  <h3 className="text-white mb-1">
+                    {entry.customType || maintenanceTypeLabels[entry.type]}
+                  </h3>
                   <div className="flex items-center gap-4 text-sm text-zinc-500 mb-2">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />

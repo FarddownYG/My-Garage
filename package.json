@@ -1,11 +1,15 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "valcar-app",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Application PWA premium de gestion de véhicules et carnet d'entretien",
+  "author": "Votre Nom",
+  "license": "MIT",
   "scripts": {
+    "dev": "vite",
     "build": "vite build",
-    "dev": "vite"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

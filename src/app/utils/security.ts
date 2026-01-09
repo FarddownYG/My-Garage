@@ -114,11 +114,14 @@ export function clearClipboardOnExit() {
  */
 export function preventIframeEmbedding() {
   if (window.top !== window.self) {
-    // Check if we're in Figma's legitimate iframe
-    const isFigmaEnvironment = window.location.hostname.includes('figma');
+    // Check if we're in a legitimate development environment
+    const isDevEnvironment = window.location.hostname.includes('localhost') || 
+                             window.location.hostname.includes('127.0.0.1') ||
+                             window.location.hostname.includes('makeproxy') ||
+                             window.location.hostname.includes('figma');
     
-    if (isFigmaEnvironment) {
-      console.log('✅ Environnement Figma détecté - iframe autorisé');
+    if (isDevEnvironment) {
+      console.log('✅ Environnement de développement détecté - iframe autorisé');
       return;
     }
     
@@ -133,11 +136,13 @@ export function preventIframeEmbedding() {
 }
 
 /**
- * Check if we're running in Figma environment
+ * Check if we're running in production environment
  */
-export function isFigmaEnvironment(): boolean {
-  return window.location.hostname.includes('figma') || 
-         window.location.hostname.includes('makeproxy');
+export function isProductionEnvironment(): boolean {
+  return !window.location.hostname.includes('localhost') && 
+         !window.location.hostname.includes('127.0.0.1') &&
+         !window.location.hostname.includes('makeproxy') &&
+         !window.location.hostname.includes('figma');
 }
 
 /**
@@ -147,16 +152,16 @@ export function initializeSecurity(enableDevToolsProtection: boolean = false) {
   console.log('🔒 Initialisation des mesures de sécurité...');
   
   // Detect environment
-  const inFigma = isFigmaEnvironment();
-  console.log('🌍 Environnement:', inFigma ? 'Figma' : 'Production');
+  const inProduction = isProductionEnvironment();
+  console.log('🌍 Environnement:', inProduction ? 'Production' : 'Développement');
   
   // Basic protections (always enabled)
   preventIframeEmbedding();
   clearClipboardOnExit();
   
   // Optional: DevTools protection (can be annoying for development)
-  // Disabled in Figma environment for better development experience
-  if (enableDevToolsProtection && !inFigma) {
+  // Disabled in development environment for better development experience
+  if (enableDevToolsProtection && inProduction) {
     disableContextMenu();
     disableDevToolsShortcuts();
     

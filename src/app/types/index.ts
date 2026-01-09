@@ -21,6 +21,7 @@ export interface Vehicle {
   vin?: string;
   ownerId: string;
   fuelType?: 'essence' | 'diesel'; // Type de motorisation
+  engineType?: 'gasoline' | 'diesel'; // Alias pour compatibilité (à migrer vers fuelType)
 }
 
 export interface MaintenanceEntry {
@@ -28,6 +29,7 @@ export interface MaintenanceEntry {
   vehicleId: string;
   type: 'oil' | 'tires' | 'brakes' | 'filter' | 'battery' | 'inspection' | 'other';
   customType?: string;
+  customIcon?: string; // Icône du template
   date: string;
   mileage: number;
   cost?: number;
@@ -39,9 +41,11 @@ export interface MaintenanceTemplate {
   id: string;
   name: string;
   icon: string;
+  category?: string; // Catégorie pour regrouper les templates
   intervalMonths?: number;
   intervalKm?: number;
   fuelType?: 'essence' | 'diesel' | 'both'; // Compatibilité motorisation
+  engineType?: 'gasoline' | 'diesel' | 'both'; // Alias pour compatibilité
 }
 
 export interface Reminder {
