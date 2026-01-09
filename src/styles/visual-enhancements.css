@@ -1,0 +1,177 @@
+/* ========================================
+   VISUAL ENHANCEMENTS - Coins arrondis et effets subtils
+   ======================================== */
+
+@layer components {
+  /* Amélioration des cartes et conteneurs */
+  .card-enhanced {
+    @apply shadow-lg shadow-black/20;
+  }
+
+  /* Amélioration des boutons avec effets subtils */
+  .button-enhanced {
+    @apply shadow-md hover:shadow-lg transition-all duration-300;
+  }
+
+  /* Amélioration des inputs */
+  .input-enhanced {
+    @apply transition-all duration-200 focus:shadow-lg focus:shadow-blue-600/20;
+  }
+
+  /* Hover effects améliorés */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl;
+  }
+
+  /* Glassmorphism amélioré */
+  .glass-enhanced {
+    @apply backdrop-blur-xl bg-white/5;
+  }
+
+  /* Bordures avec gradient subtil */
+  .border-gradient {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  }
+
+  /* Smooth transitions globales */
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  /* Amélioration des modals */
+  .modal-enhanced {
+    @apply shadow-2xl shadow-black/40;
+  }
+
+  /* Amélioration des badges et tags */
+  .badge-enhanced {
+    @apply shadow-sm;
+  }
+
+  /* Effet de focus amélioré */
+  .focus-enhanced:focus {
+    @apply ring-2 ring-blue-500/50 ring-offset-2 ring-offset-zinc-900;
+  }
+}
+
+/* Coins arrondis améliorés pour l'app entière */
+@layer utilities {
+  /* Augmentation subtile des radius */
+  .rounded-card {
+    border-radius: 1.25rem; /* 20px */
+  }
+
+  .rounded-button {
+    border-radius: 1rem; /* 16px */
+  }
+
+  .rounded-input {
+    border-radius: 0.875rem; /* 14px */
+  }
+
+  .rounded-modal {
+    border-radius: 1.5rem; /* 24px */
+  }
+
+  /* Ombres personnalisées */
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .shadow-glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .shadow-glow-purple {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+  }
+
+  /* Transitions améliorées */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-bounce {
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+/* Effets de hover globaux améliorés */
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Amélioration des cards avec gradient subtil sur hover */
+.group:hover .group-hover\:border-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 100px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Animation fade-in subtile pour les éléments */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Amélioration des inputs avec inner shadow */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+input:focus:not([type="checkbox"]):not([type="radio"]),
+textarea:focus,
+select:focus {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Effet glassmorphism amélioré pour les modals */
+.backdrop-blur-modal {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
