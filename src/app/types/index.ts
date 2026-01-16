@@ -48,6 +48,7 @@ export interface MaintenanceTemplate {
   fuelType?: 'essence' | 'diesel' | 'both'; // Compatibilité motorisation
   driveType?: '4x2' | '4x4' | 'both'; // Compatibilité transmission (nouveau)
   engineType?: 'gasoline' | 'diesel' | 'both'; // Alias pour compatibilité
+  ownerId: string; // Propriétaire du template (profil)
 }
 
 export interface Reminder {

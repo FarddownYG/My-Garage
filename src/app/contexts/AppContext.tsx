@@ -67,6 +67,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: p.id, first_name: p.firstName, last_name: p.lastName, name: p.name,
           avatar: p.avatar, is_pin_protected: p.isPinProtected, pin: p.pin || null, is_admin: p.isAdmin || false
         })));
+        
+        // Migrer les templates pour chaque profil
+        if (localData.maintenanceTemplates?.length) {
+          const templatesWithOwner = localData.profiles.flatMap(profile => 
+            localData.maintenanceTemplates.map(t => ({
+              id: `${t.id}-${profile.id}`,
+              name: t.name,
+              icon: t.icon,
+              category: t.category || null,
+              interval_months: t.intervalMonths || null,
+              interval_km: t.intervalKm || null,
+              fuel_type: t.fuelType || null,
+              drive_type: t.driveType || null,
+              owner_id: profile.id
+            }))
+          );
+          await supabase.from('maintenance_templates').insert(templatesWithOwner);
+        }
       }
       
       if (localData.vehicles?.length) {
@@ -118,6 +136,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: maintenanceEntries } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
       const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
       const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
+      const { data: templates } = await supabase.from('maintenance_templates').select('*').order('name');
 
       let currentProfile = null;
       if (config?.current_profile_id && profiles) {
@@ -142,7 +161,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           description: t.description || undefined, completed: t.completed, createdAt: t.created_at })),
         reminders: (reminders || []).map(r => ({ id: r.id, vehicleId: r.vehicle_id, type: r.type,
           dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description })),
-        maintenanceTemplates: defaultMaintenanceTemplates,
+        maintenanceTemplates: (templates || []).map(t => ({ id: t.id, name: t.name, icon: t.icon,
+          category: t.category || undefined, intervalMonths: t.interval_months || undefined, intervalKm: t.interval_km || undefined,
+          fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id })),
       });
     } catch (error) {
       console.error('Erreur chargement:', error);
@@ -167,7 +188,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
     await supabase.from('profiles').insert({ id: s.id, first_name: s.firstName, last_name: s.lastName, name: s.name,
       avatar: s.avatar, is_pin_protected: s.isPinProtected, pin: s.pin || null, is_admin: s.isAdmin || false });
-    setState(prev => ({ ...prev, profiles: [...prev.profiles, s] }));
+    
+    // Initialiser les templates par défaut pour ce profil
+    if (!s.isAdmin) {
+      const templatesForNewProfile = defaultMaintenanceTemplates.map(t => ({
+        id: `${t.id}-${s.id}`,
+        name: t.name,
+        icon: t.icon,
+        category: t.category || null,
+        interval_months: t.intervalMonths || null,
+        interval_km: t.intervalKm || null,
+        fuel_type: t.fuelType || null,
+        drive_type: t.driveType || null,
+        owner_id: s.id
+      }));
+      await supabase.from('maintenance_templates').insert(templatesForNewProfile);
+      
+      // Ajouter aussi les templates dans le state
+      const newTemplates = defaultMaintenanceTemplates.map(t => ({
+        ...t,
+        id: `${t.id}-${s.id}`,
+        ownerId: s.id
+      }));
+      setState(prev => ({ 
+        ...prev, 
+        profiles: [...prev.profiles, s],
+        maintenanceTemplates: [...prev.maintenanceTemplates, ...newTemplates]
+      }));
+    } else {
+      setState(prev => ({ ...prev, profiles: [...prev.profiles, s] }));
+    }
   };
 
   const updateProfile = async (id: string, updates: Partial<Profile>) => {
@@ -308,15 +358,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) }));
   };
 
-  const addMaintenanceTemplate = (template: MaintenanceTemplate) => {
-    setState(prev => ({ ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, template] }));
+  const addMaintenanceTemplate = async (template: MaintenanceTemplate) => {
+    if (!state.currentProfile) return;
+    const t = { ...template, ownerId: state.currentProfile.id };
+    await supabase.from('maintenance_templates').insert({
+      id: t.id, name: t.name, icon: t.icon, category: t.category || null,
+      interval_months: t.intervalMonths || null, interval_km: t.intervalKm || null,
+      fuel_type: t.fuelType || null, drive_type: t.driveType || null, owner_id: t.ownerId
+    });
+    setState(prev => ({ ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, t] }));
   };
 
-  const updateMaintenanceTemplate = (id: string, updates: Partial<MaintenanceTemplate>) => {
+  const updateMaintenanceTemplate = async (id: string, updates: Partial<MaintenanceTemplate>) => {
+    const db: any = {};
+    if (updates.name) db.name = updates.name;
+    if (updates.icon) db.icon = updates.icon;
+    if (updates.category !== undefined) db.category = updates.category;
+    if (updates.intervalMonths !== undefined) db.interval_months = updates.intervalMonths;
+    if (updates.intervalKm !== undefined) db.interval_km = updates.intervalKm;
+    if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
+    if (updates.driveType !== undefined) db.drive_type = updates.driveType;
+    await supabase.from('maintenance_templates').update(db).eq('id', id);
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) }));
   };
 
-  const deleteMaintenanceTemplate = (id: string) => {
+  const deleteMaintenanceTemplate = async (id: string) => {
+    await supabase.from('maintenance_templates').delete().eq('id', id);
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) }));
   };
 

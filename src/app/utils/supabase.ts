@@ -98,6 +98,22 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['app_config']['Row'], 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['app_config']['Insert']>;
       };
+      maintenance_templates: {
+        Row: {
+          id: string;
+          name: string;
+          icon: string;
+          category: string | null;
+          interval_months: number | null;
+          interval_km: number | null;
+          fuel_type: 'essence' | 'diesel' | 'both' | null;
+          drive_type: '4x2' | '4x4' | 'both' | null;
+          owner_id: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['maintenance_templates']['Row'], 'created_at'>;
+        Update: Partial<Database['public']['Tables']['maintenance_templates']['Insert']>;
+      };
     };
   };
 }
