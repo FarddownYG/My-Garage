@@ -35,54 +35,89 @@ export function VehicleList() {
             key={vehicle.id}
             className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer overflow-hidden relative hover-lift rounded-2xl shadow-soft"
           >
-            <div className="flex items-center gap-4" onClick={() => setSelectedVehicleId(vehicle.id)}>
-              <div className="w-32 h-32 bg-zinc-800 flex items-center justify-center flex-shrink-0 cursor-pointer">
+            <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-0" onClick={() => setSelectedVehicleId(vehicle.id)}>
+              <div className="w-20 h-20 sm:w-32 sm:h-32 bg-zinc-800 flex items-center justify-center flex-shrink-0 rounded-lg sm:rounded-none cursor-pointer">
                 {vehicle.photo ? (
-                  <img src={vehicle.photo} alt={vehicle.name} className="w-full h-full object-cover" />
+                  <img src={vehicle.photo} alt={vehicle.name} className="w-full h-full object-cover rounded-lg sm:rounded-none" />
                 ) : (
-                  <CarIcon className="w-12 h-12 text-zinc-600" />
+                  <CarIcon className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-600" />
                 )}
               </div>
-              <div className="flex-1 py-4 pr-4 cursor-pointer">
-                <h3 className="text-xl text-white mb-1">{vehicle.name}</h3>
+              <div className="flex-1 py-2 sm:py-4 pr-2 sm:pr-4 cursor-pointer min-w-0">
+                <h3 className="text-base sm:text-xl text-white mb-1 truncate">{vehicle.name}</h3>
                 {vehicle.licensePlate && (
-                  <p className="text-sm text-zinc-500 mb-2">{vehicle.licensePlate}</p>
+                  <p className="text-xs sm:text-sm text-zinc-500 mb-2 truncate">{vehicle.licensePlate}</p>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-zinc-800 rounded-full text-sm text-zinc-400">
+                  <span className="px-2 sm:px-3 py-1 bg-zinc-800 rounded-full text-xs sm:text-sm text-zinc-400 whitespace-nowrap">
                     {vehicle.mileage.toLocaleString()} km
                   </span>
                 </div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Supprimer ${vehicle.name} ?`)) {
-                    deleteVehicle(vehicle.id);
-                  }
-                }}
-                className="absolute top-3 right-3 p-2 bg-zinc-800/80 hover:bg-red-600/20 text-zinc-500 hover:text-red-500 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingVehicle(vehicle);
-                }}
-                className="absolute top-3 right-12 p-2 bg-zinc-800/80 hover:bg-blue-600/20 text-zinc-500 hover:text-blue-500 rounded-lg transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingMileageVehicle(vehicle);
-                }}
-                className="absolute top-3 right-24 p-2 bg-zinc-800/80 hover:bg-green-600/20 text-zinc-500 hover:text-green-500 rounded-lg transition-colors"
-              >
-                <Gauge className="w-4 h-4" />
-              </button>
+              {/* Boutons d'action - Repositionnés */}
+              <div className="flex sm:hidden flex-col gap-1 absolute top-2 right-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingVehicle(vehicle);
+                  }}
+                  className="p-1.5 bg-zinc-800/90 hover:bg-blue-600/20 text-zinc-500 hover:text-blue-500 rounded-lg transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingMileageVehicle(vehicle);
+                  }}
+                  className="p-1.5 bg-zinc-800/90 hover:bg-green-600/20 text-zinc-500 hover:text-green-500 rounded-lg transition-colors"
+                >
+                  <Gauge className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Supprimer ${vehicle.name} ?`)) {
+                      deleteVehicle(vehicle.id);
+                    }
+                  }}
+                  className="p-1.5 bg-zinc-800/90 hover:bg-red-600/20 text-zinc-500 hover:text-red-500 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {/* Boutons desktop */}
+              <div className="hidden sm:flex">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Supprimer ${vehicle.name} ?`)) {
+                      deleteVehicle(vehicle.id);
+                    }
+                  }}
+                  className="absolute top-3 right-3 p-2 bg-zinc-800/80 hover:bg-red-600/20 text-zinc-500 hover:text-red-500 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingVehicle(vehicle);
+                  }}
+                  className="absolute top-3 right-14 p-2 bg-zinc-800/80 hover:bg-blue-600/20 text-zinc-500 hover:text-blue-500 rounded-lg transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingMileageVehicle(vehicle);
+                  }}
+                  className="absolute top-3 right-28 p-2 bg-zinc-800/80 hover:bg-green-600/20 text-zinc-500 hover:text-green-500 rounded-lg transition-colors"
+                >
+                  <Gauge className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </Card>
         ))}

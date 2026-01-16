@@ -118,10 +118,10 @@ export function preventIframeEmbedding() {
     const isDevEnvironment = window.location.hostname.includes('localhost') || 
                              window.location.hostname.includes('127.0.0.1') ||
                              window.location.hostname.includes('makeproxy') ||
-                             window.location.hostname.includes('figma');
+                             window.location.hostname.includes('figma.site');
     
     if (isDevEnvironment) {
-      console.log('✅ Environnement de développement détecté - iframe autorisé');
+      // Silently allow iframe in development - no console logs
       return;
     }
     
@@ -141,8 +141,7 @@ export function preventIframeEmbedding() {
 export function isProductionEnvironment(): boolean {
   return !window.location.hostname.includes('localhost') && 
          !window.location.hostname.includes('127.0.0.1') &&
-         !window.location.hostname.includes('makeproxy') &&
-         !window.location.hostname.includes('figma');
+         !window.location.hostname.includes('makeproxy');
 }
 
 /**

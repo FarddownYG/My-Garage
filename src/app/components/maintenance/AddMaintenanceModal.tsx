@@ -33,20 +33,26 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     notes: '',
   });
 
-  // Filtrer les templates selon la motorisation du véhicule
+  // Filtrer les templates selon la motorisation ET le type de transmission du véhicule
   const filteredByEngine = useMemo(() => {
     const vehicleFuelType = vehicle?.engineType || vehicle?.fuelType;
+    const vehicleDriveType = vehicle?.driveType;
+    
     if (!vehicleFuelType) return maintenanceTemplates;
     
     return maintenanceTemplates.filter(template => {
-      // Garde tous les templates qui correspondent à la motorisation OU qui sont généraux
-      if (template.fuelType === 'both') return true;
+      // Filtrage par motorisation (essence/diesel)
+      const fuelMatch = template.fuelType === 'both' || 
+        template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
       
-      // Convertir gasoline -> essence, diesel -> diesel
-      const normalizedVehicleFuel = vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType;
-      return template.fuelType === normalizedVehicleFuel;
+      // Filtrage par transmission (4x2/4x4)
+      const driveMatch = !template.driveType || 
+        template.driveType === 'both' || 
+        template.driveType === vehicleDriveType;
+      
+      return fuelMatch && driveMatch;
     });
-  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType]);
+  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType, vehicle?.driveType]);
 
   // Filtrer par recherche
   const filteredTemplates = useMemo(() => {

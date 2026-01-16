@@ -5,10 +5,11 @@
 ![React](https://img.shields.io/badge/React-18.3.1-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6.2-3178c6.svg)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4.0-38bdf8.svg)
+![Supabase](https://img.shields.io/badge/Supabase-enabled-3ecf8e.svg)
 
 ## 📱 Description
 
-**Valcar** est une application web progressive (PWA) premium de gestion de véhicules et carnet d'entretien pour usage privé. Conçue avec un design dark mode moderne iOS-first, elle permet de gérer plusieurs véhicules et profils utilisateurs avec une sécurité renforcée.
+**Valcar** est une application web progressive (PWA) premium de gestion de véhicules et carnet d'entretien pour usage privé. Conçue avec un design dark mode moderne iOS-first, elle permet de gérer plusieurs véhicules et profils utilisateurs avec une sécurité renforcée et une synchronisation cloud via Supabase.
 
 ### ✨ Fonctionnalités principales
 
@@ -19,16 +20,18 @@
 - **Système de PIN** à 4 chiffres par profil
 - **Zone admin** protégée pour la gestion des profils
 - **Export/Import** chiffrés des données
+- **Synchronisation Supabase** pour sauvegarde cloud sécurisée
 
 #### 🚗 **Gestion des véhicules**
 - Ajout illimité de véhicules (voitures, motos, utilitaires)
 - Informations détaillées : marque, modèle, année, kilométrage
 - Suivi du kilométrage en temps réel
-- Galerie photos par véhicule
+- **Upload photos** depuis galerie mobile
 - Choix du type de motorisation (Essence/Diesel)
+- **Support 4x4** avec templates spécifiques
 
 #### 🛠️ **Carnet d'entretien intelligent**
-- **34 templates d'entretien pré-configurés** par motorisation :
+- **41 templates d'entretien pré-configurés** différenciés selon motorisation et transmission (4x2/4x4) :
   - 🛢️ Entretien courant (vidange, filtres, bougies)
   - 🧴 Fluides (liquide de refroidissement, frein, direction)
   - 🛑 Freinage (plaquettes, disques, liquide)
@@ -37,11 +40,13 @@
   - ❄️ Climatisation (recharge gaz, filtres)
   - 🏁 Performance (échappement, amortisseurs, pneus)
   - 🧰 Divers (contrôle technique, géométrie)
+  - 🚙 **Spécifique 4x4** (pont, différentiel, cardans, boîtier transfert)
 
 - **Calcul automatique des échéances** :
   - Par kilométrage (ex: tous les 15 000 km)
   - Par temps (ex: tous les 12 mois)
   - Alertes intelligentes (2000 km ou 60 jours avant)
+  - **Règle 4,5 ans appliquée** pour tous les intervalles
 
 - **Historique complet** chronologique par véhicule
 - Ajout de notes et coûts pour chaque intervention
@@ -88,6 +93,7 @@
 ### Stockage
 - **LocalStorage** chiffré - Persistance des données
 - **Export/Import JSON** - Sauvegarde sécurisée
+- **Supabase** - Synchronisation cloud
 
 ---
 

@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord } from '../types';
-import { saveEncryptedToStorage, loadEncryptedFromStorage, exportEncryptedJSON, importEncryptedJSON } from '../utils/encryption';
+import { loadEncryptedFromStorage, exportEncryptedJSON, importEncryptedJSON } from '../utils/encryption';
 import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
+import { supabase } from '../utils/supabase';
 
 interface AppContextType extends AppState {
-  maintenances: MaintenanceRecord[]; // Calculé dynamiquement
+  maintenances: MaintenanceRecord[];
   setCurrentProfile: (profile: Profile | null) => void;
   addProfile: (profile: Profile) => void;
   updateProfile: (id: string, profile: Partial<Profile>) => void;
@@ -41,7 +42,7 @@ const defaultState: AppState = {
   maintenanceEntries: [],
   reminders: [],
   tasks: [],
-  maintenanceTemplates: [],
+  maintenanceTemplates: defaultMaintenanceTemplates,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -49,227 +50,262 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(defaultState);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load encrypted data on mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('🔍 Chargement des données cryptées...');
-        console.log('🌍 Environnement:', window.location.href);
-        const loaded = await loadEncryptedFromStorage('valcar-app-state-encrypted-v4'); // v4 pour forcer reload templates
-        
-        if (loaded) {
-          console.log('📦 Données décryptées:', {
-            profiles: loaded.profiles?.length || 0,
-            vehicles: loaded.vehicles?.length || 0,
-            currentProfile: loaded.currentProfile?.name || 'Aucun',
-            templates: loaded.maintenanceTemplates?.length || 0,
-          });
-          
-          // Migration: add firstName and lastName to old profiles
-          if (loaded.profiles) {
-            loaded.profiles = loaded.profiles.map((profile: any) => {
-              if (!profile.firstName || !profile.lastName) {
-                const nameParts = (profile.name || '').split(' ');
-                return {
-                  ...profile,
-                  firstName: nameParts[0] || 'User',
-                  lastName: nameParts.slice(1).join(' ') || '',
-                  name: profile.name || 'User',
-                };
-              }
-              return profile;
-            });
-          }
-          
-          // TOUJOURS charger les templates par défaut (35 templates essence/diesel)
-          loaded.maintenanceTemplates = defaultMaintenanceTemplates;
-          console.log('✅ Templates d\'entretien par défaut chargés (v4):', defaultMaintenanceTemplates.length);
-          
-          setState(loaded);
-          console.log('✅ État restauré avec succès');
-        } else {
-          console.log('✨ Aucune donnée sauvegardée - initialisation avec templates par défaut');
-          // Initialize with default templates
-          setState(prev => ({
-            ...prev,
-            maintenanceTemplates: defaultMaintenanceTemplates,
-          }));
-          console.log('✅ Templates d\'entretien par défaut chargés:', defaultMaintenanceTemplates.length);
-        }
-      } catch (error) {
-        console.error('❌ Erreur lors du chargement:', error);
-        // On error, still load default templates
-        setState(prev => ({
-          ...prev,
-          maintenanceTemplates: defaultMaintenanceTemplates,
-        }));
-        console.log('✅ Templates d\'entretien par défaut chargés (fallback):', defaultMaintenanceTemplates.length);
-      } finally {
-        setIsLoading(false);
-        setIsInitialized(true);
+  // 🔄 MIGRATION localStorage → Supabase (automatique au premier lancement)
+  const migrateToSupabase = async () => {
+    try {
+      const localData = await loadEncryptedFromStorage('valcar-app-state-encrypted-v4');
+      if (!localData?.profiles?.length) return;
+
+      const { data: existing } = await supabase.from('profiles').select('id').limit(1);
+      if (existing?.length) return;
+
+      console.log('🚀 Migration localStorage → Supabase...');
+      
+      if (localData.profiles?.length) {
+        await supabase.from('profiles').insert(localData.profiles.map(p => ({
+          id: p.id, first_name: p.firstName, last_name: p.lastName, name: p.name,
+          avatar: p.avatar, is_pin_protected: p.isPinProtected, pin: p.pin || null, is_admin: p.isAdmin || false
+        })));
       }
-    };
+      
+      if (localData.vehicles?.length) {
+        await supabase.from('vehicles').insert(localData.vehicles.map(v => ({
+          id: v.id, name: v.name, photo: v.photo, mileage: v.mileage, brand: v.brand || null,
+          model: v.model || null, year: v.year || null, license_plate: v.licensePlate || null,
+          vin: v.vin || null, owner_id: v.ownerId, fuel_type: v.fuelType || null, drive_type: v.driveType || '4x2'
+        })));
+      }
+      
+      if (localData.maintenanceEntries?.length) {
+        await supabase.from('maintenance_entries').insert(localData.maintenanceEntries.map(e => ({
+          id: e.id, vehicle_id: e.vehicleId, type: typeof e.type === 'string' ? e.type : 'other',
+          custom_type: e.customType || null, custom_icon: e.customIcon || null, date: e.date,
+          mileage: e.mileage, cost: e.cost || null, notes: e.notes || null, photos: e.photos || null
+        })));
+      }
+      
+      if (localData.tasks?.length) {
+        await supabase.from('tasks').insert(localData.tasks.map(t => ({
+          id: t.id, vehicle_id: t.vehicleId, title: t.title, description: t.description || null, completed: t.completed
+        })));
+      }
+      
+      if (localData.reminders?.length) {
+        await supabase.from('reminders').insert(localData.reminders.map(r => ({
+          id: r.id, vehicle_id: r.vehicleId, type: r.type, due_date: r.dueDate || null,
+          due_mileage: r.dueMileage || null, status: r.status, description: r.description
+        })));
+      }
+      
+      await supabase.from('app_config').upsert({
+        id: 'global', admin_pin: localData.adminPin || '1234', current_profile_id: localData.currentProfile?.id || null
+      });
+      
+      console.log('✅ Migration terminée !');
+      localStorage.removeItem('valcar-app-state-encrypted-v4');
+    } catch (error) {
+      console.error('Erreur migration:', error);
+    }
+  };
 
-    loadData();
+  // 📥 CHARGEMENT depuis Supabase
+  const loadFromSupabase = async () => {
+    try {
+      const { data: config } = await supabase.from('app_config').select('*').eq('id', 'global').single();
+      const { data: profiles } = await supabase.from('profiles').select('*').order('name');
+      const { data: vehicles } = await supabase.from('vehicles').select('*').order('name');
+      const { data: maintenanceEntries } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
+      const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
+
+      let currentProfile = null;
+      if (config?.current_profile_id && profiles) {
+        const p = profiles.find(p => p.id === config.current_profile_id);
+        if (p) currentProfile = { id: p.id, firstName: p.first_name, lastName: p.last_name, name: p.name,
+          avatar: p.avatar, isPinProtected: p.is_pin_protected, pin: p.pin || undefined, isAdmin: p.is_admin };
+      }
+
+      setState({
+        adminPin: config?.admin_pin || '1234',
+        currentProfile,
+        profiles: (profiles || []).map(p => ({ id: p.id, firstName: p.first_name, lastName: p.last_name, name: p.name,
+          avatar: p.avatar, isPinProtected: p.is_pin_protected, pin: p.pin || undefined, isAdmin: p.is_admin })),
+        vehicles: (vehicles || []).map(v => ({ id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
+          brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
+          licensePlate: v.license_plate || undefined, vin: v.vin || undefined, ownerId: v.owner_id, 
+          fuelType: v.fuel_type || undefined, driveType: v.drive_type || undefined })),
+        maintenanceEntries: (maintenanceEntries || []).map(e => ({ id: e.id, vehicleId: e.vehicle_id, type: e.type as any,
+          customType: e.custom_type || undefined, customIcon: e.custom_icon || undefined, date: e.date,
+          mileage: e.mileage, cost: e.cost || undefined, notes: e.notes || undefined, photos: e.photos || undefined })),
+        tasks: (tasks || []).map(t => ({ id: t.id, vehicleId: t.vehicle_id, title: t.title,
+          description: t.description || undefined, completed: t.completed, createdAt: t.created_at })),
+        reminders: (reminders || []).map(r => ({ id: r.id, vehicleId: r.vehicle_id, type: r.type,
+          dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description })),
+        maintenanceTemplates: defaultMaintenanceTemplates,
+      });
+    } catch (error) {
+      console.error('Erreur chargement:', error);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      await migrateToSupabase();
+      await loadFromSupabase();
+      setIsLoading(false);
+    };
+    init();
   }, []);
 
-  // Save encrypted data whenever state changes (but not on first load)
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    const saveData = async () => {
-      try {
-        await saveEncryptedToStorage('valcar-app-state-encrypted-v4', state);
-        console.log('💾 État actuel sauvegardé:', {
-          profiles: state.profiles.length,
-          vehicles: state.vehicles.length,
-          currentProfile: state.currentProfile?.name || 'Aucun',
-          templates: state.maintenanceTemplates?.length || 0,
-        });
-      } catch (error) {
-        console.error('❌ Erreur lors de la sauvegarde:', error);
-      }
-    };
-
-    saveData();
-  }, [state, isInitialized]);
-
-  const setCurrentProfile = (profile: Profile | null) => {
+  const setCurrentProfile = async (profile: Profile | null) => {
     setState(prev => ({ ...prev, currentProfile: profile }));
+    await supabase.from('app_config').upsert({ id: 'global', admin_pin: state.adminPin, current_profile_id: profile?.id || null });
   };
 
-  const addProfile = (profile: Profile) => {
-    // Sanitize profile data
-    const sanitized = {
-      ...profile,
-      firstName: sanitizeInput(profile.firstName),
-      lastName: sanitizeInput(profile.lastName),
-      name: sanitizeInput(profile.name),
-    };
-    setState(prev => ({ ...prev, profiles: [...prev.profiles, sanitized] }));
+  const addProfile = async (profile: Profile) => {
+    const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
+    await supabase.from('profiles').insert({ id: s.id, first_name: s.firstName, last_name: s.lastName, name: s.name,
+      avatar: s.avatar, is_pin_protected: s.isPinProtected, pin: s.pin || null, is_admin: s.isAdmin || false });
+    setState(prev => ({ ...prev, profiles: [...prev.profiles, s] }));
   };
 
-  const updateProfile = (id: string, updates: Partial<Profile>) => {
-    // Sanitize updates
-    const sanitized = { ...updates };
-    if (updates.firstName) sanitized.firstName = sanitizeInput(updates.firstName);
-    if (updates.lastName) sanitized.lastName = sanitizeInput(updates.lastName);
-    if (updates.name) sanitized.name = sanitizeInput(updates.name);
-    
-    setState(prev => ({
-      ...prev,
-      profiles: prev.profiles.map(p => (p.id === id ? { ...p, ...sanitized } : p)),
-    }));
+  const updateProfile = async (id: string, updates: Partial<Profile>) => {
+    const s = { ...updates };
+    if (updates.firstName) s.firstName = sanitizeInput(updates.firstName);
+    if (updates.lastName) s.lastName = sanitizeInput(updates.lastName);
+    if (updates.name) s.name = sanitizeInput(updates.name);
+    const db: any = {};
+    if (s.firstName) db.first_name = s.firstName;
+    if (s.lastName) db.last_name = s.lastName;
+    if (s.name) db.name = s.name;
+    if (s.avatar) db.avatar = s.avatar;
+    if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
+    if (s.pin !== undefined) db.pin = s.pin;
+    if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
+    await supabase.from('profiles').update(db).eq('id', id);
+    setState(prev => ({ ...prev, profiles: prev.profiles.map(p => p.id === id ? { ...p, ...s } : p) }));
   };
 
-  const deleteProfile = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      profiles: prev.profiles.filter(p => p.id !== id),
-    }));
+  const deleteProfile = async (id: string) => {
+    await supabase.from('profiles').delete().eq('id', id);
+    setState(prev => ({ ...prev, profiles: prev.profiles.filter(p => p.id !== id) }));
   };
 
-  const addVehicle = (vehicle: Vehicle) => {
-    // Sanitize vehicle data
-    const sanitized = {
-      ...vehicle,
-      name: sanitizeInput(vehicle.name),
-      brand: vehicle.brand ? sanitizeInput(vehicle.brand) : vehicle.brand,
-      model: vehicle.model ? sanitizeInput(vehicle.model) : vehicle.model,
-    };
-    setState(prev => ({ ...prev, vehicles: [...prev.vehicles, sanitized] }));
+  const addVehicle = async (vehicle: Vehicle) => {
+    const s = { ...vehicle, name: sanitizeInput(vehicle.name), brand: vehicle.brand ? sanitizeInput(vehicle.brand) : vehicle.brand,
+      model: vehicle.model ? sanitizeInput(vehicle.model) : vehicle.model };
+    await supabase.from('vehicles').insert({ id: s.id, name: s.name, photo: s.photo, mileage: s.mileage,
+      brand: s.brand || null, model: s.model || null, year: s.year || null, license_plate: s.licensePlate || null,
+      vin: s.vin || null, owner_id: s.ownerId, fuel_type: s.fuelType || null, drive_type: s.driveType || null });
+    setState(prev => ({ ...prev, vehicles: [...prev.vehicles, s] }));
   };
 
-  const updateVehicle = (id: string, updates: Partial<Vehicle>) => {
-    // Sanitize updates
-    const sanitized = { ...updates };
-    if (updates.name) sanitized.name = sanitizeInput(updates.name);
-    if (updates.brand) sanitized.brand = sanitizeInput(updates.brand);
-    if (updates.model) sanitized.model = sanitizeInput(updates.model);
-    
-    setState(prev => ({
-      ...prev,
-      vehicles: prev.vehicles.map(v => (v.id === id ? { ...v, ...sanitized } : v)),
-    }));
+  const updateVehicle = async (id: string, updates: Partial<Vehicle>) => {
+    const s = { ...updates };
+    if (updates.name) s.name = sanitizeInput(updates.name);
+    if (updates.brand) s.brand = sanitizeInput(updates.brand);
+    if (updates.model) s.model = sanitizeInput(updates.model);
+    const db: any = {};
+    if (s.name) db.name = s.name;
+    if (s.photo) db.photo = s.photo;
+    if (s.mileage !== undefined) db.mileage = s.mileage;
+    if (s.brand) db.brand = s.brand;
+    if (s.model) db.model = s.model;
+    if (s.year) db.year = s.year;
+    if (s.licensePlate) db.license_plate = s.licensePlate;
+    if (s.vin) db.vin = s.vin;
+    if (s.fuelType) db.fuel_type = s.fuelType;
+    if (s.driveType) db.drive_type = s.driveType;
+    await supabase.from('vehicles').update(db).eq('id', id);
+    setState(prev => ({ ...prev, vehicles: prev.vehicles.map(v => v.id === id ? { ...v, ...s } : v) }));
   };
 
-  const deleteVehicle = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      vehicles: prev.vehicles.filter(v => v.id !== id),
+  const deleteVehicle = async (id: string) => {
+    await supabase.from('vehicles').delete().eq('id', id);
+    setState(prev => ({ ...prev, vehicles: prev.vehicles.filter(v => v.id !== id),
       maintenanceEntries: prev.maintenanceEntries.filter(e => e.vehicleId !== id),
       reminders: prev.reminders.filter(r => r.vehicleId !== id),
-      tasks: prev.tasks.filter(t => t.vehicleId !== id),
-    }));
+      tasks: prev.tasks.filter(t => t.vehicleId !== id) }));
   };
 
-  const addMaintenanceEntry = (entry: MaintenanceEntry) => {
+  const addMaintenanceEntry = async (entry: MaintenanceEntry) => {
+    await supabase.from('maintenance_entries').insert({ id: entry.id, vehicle_id: entry.vehicleId,
+      type: typeof entry.type === 'string' ? entry.type : 'other', custom_type: entry.customType || null,
+      custom_icon: entry.customIcon || null, date: entry.date, mileage: entry.mileage,
+      cost: entry.cost || null, notes: entry.notes || null, photos: entry.photos || null });
     setState(prev => ({ ...prev, maintenanceEntries: [...prev.maintenanceEntries, entry] }));
   };
 
-  const updateMaintenanceEntry = (id: string, updates: Partial<MaintenanceEntry>) => {
-    setState(prev => ({
-      ...prev,
-      maintenanceEntries: prev.maintenanceEntries.map(e => (e.id === id ? { ...e, ...updates } : e)),
-    }));
+  const updateMaintenanceEntry = async (id: string, updates: Partial<MaintenanceEntry>) => {
+    const db: any = {};
+    if (updates.type) db.type = typeof updates.type === 'string' ? updates.type : 'other';
+    if (updates.customType !== undefined) db.custom_type = updates.customType;
+    if (updates.customIcon !== undefined) db.custom_icon = updates.customIcon;
+    if (updates.date) db.date = updates.date;
+    if (updates.mileage !== undefined) db.mileage = updates.mileage;
+    if (updates.cost !== undefined) db.cost = updates.cost;
+    if (updates.notes !== undefined) db.notes = updates.notes;
+    if (updates.photos !== undefined) db.photos = updates.photos;
+    await supabase.from('maintenance_entries').update(db).eq('id', id);
+    setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.map(e => e.id === id ? { ...e, ...updates } : e) }));
   };
 
-  const deleteMaintenanceEntry = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      maintenanceEntries: prev.maintenanceEntries.filter(e => e.id !== id),
-    }));
+  const deleteMaintenanceEntry = async (id: string) => {
+    await supabase.from('maintenance_entries').delete().eq('id', id);
+    setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.filter(e => e.id !== id) }));
   };
 
-  const addReminder = (reminder: Reminder) => {
+  const addReminder = async (reminder: Reminder) => {
+    await supabase.from('reminders').insert({ id: reminder.id, vehicle_id: reminder.vehicleId, type: reminder.type,
+      due_date: reminder.dueDate || null, due_mileage: reminder.dueMileage || null,
+      status: reminder.status, description: reminder.description });
     setState(prev => ({ ...prev, reminders: [...prev.reminders, reminder] }));
   };
 
-  const updateReminder = (id: string, updates: Partial<Reminder>) => {
-    setState(prev => ({
-      ...prev,
-      reminders: prev.reminders.map(r => (r.id === id ? { ...r, ...updates } : r)),
-    }));
+  const updateReminder = async (id: string, updates: Partial<Reminder>) => {
+    const db: any = {};
+    if (updates.type) db.type = updates.type;
+    if (updates.dueDate !== undefined) db.due_date = updates.dueDate;
+    if (updates.dueMileage !== undefined) db.due_mileage = updates.dueMileage;
+    if (updates.status) db.status = updates.status;
+    if (updates.description) db.description = updates.description;
+    await supabase.from('reminders').update(db).eq('id', id);
+    setState(prev => ({ ...prev, reminders: prev.reminders.map(r => r.id === id ? { ...r, ...updates } : r) }));
   };
 
-  const deleteReminder = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      reminders: prev.reminders.filter(r => r.id !== id),
-    }));
+  const deleteReminder = async (id: string) => {
+    await supabase.from('reminders').delete().eq('id', id);
+    setState(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== id) }));
   };
 
-  const addTask = (task: Task) => {
-    // Sanitize task data
-    const sanitized = {
-      ...task,
-      title: sanitizeInput(task.title),
-      description: task.description ? sanitizeInput(task.description) : undefined,
-    };
-    setState(prev => ({ ...prev, tasks: [...prev.tasks, sanitized] }));
+  const addTask = async (task: Task) => {
+    const s = { ...task, title: sanitizeInput(task.title), description: task.description ? sanitizeInput(task.description) : undefined };
+    await supabase.from('tasks').insert({ id: s.id, vehicle_id: s.vehicleId, title: s.title,
+      description: s.description || null, completed: s.completed });
+    setState(prev => ({ ...prev, tasks: [...prev.tasks, s] }));
   };
 
-  const updateTask = (id: string, updates: Partial<Task>) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(t => (t.id === id ? { ...t, ...updates } : t)),
-    }));
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    const db: any = {};
+    if (updates.title) db.title = updates.title;
+    if (updates.description !== undefined) db.description = updates.description;
+    if (updates.completed !== undefined) db.completed = updates.completed;
+    await supabase.from('tasks').update(db).eq('id', id);
+    setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));
   };
 
-  const deleteTask = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.filter(t => t.id !== id),
-    }));
+  const deleteTask = async (id: string) => {
+    await supabase.from('tasks').delete().eq('id', id);
+    setState(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== id) }));
   };
 
-  const toggleTaskComplete = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)),
-    }));
+  const toggleTaskComplete = async (id: string) => {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
+    const newCompleted = !task.completed;
+    await supabase.from('tasks').update({ completed: newCompleted }).eq('id', id);
+    setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) }));
   };
 
   const addMaintenanceTemplate = (template: MaintenanceTemplate) => {
@@ -277,105 +313,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateMaintenanceTemplate = (id: string, updates: Partial<MaintenanceTemplate>) => {
-    setState(prev => ({
-      ...prev,
-      maintenanceTemplates: prev.maintenanceTemplates.map(t => (t.id === id ? { ...t, ...updates } : t)),
-    }));
+    setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) }));
   };
 
   const deleteMaintenanceTemplate = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id),
-    }));
+    setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) }));
   };
 
-  const updateAdminPin = (newPin: string) => {
+  const updateAdminPin = async (newPin: string) => {
+    await supabase.from('app_config').upsert({ id: 'global', admin_pin: newPin, current_profile_id: state.currentProfile?.id || null });
     setState(prev => ({ ...prev, adminPin: newPin }));
   };
 
-  const resetData = () => {
+  const resetData = async () => {
+    await supabase.from('tasks').delete().neq('id', '');
+    await supabase.from('reminders').delete().neq('id', '');
+    await supabase.from('maintenance_entries').delete().neq('id', '');
+    await supabase.from('vehicles').delete().neq('id', '');
+    await supabase.from('profiles').delete().neq('id', '');
+    await supabase.from('app_config').delete().eq('id', 'global');
     setState(defaultState);
-    localStorage.removeItem('valcar-app-state');
   };
 
   const exportData = async () => {
-    try {
-      await exportEncryptedJSON(state, `valcar-backup-${new Date().toISOString().split('T')[0]}.json`);
-      console.log('✅ Export réussi');
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'export:', error);
-      throw error;
-    }
+    await exportEncryptedJSON(state, `valcar-backup-${new Date().toISOString().split('T')[0]}.json`);
   };
 
   const importData = async (file: File) => {
-    try {
-      const imported = await importEncryptedJSON(file);
-      setState(imported);
-      console.log('✅ Import réussi');
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'import:', error);
-      throw error;
-    }
+    const imported = await importEncryptedJSON(file);
+    setState(imported);
   };
 
-  // Calculer les maintenances dynamiquement
   const maintenances: MaintenanceRecord[] = useMemo(() => {
-    console.log('🔄 [Context] Recalcul des maintenances...', {
-      entries: state.maintenanceEntries.length,
-      templates: state.maintenanceTemplates.length,
-    });
     return state.maintenanceEntries.map(entry => {
-      // Trouver le template correspondant pour obtenir intervalKm et intervalMonths
       const template = state.maintenanceTemplates.find(t => t.name === (entry.customType || entry.type));
-      
-      return {
-        id: entry.id,
-        vehicleId: entry.vehicleId,
-        type: entry.customType || (typeof entry.type === 'string' ? entry.type : 'other'),
-        date: entry.date,
-        mileage: entry.mileage,
-        intervalKm: template?.intervalKm,
-        intervalMonths: template?.intervalMonths,
-        cost: entry.cost,
-        notes: entry.notes,
-      };
+      return { id: entry.id, vehicleId: entry.vehicleId, type: entry.customType || (typeof entry.type === 'string' ? entry.type : 'other'),
+        date: entry.date, mileage: entry.mileage, intervalKm: template?.intervalKm, intervalMonths: template?.intervalMonths,
+        cost: entry.cost, notes: entry.notes };
     });
   }, [state.maintenanceEntries, state.maintenanceTemplates]);
 
   return (
-    <AppContext.Provider
-      value={{
-        ...state,
-        maintenances,
-        setCurrentProfile,
-        addProfile,
-        updateProfile,
-        deleteProfile,
-        addVehicle,
-        updateVehicle,
-        deleteVehicle,
-        addMaintenanceEntry,
-        updateMaintenanceEntry,
-        deleteMaintenanceEntry,
-        addReminder,
-        updateReminder,
-        deleteReminder,
-        addTask,
-        updateTask,
-        deleteTask,
-        toggleTaskComplete,
-        addMaintenanceTemplate,
-        updateMaintenanceTemplate,
-        deleteMaintenanceTemplate,
-        updateAdminPin,
-        resetData,
-        exportData,
-        importData,
-        isLoading,
-      }}
-    >
+    <AppContext.Provider value={{ ...state, maintenances, setCurrentProfile, addProfile, updateProfile, deleteProfile,
+      addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
+      addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,
+      addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, updateAdminPin,
+      resetData, exportData, importData, isLoading }}>
       {children}
     </AppContext.Provider>
   );
@@ -383,8 +366,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp() {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 }

@@ -20,9 +20,10 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
     intervalMonths: '',
     intervalKm: '',
     fuelType: 'both' as 'essence' | 'diesel' | 'both',
+    driveType: 'both' as '4x2' | '4x4' | 'both',
   });
 
-  const availableIcons = ['🔧', '🛠️', '⚙️', '🔩', '⚡', '💡', '🧰', '🪛', '⛽', '🧪', '🔌', '🌡️', '🛢️', '🧴', '🔥', '🛑', '🛞', '⛓️', '🌫️', '🔋', '❄️', '🚗', '🧼'];
+  const availableIcons = ['🔧', '🛠️', '⚙️', '🔩', '⚡', '💡', '🧰', '🪛', '⛽', '🧪', '🔌', '🌡️', '🛢️', '🧴', '🔥', '🛑', '🛞', '⛓️', '🌫️', '🔋', '❄️', '🚗', '🚙', '🧼'];
 
   // Debug : afficher le nombre de templates chargés
   console.log('🔧 MaintenanceSettings - Templates chargés:', maintenanceTemplates.length);
@@ -39,6 +40,7 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
       intervalMonths: formData.intervalMonths ? parseInt(formData.intervalMonths) : undefined,
       intervalKm: formData.intervalKm ? parseInt(formData.intervalKm) : undefined,
       fuelType: formData.fuelType,
+      driveType: formData.driveType,
     };
 
     if (editingId) {
@@ -47,7 +49,7 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
       addMaintenanceTemplate(template);
     }
 
-    setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both' });
+    setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both', driveType: 'both' });
     setShowAddForm(false);
     setEditingId(null);
   };
@@ -59,6 +61,7 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
       intervalMonths: template.intervalMonths?.toString() || '',
       intervalKm: template.intervalKm?.toString() || '',
       fuelType: template.fuelType || 'both',
+      driveType: template.driveType || 'both',
     });
     setEditingId(template.id);
     setShowAddForm(true);
@@ -73,7 +76,7 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
   const handleCancel = () => {
     setShowAddForm(false);
     setEditingId(null);
-    setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both' });
+    setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both', driveType: 'both' });
   };
 
   // Filtrer les templates selon la motorisation sélectionnée
@@ -174,9 +177,22 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
                   value={formData.fuelType}
                   onChange={(value) => setFormData({ ...formData, fuelType: value as 'essence' | 'diesel' | 'both' })}
                   options={[
-                    { value: 'both', label: 'Les deux (Essence + Diesel)', icon: '🔧' },
-                    { value: 'essence', label: 'Essence uniquement', icon: '⛽' },
-                    { value: 'diesel', label: 'Diesel uniquement', icon: '🛢️' },
+                    { value: 'both', label: 'Essence + Diesel', icon: '🔧' },
+                    { value: 'essence', label: 'Essence', icon: '⛽' },
+                    { value: 'diesel', label: 'Diesel', icon: '🛢️' },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-zinc-400 mb-2 block">Type de traction</label>
+                <CustomSelect
+                  value={formData.driveType}
+                  onChange={(value) => setFormData({ ...formData, driveType: value as '4x2' | '4x4' | 'both' })}
+                  options={[
+                    { value: 'both', label: '4x2 + 4x4', icon: '🔧' },
+                    { value: '4x2', label: '4x2', icon: '⚙️' },
+                    { value: '4x4', label: '4x4', icon: '🚙' },
                   ]}
                 />
               </div>
@@ -323,6 +339,7 @@ function getCategoryForTemplate(template: MaintenanceTemplate, fuelType: 'essenc
   if (icon === '🔋') return '🔋 Électricité / contrôles';
   if (icon === '❄️') return '❄️ Confort';
   if (icon === '🚗') return '🚗 Transmission';
+  if (icon === '🚙') return '🚙 Spécifique 4x4';
   if (icon === '🧼') return '🧼 Divers';
 
   return '🔧 Autre';

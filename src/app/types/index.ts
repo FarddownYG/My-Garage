@@ -21,6 +21,7 @@ export interface Vehicle {
   vin?: string;
   ownerId: string;
   fuelType?: 'essence' | 'diesel'; // Type de motorisation
+  driveType?: '4x2' | '4x4'; // Type de transmission (nouveau)
   engineType?: 'gasoline' | 'diesel'; // Alias pour compatibilité (à migrer vers fuelType)
 }
 
@@ -45,6 +46,7 @@ export interface MaintenanceTemplate {
   intervalMonths?: number;
   intervalKm?: number;
   fuelType?: 'essence' | 'diesel' | 'both'; // Compatibilité motorisation
+  driveType?: '4x2' | '4x4' | 'both'; // Compatibilité transmission (nouveau)
   engineType?: 'gasoline' | 'diesel' | 'both'; // Alias pour compatibilité
 }
 
