@@ -138,6 +138,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
       const { data: templates } = await supabase.from('maintenance_templates').select('*').order('name');
 
+      // 🔧 Initialiser les templates pour les profils qui n'en ont pas
+      if (profiles && profiles.length > 0) {
+        const profilesWithoutTemplates = profiles.filter(p => 
+          !p.is_admin && !(templates || []).some(t => t.owner_id === p.id)
+        );
+        
+        if (profilesWithoutTemplates.length > 0) {
+          console.log(`🔧 Initialisation des templates pour ${profilesWithoutTemplates.length} profil(s)...`);
+          const newTemplates = profilesWithoutTemplates.flatMap(profile => 
+            defaultMaintenanceTemplates.map(t => ({
+              id: `${t.id}-${profile.id}`,
+              name: t.name,
+              icon: t.icon,
+              category: t.category || null,
+              interval_months: t.intervalMonths || null,
+              interval_km: t.intervalKm || null,
+              fuel_type: t.fuelType || null,
+              drive_type: t.driveType || null,
+              owner_id: profile.id
+            }))
+          );
+          await supabase.from('maintenance_templates').insert(newTemplates);
+          
+          // Recharger les templates
+          const { data: updatedTemplates } = await supabase.from('maintenance_templates').select('*').order('name');
+          if (updatedTemplates) {
+            templates?.push(...updatedTemplates);
+          }
+        }
+      }
+
       let currentProfile = null;
       if (config?.current_profile_id && profiles) {
         const p = profiles.find(p => p.id === config.current_profile_id);
@@ -420,8 +451,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [state.maintenanceEntries, state.maintenanceTemplates]);
 
+  // 🔒 Filtrer les templates par profil actif uniquement
+  const userMaintenanceTemplates = useMemo(() => {
+    if (!state.currentProfile) return [];
+    return state.maintenanceTemplates.filter(t => t.ownerId === state.currentProfile!.id);
+  }, [state.maintenanceTemplates, state.currentProfile]);
+
   return (
-    <AppContext.Provider value={{ ...state, maintenances, setCurrentProfile, addProfile, updateProfile, deleteProfile,
+    <AppContext.Provider value={{ 
+      ...state, 
+      maintenanceTemplates: userMaintenanceTemplates, // Remplacer par la version filtrée
+      maintenances, 
+      setCurrentProfile, addProfile, updateProfile, deleteProfile,
       addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
       addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,
       addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, updateAdminPin,
