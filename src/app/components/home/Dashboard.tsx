@@ -3,6 +3,7 @@ import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight } from 'l
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { calculateUpcomingAlerts } from '../../utils/alerts';
+import { Footer } from '../shared/Footer';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -229,6 +230,9 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
           <p className="text-zinc-500 text-sm">Ajoutez votre premier véhicule pour commencer</p>
         </div>
       )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

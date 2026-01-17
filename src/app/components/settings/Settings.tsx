@@ -5,6 +5,7 @@ import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
 import { AdminPinModal } from './AdminPinModal';
 import { MaintenanceSettings } from './MaintenanceSettings';
+import { Footer } from '../shared/Footer';
 
 interface SettingsProps {
   onLogout: () => void;
@@ -146,6 +147,7 @@ export function Settings({ onLogout }: SettingsProps) {
       {showAdminPinModal && (
         <AdminPinModal onClose={() => setShowAdminPinModal(false)} />
       )}
+      <Footer />
     </div>
   );
 }

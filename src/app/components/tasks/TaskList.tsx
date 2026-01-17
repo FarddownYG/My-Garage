@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Square, Trash2, Edit2 } from 'lucide-react';
+import { Plus, CheckSquare, Square, Trash2, Edit2, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddTaskModal } from './AddTaskModal';
 import { EditTaskModal } from './EditTaskModal';
+import { TaskDetailModal } from './TaskDetailModal';
 
 export function TaskList() {
   const { tasks, vehicles, updateTask, deleteTask } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [viewingTask, setViewingTask] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   const filteredTasks = tasks.filter(task => {
@@ -66,45 +68,88 @@ export function TaskList() {
           filteredTasks.map((task) => {
             const vehicle = vehicles.find(v => v.id === task.vehicleId);
             return (
-              <Card key={task.id} className="bg-zinc-900 border-zinc-800 p-4 rounded-2xl shadow-soft hover-lift">
-                <div className="flex items-start gap-3">
-                  <button
-                    onClick={() => updateTask(task.id, { completed: !task.completed })}
-                    className="mt-1 text-zinc-400 hover:text-blue-500 transition-colors"
-                  >
-                    {task.completed ? (
-                      <CheckSquare className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <Square className="w-5 h-5" />
-                    )}
-                  </button>
-                  <div className="flex-1">
-                    <h3 className={`text-white mb-1 ${task.completed ? 'line-through opacity-60' : ''}`}>
-                      {task.title}
-                    </h3>
-                    {task.description && (
-                      <p className="text-sm text-zinc-500 mb-2">{task.description}</p>
-                    )}
-                    {vehicle && (
-                      <p className="text-xs text-zinc-600">{vehicle.name}</p>
-                    )}
+              <Card key={task.id} className="bg-zinc-900 border-zinc-800 rounded-2xl shadow-soft overflow-hidden">
+                {/* Liens en haut */}
+                {task.links && task.links.length > 0 && (
+                  <div className="bg-zinc-800/30 px-4 py-2 border-b border-zinc-800">
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                      {task.links.map((link, index) => (
+                        <a
+                          key={index}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 transition-colors rounded-lg px-3 py-1.5 text-xs whitespace-nowrap group"
+                        >
+                          <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="truncate max-w-[120px]">{link.name || link.url}</span>
+                          <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (confirm('Supprimer cette tâche ?')) {
-                        deleteTask(task.id);
-                      }
-                    }}
-                    className="text-zinc-600 hover:text-red-500 transition-all p-1.5 hover:bg-red-500/10 rounded-lg"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setEditingTask(task)}
-                    className="text-zinc-600 hover:text-blue-500 transition-all p-1.5 hover:bg-blue-500/10 rounded-lg"
-                  >
-                    <Edit2 className="w-5 h-5" />
-                  </button>
+                )}
+
+                {/* Contenu de la tâche */}
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateTask(task.id, { completed: !task.completed });
+                      }}
+                      className="mt-1 text-zinc-400 hover:text-blue-500 transition-colors flex-shrink-0"
+                    >
+                      {task.completed ? (
+                        <CheckSquare className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </button>
+                    
+                    {/* Zone cliquable pour voir les détails */}
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => setViewingTask(task)}
+                    >
+                      <h3 className={`text-white mb-1 truncate ${task.completed ? 'line-through opacity-60' : ''}`}>
+                        {task.title}
+                      </h3>
+                      {task.description && (
+                        <p className="text-sm text-zinc-500 mb-2 break-words overflow-hidden line-clamp-3">
+                          {task.description}
+                        </p>
+                      )}
+                      {vehicle && (
+                        <p className="text-xs text-zinc-600">{vehicle.name}</p>
+                      )}
+                    </div>
+                    
+                    {/* Boutons d'action - restent dans le rectangle */}
+                    <div className="flex items-start gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                        className="text-zinc-600 hover:text-blue-500 transition-all p-1.5 hover:bg-blue-500/10 rounded-lg"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Supprimer cette tâche ?')) {
+                            deleteTask(task.id);
+                          }
+                        }}
+                        className="text-zinc-600 hover:text-red-500 transition-all p-1.5 hover:bg-red-500/10 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </Card>
             );
@@ -125,7 +170,7 @@ export function TaskList() {
       <div className="fixed bottom-28 right-6">
         <Button
           onClick={() => setShowAddModal(true)}
-          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-glow-blue hover:shadow-2xl transition-all"
+          className="floating-action-button w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-glow-blue hover:shadow-2xl transition-all"
         >
           <Plus className="w-6 h-6" />
         </Button>
@@ -136,6 +181,9 @@ export function TaskList() {
       )}
       {editingTask && (
         <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} />
+      )}
+      {viewingTask && (
+        <TaskDetailModal task={viewingTask} onClose={() => setViewingTask(null)} />
       )}
     </div>
   );

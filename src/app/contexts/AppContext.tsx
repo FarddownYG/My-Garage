@@ -105,7 +105,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (localData.tasks?.length) {
         await supabase.from('tasks').insert(localData.tasks.map(t => ({
-          id: t.id, vehicle_id: t.vehicleId, title: t.title, description: t.description || null, completed: t.completed
+          id: t.id, vehicle_id: t.vehicleId, title: t.title, description: t.description || null, links: t.links || null, completed: t.completed
         })));
       }
       
@@ -189,7 +189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           customType: e.custom_type || undefined, customIcon: e.custom_icon || undefined, date: e.date,
           mileage: e.mileage, cost: e.cost || undefined, notes: e.notes || undefined, photos: e.photos || undefined })),
         tasks: (tasks || []).map(t => ({ id: t.id, vehicleId: t.vehicle_id, title: t.title,
-          description: t.description || undefined, completed: t.completed, createdAt: t.created_at })),
+          description: t.description || undefined, links: t.links || undefined, completed: t.completed, createdAt: t.created_at })),
         reminders: (reminders || []).map(r => ({ id: r.id, vehicleId: r.vehicle_id, type: r.type,
           dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description })),
         maintenanceTemplates: (templates || []).map(t => ({ id: t.id, name: t.name, icon: t.icon,
@@ -363,7 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addTask = async (task: Task) => {
     const s = { ...task, title: sanitizeInput(task.title), description: task.description ? sanitizeInput(task.description) : undefined };
     await supabase.from('tasks').insert({ id: s.id, vehicle_id: s.vehicleId, title: s.title,
-      description: s.description || null, completed: s.completed });
+      description: s.description || null, links: s.links || null, completed: s.completed });
     setState(prev => ({ ...prev, tasks: [...prev.tasks, s] }));
   };
 
@@ -371,6 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const db: any = {};
     if (updates.title) db.title = updates.title;
     if (updates.description !== undefined) db.description = updates.description;
+    if (updates.links !== undefined) db.links = updates.links;
     if (updates.completed !== undefined) db.completed = updates.completed;
     await supabase.from('tasks').update(db).eq('id', id);
     setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));

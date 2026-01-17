@@ -2,7 +2,7 @@
 // Adds multiple layers of protection
 
 /**
- * Detects if developer tools are open
+ * Detect if DevTools are open
  */
 export function detectDevTools(): boolean {
   const threshold = 160;
@@ -10,7 +10,7 @@ export function detectDevTools(): boolean {
   const heightThreshold = window.outerHeight - window.innerHeight > threshold;
   
   if (widthThreshold || heightThreshold) {
-    console.warn('⚠️ Outils de développement détectés');
+    // Silently detect without warning (removed console.warn)
     return true;
   }
   return false;
@@ -164,11 +164,10 @@ export function initializeSecurity(enableDevToolsProtection: boolean = false) {
     disableContextMenu();
     disableDevToolsShortcuts();
     
-    // Periodic DevTools detection
+    // Periodic DevTools detection (silently - no console warnings)
     setInterval(() => {
       if (detectDevTools()) {
-        // You could clear data or show a warning here
-        console.warn('⚠️ Sécurité: DevTools actifs');
+        // Silently detect - removed console.warn to avoid spam
       }
     }, 1000);
   }

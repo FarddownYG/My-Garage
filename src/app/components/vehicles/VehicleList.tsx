@@ -133,10 +133,10 @@ export function VehicleList() {
         )}
       </div>
 
-      <div className="fixed bottom-28 right-6">
+      <div className="fixed bottom-28 right-6 z-10">
         <Button
           onClick={() => setShowAddModal(true)}
-          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-glow-blue hover:shadow-2xl transition-all"
+          className="floating-action-button w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-glow-blue hover:shadow-2xl transition-all"
         >
           <Plus className="w-6 h-6" />
         </Button>

@@ -2,6 +2,7 @@
 @import './tailwind.css';
 @import './theme.css';
 @import './visual-enhancements.css';
+@import './responsive.css';
 
 /* iOS Safe Areas */
 :root {

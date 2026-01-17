@@ -1,0 +1,83 @@
+/* 📱 SYSTÈME RESPONSIVE GLOBAL */
+/* Ce fichier ajuste automatiquement les espacements, tailles d'icônes, et images selon la taille d'écran */
+
+/* 🎯 Stratégie: Réduire progressivement la police de base (--font-size) */
+/* Toutes les unités rem s'ajusteront automatiquement */
+
+/* 📱 Ajustements spécifiques pour les icônes SVG et Lucide React */
+@media (max-width: 767px) {
+  /* Réduire toutes les icônes Lucide sur mobile */
+  svg.lucide {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Icônes encore plus petites sur petits mobiles */
+  svg.lucide {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  /* Réduire les bordures arrondies sur mobile pour gagner de l'espace */
+  .rounded-3xl {
+    border-radius: 1.25rem;
+  }
+  
+  .rounded-2xl {
+    border-radius: 1rem;
+  }
+}
+
+@media (max-width: 399px) {
+  /* Icônes très petites sur très petits écrans */
+  svg.lucide {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+/* 🖼️ Ajustements pour les images et avatars de véhicules */
+@media (max-width: 639px) {
+  /* Réduire les photos de véhicules */
+  .vehicle-photo {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+  
+  .vehicle-photo-large {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+
+@media (max-width: 399px) {
+  /* Photos encore plus petites */
+  .vehicle-photo {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .vehicle-photo-large {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+}
+
+/* 🔘 Ajustements pour les boutons flottants */
+@media (max-width: 639px) {
+  /* Boutons d'action flottants plus petits */
+  .floating-action-button {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+@media (max-width: 399px) {
+  /* Boutons d'action très petits */
+  .floating-action-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}

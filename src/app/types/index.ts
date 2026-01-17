@@ -66,6 +66,7 @@ export interface Task {
   vehicleId: string;
   title: string;
   description?: string;
+  links?: { url: string; name: string }[];
   completed: boolean;
   createdAt: string;
 }

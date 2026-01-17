@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,15 +21,40 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     title: task.title,
     description: task.description || '',
     vehicleId: task.vehicleId,
+    links: task.links || [],
   });
+
+  const addLink = () => {
+    setFormData({
+      ...formData,
+      links: [...formData.links, { url: '', name: '' }],
+    });
+  };
+
+  const updateLink = (index: number, field: 'url' | 'name', value: string) => {
+    const newLinks = [...formData.links];
+    newLinks[index][field] = value;
+    setFormData({ ...formData, links: newLinks });
+  };
+
+  const removeLink = (index: number) => {
+    setFormData({
+      ...formData,
+      links: formData.links.filter((_, i) => i !== index),
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.vehicleId) return;
 
+    // Filtrer les liens valides (avec au moins une URL)
+    const validLinks = formData.links.filter(link => link.url.trim() !== '');
+
     updateTask(task.id, {
       title: formData.title,
       description: formData.description || undefined,
+      links: validLinks.length > 0 ? validLinks : undefined,
       vehicleId: formData.vehicleId,
     });
 
@@ -69,6 +94,53 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
               placeholder="Détails supplémentaires..."
               className="bg-zinc-800 border-zinc-700 text-white min-h-24"
             />
+          </div>
+
+          {/* Section Liens */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-zinc-400">Liens</Label>
+              <Button
+                type="button"
+                onClick={addLink}
+                size="sm"
+                variant="ghost"
+                className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Ajouter un lien
+              </Button>
+            </div>
+            {formData.links.length > 0 && (
+              <div className="space-y-3">
+                {formData.links.map((link, index) => (
+                  <div key={index} className="bg-zinc-800/50 p-3 rounded-lg space-y-2">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                      <Input
+                        value={link.name}
+                        onChange={(e) => updateLink(index, 'name', e.target.value)}
+                        placeholder="Nom du lien (ex: Tutorial YouTube)"
+                        className="bg-zinc-800 border-zinc-700 text-white text-sm flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeLink(index)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <Input
+                      value={link.url}
+                      onChange={(e) => updateLink(index, 'url', e.target.value)}
+                      placeholder="https://..."
+                      className="bg-zinc-800 border-zinc-700 text-white text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

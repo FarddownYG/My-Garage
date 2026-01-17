@@ -1,7 +1,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* 📱 Taille de police adaptative selon la taille d'écran */
   --font-size: 16px;
+  
+  /* 📱 Échelle globale pour réduire tout sur mobile */
+  --scale-factor: 1;
+  
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -177,5 +182,61 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+}
+
+/* Utility classes pour limiter le nombre de lignes */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Cacher la scrollbar tout en gardant le scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 📱 RESPONSIVE: Ajuster la taille de police selon la largeur d'écran */
+/* Par défaut: 16px pour desktop */
+
+/* Tablettes (< 1024px) : réduire à 15px */
+@media (max-width: 1023px) {
+  :root {
+    --font-size: 15px;
+  }
+}
+
+/* Petites tablettes / Grands mobiles (< 768px) : réduire à 14px */
+@media (max-width: 767px) {
+  :root {
+    --font-size: 14px;
+  }
+}
+
+/* Mobiles normaux (< 640px) : réduire à 13px */
+@media (max-width: 639px) {
+  :root {
+    --font-size: 13px;
+  }
+}
+
+/* Petits mobiles (< 400px) : réduire à 12px */
+@media (max-width: 399px) {
+  :root {
+    --font-size: 12px;
+  }
+}
+
+/* Très petits écrans (< 360px) : réduire à 11px */
+@media (max-width: 359px) {
+  :root {
+    --font-size: 11px;
   }
 }
