@@ -78,8 +78,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (localData.profiles?.length) {
         await supabase.from('profiles').insert(localData.profiles.map(p => ({
-          id: p.id, first_name: p.firstName, last_name: p.lastName, name: p.name,
-          avatar: p.avatar, is_pin_protected: p.isPinProtected, pin: p.pin || null, is_admin: p.isAdmin || false
+          id: p.id, 
+          first_name: p.firstName, 
+          last_name: p.lastName || null, // Permettre null pour lastName vide
+          name: p.name,
+          avatar: p.avatar, 
+          is_pin_protected: p.isPinProtected, 
+          pin: p.pin || null, 
+          is_admin: p.isAdmin || false
         })));
         
         // Migrer les templates pour chaque profil
@@ -237,8 +243,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addProfile = async (profile: Profile) => {
     const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
-    await supabase.from('profiles').insert({ id: s.id, first_name: s.firstName, last_name: s.lastName, name: s.name,
-      avatar: s.avatar, is_pin_protected: s.isPinProtected, pin: s.pin || null, is_admin: s.isAdmin || false });
+    await supabase.from('profiles').insert({ 
+      id: s.id, 
+      first_name: s.firstName, 
+      last_name: s.lastName || null,
+      name: s.name,
+      avatar: s.avatar, 
+      is_pin_protected: s.isPinProtected, 
+      pin: s.pin || null, 
+      is_admin: s.isAdmin || false,
+      font_size: s.fontSize || 50 // Initialiser avec la taille par défaut
+    });
     
     // Initialiser les templates par défaut pour ce profil
     if (!s.isAdmin) {
@@ -276,15 +291,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.firstName) s.firstName = sanitizeInput(updates.firstName);
     if ('lastName' in updates) s.lastName = updates.lastName ? sanitizeInput(updates.lastName) : ''; // Permettre les chaînes vides
     if (updates.name) s.name = sanitizeInput(updates.name);
+    
     const db: any = {};
     if (s.firstName) db.first_name = s.firstName;
     if ('lastName' in s) db.last_name = s.lastName || null; // Sauvegarder null si vide
-    if (s.name) db.name = s.name;
+    if (s.name) db.name = s.name; // Sauvegarder le nom complet reconstruit
     if (s.avatar) db.avatar = s.avatar;
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if (s.pin !== undefined) db.pin = s.pin;
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
     if (s.fontSize !== undefined) db.font_size = s.fontSize; // Supporter la taille de police
+    
+    console.log('💾 Mise à jour profil Supabase:', { id, updates: s, db });
+    
     await supabase.from('profiles').update(db).eq('id', id);
     setState(prev => ({ 
       ...prev, 
@@ -590,16 +609,16 @@ export function useApp() {
   // 🔥 Hot-reload protection: Better error handling
   if (!context) {
     // During hot-reload, the context might temporarily be undefined
-    // Log the error but provide a more helpful message
+    // Only throw error in production or if context is truly missing
     if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ AppContext non disponible - Hot-reload détecté. Rechargez la page (Ctrl+Shift+R) si l\'erreur persiste.');
-      
-      // Try to recover from global instance
+      // Silently try to recover from global instance first
       const globalContext = (window as any).__APP_CONTEXT_INSTANCE__;
       if (globalContext) {
-        console.log('🔄 Tentative de récupération depuis l\'instance globale...');
         return useContext(globalContext);
       }
+      
+      // Log warning only if recovery failed
+      console.warn('⚠️ AppContext non disponible - Hot-reload détecté. Rechargez la page (Ctrl+Shift+R) si l\'erreur persiste.');
     }
     
     throw new Error('useApp must be used within AppProvider. Si vous voyez cette erreur après un hot-reload, faites un hard refresh (Ctrl+Shift+R).');

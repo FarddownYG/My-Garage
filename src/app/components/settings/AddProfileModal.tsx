@@ -53,7 +53,7 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
     addProfile({
       id: Date.now().toString(),
       firstName: formData.firstName.trim(),
-      lastName: formData.lastName.trim() || undefined,
+      lastName: formData.lastName.trim(), // Passer une chaîne vide, pas undefined
       name,
       avatar: formData.avatar,
       isPinProtected: formData.isPinProtected,
