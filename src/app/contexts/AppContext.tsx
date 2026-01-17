@@ -28,7 +28,7 @@ interface AppContextType extends AppState {
   addMaintenanceTemplate: (template: MaintenanceTemplate) => void;
   updateMaintenanceTemplate: (id: string, template: Partial<MaintenanceTemplate>) => void;
   deleteMaintenanceTemplate: (id: string) => void;
-  updateAdminPin: (newPin: string) => void;
+  updateAdminPin: (newPin: string) => Promise<void>;
   resetData: () => void;
   exportData: () => Promise<void>;
   importData: (file: File) => Promise<void>;
@@ -469,12 +469,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateAdminPin = async (newPin: string) => {
     try {
+      console.log('🔐 Début mise à jour PIN admin:', { newPin, currentProfileId: state.currentProfile?.id });
+      
       // 1️⃣ Sauvegarder dans Supabase d'abord
-      const { error } = await supabase.from('app_config').upsert({ 
+      const payload = { 
         id: 'global', 
         admin_pin: newPin, 
         current_profile_id: state.currentProfile?.id || null 
-      });
+      };
+      
+      console.log('📤 Tentative upsert Supabase:', payload);
+      
+      const { data, error } = await supabase.from('app_config').upsert(payload);
+      
+      console.log('📥 Réponse Supabase:', { data, error });
       
       if (error) {
         console.error('❌ Erreur sauvegarde PIN admin:', error);
@@ -483,9 +491,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       // 2️⃣ Mettre à jour le state local uniquement si la sauvegarde a réussi
       setState(prev => ({ ...prev, adminPin: newPin }));
-      console.log('✅ PIN admin sauvegardé:', newPin);
+      console.log('✅ PIN admin sauvegardé avec succès:', newPin);
     } catch (error) {
       console.error('❌ Échec mise à jour PIN admin:', error);
+      console.error('Détails de l\'erreur:', {
+        message: (error as any)?.message,
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint
+      });
       throw error;
     }
   };
