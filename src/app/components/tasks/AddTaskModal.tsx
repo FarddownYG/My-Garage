@@ -52,7 +52,7 @@ export function AddTaskModal({ onClose }: AddTaskModalProps) {
     addTask({
       id: Date.now().toString(),
       title: formData.title,
-      description: formData.description || undefined,
+      description: formData.description.trim() || undefined,
       links: validLinks.length > 0 ? validLinks : undefined,
       vehicleId: formData.vehicleId,
       completed: false,

@@ -362,16 +362,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = async (task: Task) => {
     const s = { ...task, title: sanitizeInput(task.title), description: task.description ? sanitizeInput(task.description) : undefined };
-    await supabase.from('tasks').insert({ id: s.id, vehicle_id: s.vehicleId, title: s.title,
-      description: s.description || null, links: s.links || null, completed: s.completed });
-    setState(prev => ({ ...prev, tasks: [...prev.tasks, s] }));
+    
+    // 🚀 OPTIMISATION : Nettoyer et minimiser les liens avant sauvegarde
+    const optimizedLinks = s.links && s.links.length > 0 
+      ? s.links
+          .filter(link => link.url.trim() !== '') // Supprimer les liens vides
+          .map(link => ({
+            url: link.url.trim(),                  // Supprimer les espaces
+            name: link.name.trim() || undefined    // Supprimer les noms vides
+          }))
+          .filter(link => link.url)                // Garde uniquement les liens valides
+      : null;
+    
+    await supabase.from('tasks').insert({ 
+      id: s.id, 
+      vehicle_id: s.vehicleId, 
+      title: s.title,
+      description: s.description || null, 
+      links: optimizedLinks, 
+      completed: s.completed 
+    });
+    
+    setState(prev => ({ ...prev, tasks: [...prev.tasks, { ...s, links: optimizedLinks || undefined }] }));
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     const db: any = {};
     if (updates.title) db.title = updates.title;
-    if (updates.description !== undefined) db.description = updates.description;
-    if (updates.links !== undefined) db.links = updates.links;
+    
+    // ✅ CORRECTION : Toujours mettre à jour description, même si vide (null)
+    if ('description' in updates) {
+      db.description = updates.description || null;
+    }
+    
+    // 🚀 OPTIMISATION : Nettoyer les liens lors de la mise à jour
+    if ('links' in updates) {
+      const optimizedLinks = updates.links && updates.links.length > 0
+        ? updates.links
+            .filter(link => link.url.trim() !== '')
+            .map(link => ({
+              url: link.url.trim(),
+              name: link.name.trim() || undefined
+            }))
+            .filter(link => link.url)
+        : null;
+      db.links = optimizedLinks;
+      updates.links = optimizedLinks || undefined;
+    }
+    
     if (updates.completed !== undefined) db.completed = updates.completed;
     await supabase.from('tasks').update(db).eq('id', id);
     setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));

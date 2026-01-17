@@ -53,8 +53,8 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
 
     updateTask(task.id, {
       title: formData.title,
-      description: formData.description || undefined,
-      links: validLinks.length > 0 ? validLinks : undefined,
+      description: formData.description.trim() || null, // ✅ null au lieu de undefined
+      links: validLinks.length > 0 ? validLinks : null, // ✅ null au lieu de undefined
       vehicleId: formData.vehicleId,
     });
 
