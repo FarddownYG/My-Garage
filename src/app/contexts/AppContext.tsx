@@ -80,7 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await supabase.from('profiles').insert(localData.profiles.map(p => ({
           id: p.id, 
           first_name: p.firstName, 
-          last_name: p.lastName || null, // Permettre null pour lastName vide
+          last_name: p.lastName || '', // ✅ Chaîne vide au lieu de null
           name: p.name,
           avatar: p.avatar, 
           is_pin_protected: p.isPinProtected, 
@@ -246,7 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await supabase.from('profiles').insert({ 
       id: s.id, 
       first_name: s.firstName, 
-      last_name: s.lastName || null,
+      last_name: s.lastName || '', // ✅ Chaîne vide au lieu de null
       name: s.name,
       avatar: s.avatar, 
       is_pin_protected: s.isPinProtected, 
@@ -288,32 +288,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (id: string, updates: Partial<Profile>) => {
     const s = { ...updates };
+    
+    // Sanitize les champs texte
     if (updates.firstName) s.firstName = sanitizeInput(updates.firstName);
-    if ('lastName' in updates) s.lastName = updates.lastName ? sanitizeInput(updates.lastName) : ''; // Permettre les chaînes vides
+    if ('lastName' in updates) {
+      s.lastName = updates.lastName ? sanitizeInput(updates.lastName) : ''; 
+    }
     if (updates.name) s.name = sanitizeInput(updates.name);
     
+    // Préparer les données pour Supabase
     const db: any = {};
-    if (s.firstName) db.first_name = s.firstName;
-    if ('lastName' in s) db.last_name = s.lastName || null; // Sauvegarder null si vide
-    
-    // ✅ TOUJOURS sauvegarder le champ name si firstName ou lastName sont modifiés
-    if ('firstName' in s || 'lastName' in s || s.name) {
-      db.name = s.name;
-    }
-    
-    if (s.avatar) db.avatar = s.avatar;
+    if (s.firstName !== undefined) db.first_name = s.firstName;
+    if ('lastName' in s) db.last_name = s.lastName || ''; // ✅ Chaîne vide au lieu de null
+    if (s.name !== undefined) db.name = s.name;
+    if (s.avatar !== undefined) db.avatar = s.avatar;
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if (s.pin !== undefined) db.pin = s.pin;
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
-    if (s.fontSize !== undefined) db.font_size = s.fontSize; // Supporter la taille de police
+    if (s.fontSize !== undefined) db.font_size = s.fontSize;
     
     console.log('💾 Mise à jour profil Supabase:', { id, updates: s, db });
     
-    await supabase.from('profiles').update(db).eq('id', id);
+    // Sauvegarder dans Supabase
+    const { error } = await supabase.from('profiles').update(db).eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur mise à jour profil:', error);
+      throw error;
+    }
+    
+    console.log('✅ Profil sauvegardé dans Supabase');
+    
+    // Mettre à jour le state local
     setState(prev => ({ 
       ...prev, 
       profiles: prev.profiles.map(p => p.id === id ? { ...p, ...s } : p),
-      currentProfile: prev.currentProfile?.id === id ? { ...prev.currentProfile, ...s } : prev.currentProfile // Mettre à jour aussi le profil courant
+      currentProfile: prev.currentProfile?.id === id ? { ...prev.currentProfile, ...s } : prev.currentProfile
     }));
   };
 
