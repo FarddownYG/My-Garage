@@ -295,7 +295,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const db: any = {};
     if (s.firstName) db.first_name = s.firstName;
     if ('lastName' in s) db.last_name = s.lastName || null; // Sauvegarder null si vide
-    if (s.name) db.name = s.name; // Sauvegarder le nom complet reconstruit
+    
+    // ✅ TOUJOURS sauvegarder le champ name si firstName ou lastName sont modifiés
+    if ('firstName' in s || 'lastName' in s || s.name) {
+      db.name = s.name;
+    }
+    
     if (s.avatar) db.avatar = s.avatar;
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if (s.pin !== undefined) db.pin = s.pin;
