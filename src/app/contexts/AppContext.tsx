@@ -205,7 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           isPinProtected: p.is_pin_protected, 
           pin: p.pin || undefined, 
           isAdmin: p.is_admin,
-          fontSize: p.font_size || 50 // Taille de police par profil (défaut: 50)
+          fontSize: 50 // Taille par défaut (pas stockée dans Supabase pour l'instant)
         })),
         vehicles: (vehicles || []).map(v => ({ id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
           brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
@@ -251,8 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       avatar: s.avatar, 
       is_pin_protected: s.isPinProtected, 
       pin: s.pin || null, 
-      is_admin: s.isAdmin || false,
-      font_size: s.fontSize || 50 // Initialiser avec la taille par défaut
+      is_admin: s.isAdmin || false
     });
     
     // Initialiser les templates par défaut pour ce profil
@@ -278,11 +277,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
       setState(prev => ({ 
         ...prev, 
-        profiles: [...prev.profiles, s],
+        profiles: [...prev.profiles, { ...s, fontSize: 50 }], // Taille par défaut en local
         maintenanceTemplates: [...prev.maintenanceTemplates, ...newTemplates]
       }));
     } else {
-      setState(prev => ({ ...prev, profiles: [...prev.profiles, s] }));
+      setState(prev => ({ ...prev, profiles: [...prev.profiles, { ...s, fontSize: 50 }] }));
     }
   };
 
@@ -296,7 +295,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     if (updates.name) s.name = sanitizeInput(updates.name);
     
-    // Préparer les données pour Supabase
+    // Préparer les données pour Supabase (sans font_size)
     const db: any = {};
     if (s.firstName !== undefined) db.first_name = s.firstName;
     if ('lastName' in s) db.last_name = s.lastName || ''; // ✅ Chaîne vide au lieu de null
@@ -305,7 +304,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if (s.pin !== undefined) db.pin = s.pin;
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
-    if (s.fontSize !== undefined) db.font_size = s.fontSize;
+    // fontSize est géré en local uniquement (pas de colonne font_size dans Supabase)
     
     console.log('💾 Mise à jour profil Supabase:', { id, updates: s, db });
     
