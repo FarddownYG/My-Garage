@@ -38,7 +38,7 @@ export function EditProfileModal({ profile, onClose }: EditProfileModalProps) {
     // Mise à jour du profil
     updateProfile(profile.id, {
       firstName: firstName.trim(),
-      lastName: lastName.trim() || undefined,
+      lastName: lastName.trim() || '',  // Passer une chaîne vide au lieu d'undefined
       name,
       avatar
     });

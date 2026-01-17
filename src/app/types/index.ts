@@ -7,6 +7,7 @@ export interface Profile {
   isPinProtected: boolean;
   pin?: string;
   isAdmin?: boolean;
+  fontSize?: number; // Taille de police personnalisée (0-100%, défaut: 50)
 }
 
 export interface Vehicle {
@@ -89,7 +90,7 @@ export interface AppState {
   currentProfile: Profile | null;
   vehicles: Vehicle[];
   maintenanceEntries: MaintenanceEntry[];
-  reminders: Reminder[];
+  reminders: Reminder[]
   tasks: Task[];
   maintenanceTemplates: MaintenanceTemplate[];
 }

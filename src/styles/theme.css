@@ -139,7 +139,8 @@
   */
 
   html {
-    font-size: var(--font-size);
+    /* 🔤 Appliquer l'échelle de taille de police globale (0-100%, où 50% = taille normale) */
+    font-size: calc(var(--font-size) * (0.5 + var(--font-size-scale, 50%) / 100%));
   }
 
   h1 {
@@ -239,4 +240,45 @@
   :root {
     --font-size: 11px;
   }
+}
+
+/* 🎚️ Slider personnalisé pour le réglage de la taille de police */
+input[type="range"].slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(99 102 241);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider-thumb::-webkit-slider-thumb:hover {
+  background: rgb(129 140 248);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.6);
+}
+
+input[type="range"].slider-thumb::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(99 102 241);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider-thumb::-moz-range-thumb:hover {
+  background: rgb(129 140 248);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.6);
 }

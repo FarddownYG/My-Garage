@@ -29,6 +29,7 @@ interface AppContextType extends AppState {
   updateMaintenanceTemplate: (id: string, template: Partial<MaintenanceTemplate>) => void;
   deleteMaintenanceTemplate: (id: string) => void;
   updateAdminPin: (newPin: string) => Promise<void>;
+  updateFontSize: (fontSize: number) => Promise<void>;
   resetData: () => void;
   exportData: () => Promise<void>;
   importData: (file: File) => Promise<void>;
@@ -43,7 +44,7 @@ const defaultState: AppState = {
   maintenanceEntries: [],
   reminders: [],
   tasks: [],
-  maintenanceTemplates: defaultMaintenanceTemplates,
+  maintenanceTemplates: [],
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -189,8 +190,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setState({
         adminPin: config?.admin_pin || '1234',
         currentProfile,
-        profiles: (profiles || []).map(p => ({ id: p.id, firstName: p.first_name, lastName: p.last_name, name: p.name,
-          avatar: p.avatar, isPinProtected: p.is_pin_protected, pin: p.pin || undefined, isAdmin: p.is_admin })),
+        profiles: (profiles || []).map(p => ({ 
+          id: p.id, 
+          firstName: p.first_name, 
+          lastName: p.last_name || '', 
+          name: p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name, // Reconstruire le nom complet
+          avatar: p.avatar, 
+          isPinProtected: p.is_pin_protected, 
+          pin: p.pin || undefined, 
+          isAdmin: p.is_admin,
+          fontSize: p.font_size || 50 // Taille de police par profil (défaut: 50)
+        })),
         vehicles: (vehicles || []).map(v => ({ id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
           brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
           licensePlate: v.license_plate || undefined, vin: v.vin || undefined, ownerId: v.owner_id, 
@@ -264,18 +274,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (id: string, updates: Partial<Profile>) => {
     const s = { ...updates };
     if (updates.firstName) s.firstName = sanitizeInput(updates.firstName);
-    if (updates.lastName) s.lastName = sanitizeInput(updates.lastName);
+    if ('lastName' in updates) s.lastName = updates.lastName ? sanitizeInput(updates.lastName) : ''; // Permettre les chaînes vides
     if (updates.name) s.name = sanitizeInput(updates.name);
     const db: any = {};
     if (s.firstName) db.first_name = s.firstName;
-    if (s.lastName) db.last_name = s.lastName;
+    if ('lastName' in s) db.last_name = s.lastName || null; // Sauvegarder null si vide
     if (s.name) db.name = s.name;
     if (s.avatar) db.avatar = s.avatar;
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if (s.pin !== undefined) db.pin = s.pin;
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
+    if (s.fontSize !== undefined) db.font_size = s.fontSize; // Supporter la taille de police
     await supabase.from('profiles').update(db).eq('id', id);
-    setState(prev => ({ ...prev, profiles: prev.profiles.map(p => p.id === id ? { ...p, ...s } : p) }));
+    setState(prev => ({ 
+      ...prev, 
+      profiles: prev.profiles.map(p => p.id === id ? { ...p, ...s } : p),
+      currentProfile: prev.currentProfile?.id === id ? { ...prev.currentProfile, ...s } : prev.currentProfile // Mettre à jour aussi le profil courant
+    }));
   };
 
   const deleteProfile = async (id: string) => {
@@ -504,6 +519,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateFontSize = async (fontSize: number) => {
+    try {
+      if (!state.currentProfile) return;
+      
+      console.log('🔤 Mise à jour taille police:', fontSize);
+      
+      // 💾 Sauvegarder dans Supabase pour le profil courant
+      await updateProfile(state.currentProfile.id, { fontSize });
+      
+      console.log('✅ Taille police sauvegardée:', fontSize);
+    } catch (error) {
+      console.error('❌ Échec mise à jour taille police:', error);
+      throw error;
+    }
+  };
+
   const resetData = async () => {
     await supabase.from('tasks').delete().neq('id', '');
     await supabase.from('reminders').delete().neq('id', '');
@@ -546,7 +577,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentProfile, addProfile, updateProfile, deleteProfile,
       addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
       addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,
-      addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, updateAdminPin,
+      addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, updateAdminPin, updateFontSize,
       resetData, exportData, importData, isLoading }}>
       {children}
     </AppContext.Provider>

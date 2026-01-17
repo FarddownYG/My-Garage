@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench, User } from 'lucide-react';
+import { Users, Shield, Database, ChevronRight, Wrench, User, Type } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
@@ -14,12 +14,15 @@ interface SettingsProps {
 }
 
 export function Settings({ onLogout }: SettingsProps) {
-  const { currentProfile, resetData } = useApp();
+  const { currentProfile, resetData, updateFontSize } = useApp();
   const [showProfileManagement, setShowProfileManagement] = useState(false);
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
   const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  
+  // Utiliser le fontSize du profil courant
+  const fontSize = currentProfile?.fontSize || 50;
 
   const handleResetData = () => {
     if (confirm('⚠️ Cette action supprimera TOUTES les données de l\'application. Êtes-vous sûr ?')) {
@@ -139,6 +142,56 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
         )}
+
+        {/* Display Section */}
+        <div>
+          <h2 className="text-sm text-zinc-500 mb-3">AFFICHAGE</h2>
+          <Card className="bg-zinc-900 border-zinc-800 p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-indigo-500/10 rounded-lg flex-shrink-0">
+                <Type className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-white">Taille de police</p>
+                    <p className="text-sm text-zinc-500">Ajuster la taille du texte</p>
+                  </div>
+                  <div className="text-white font-semibold text-lg">{fontSize}%</div>
+                </div>
+                
+                {/* Slider */}
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={fontSize}
+                    onChange={(e) => updateFontSize(Number(e.target.value))}
+                    className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    style={{
+                      background: `linear-gradient(to right, rgb(99 102 241) 0%, rgb(99 102 241) ${fontSize}%, rgb(39 39 42) ${fontSize}%, rgb(39 39 42) 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-zinc-600">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+                
+                {/* Preview */}
+                <div className="mt-4 p-3 bg-zinc-800/50 rounded-lg">
+                  <p className="text-zinc-400 text-xs mb-2">Aperçu:</p>
+                  <p className="text-white" style={{ fontSize: `${fontSize}%` }}>
+                    Exemple de texte
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Maintenance Section */}
         <div>

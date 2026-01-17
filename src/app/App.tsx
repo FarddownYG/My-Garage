@@ -25,6 +25,18 @@ type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 function AppContent() {
   const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates } = useApp();
   
+  // Apply font size globally via CSS variable (seulement si un profil est connecté)
+  useEffect(() => {
+    if (currentProfile) {
+      const fontSize = currentProfile.fontSize || 50;
+      document.documentElement.style.setProperty('--font-size-scale', `${fontSize}%`);
+      console.log('🔤 Taille de police appliquée:', `${fontSize}%`);
+    } else {
+      // Réinitialiser à 50% (normal) quand déconnecté (page de connexion)
+      document.documentElement.style.setProperty('--font-size-scale', '50%');
+    }
+  }, [currentProfile]);
+  
   // Initialize security measures on mount
   useEffect(() => {
     // Set to 'false' during development, 'true' for production
