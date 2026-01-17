@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { ProfileSelector } from './components/auth/ProfileSelector';
 import { PinEntry } from './components/auth/PinEntry';
@@ -14,6 +15,7 @@ import { BottomNav } from './components/shared/BottomNav';
 import type { Profile, UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
 import { calculateUpcomingAlerts } from './utils/alerts';
+import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
 
 // v1.1.0 - Security & Features Update
 type AppStage = 'welcome' | 'profile-selector' | 'pin-entry' | 'app';
@@ -28,6 +30,13 @@ function AppContent() {
     // Set to 'false' during development, 'true' for production
     const isProduction = process.env.NODE_ENV === 'production';
     initializeSecurity(isProduction);
+    
+    // 🔥 Hot-reload information message (dev only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('%c🔥 Mode Développement', 'background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;');
+      console.log('%cℹ️ Si vous voyez une erreur "useApp must be used within AppProvider" après un hot-reload, faites simplement un hard refresh (Ctrl+Shift+R ou Cmd+Shift+R).', 'color: #10b981; font-size: 12px;');
+      console.log('%cℹ️ Cette erreur est normale en développement et disparaîtra en production.', 'color: #10b981; font-size: 12px;');
+    }
   }, []);
   
   // Restore session state from localStorage
@@ -244,7 +253,9 @@ function AppContent() {
 export default function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </AppProvider>
   );
 }

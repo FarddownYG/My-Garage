@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench } from 'lucide-react';
+import { Users, Shield, Database, ChevronRight, Wrench, User } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
 import { AdminPinModal } from './AdminPinModal';
 import { MaintenanceSettings } from './MaintenanceSettings';
-import { Footer } from '../shared/Footer';
+import { EditProfileModal } from './EditProfileModal';
 import { UserPinModal } from './UserPinModal';
+import { Footer } from '../shared/Footer';
 
 interface SettingsProps {
   onLogout: () => void;
@@ -18,6 +19,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
   const [showUserPinModal, setShowUserPinModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   const handleResetData = () => {
     if (confirm('⚠️ Cette action supprimera TOUTES les données de l\'application. Êtes-vous sûr ?')) {
@@ -87,6 +89,30 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
         )}
+
+        {/* User Profile Section */}
+        <div>
+          <h2 className="text-sm text-zinc-500 mb-3">PROFIL</h2>
+          <div className="space-y-2">
+            <Card
+              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              onClick={() => setShowEditProfileModal(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <User className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-white">Modifier mon profil</p>
+                    <p className="text-sm text-zinc-500">Nom, prénom, avatar</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-600" />
+              </div>
+            </Card>
+          </div>
+        </div>
 
         {/* User Security Section */}
         {!currentProfile?.isAdmin && currentProfile?.isPinProtected && (
@@ -180,6 +206,13 @@ export function Settings({ onLogout }: SettingsProps) {
         <UserPinModal 
           profile={currentProfile}
           onClose={() => setShowUserPinModal(false)} 
+        />
+      )}
+      
+      {showEditProfileModal && currentProfile && (
+        <EditProfileModal 
+          profile={currentProfile}
+          onClose={() => setShowEditProfileModal(false)} 
         />
       )}
       

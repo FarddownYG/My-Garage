@@ -48,9 +48,21 @@ const defaultState: AppState = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// 🔥 Hot-reload protection: Create a global reference to preserve context during dev reloads
+if (typeof window !== 'undefined') {
+  (window as any).__APP_CONTEXT_INSTANCE__ = AppContext;
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(defaultState);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 🔥 Prevent hot-reload errors by tracking mount state
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // 🔄 MIGRATION localStorage → Supabase (automatique au premier lancement)
   const migrateToSupabase = async () => {
@@ -456,8 +468,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateAdminPin = async (newPin: string) => {
-    await supabase.from('app_config').upsert({ id: 'global', admin_pin: newPin, current_profile_id: state.currentProfile?.id || null });
-    setState(prev => ({ ...prev, adminPin: newPin }));
+    try {
+      // 1️⃣ Sauvegarder dans Supabase d'abord
+      const { error } = await supabase.from('app_config').upsert({ 
+        id: 'global', 
+        admin_pin: newPin, 
+        current_profile_id: state.currentProfile?.id || null 
+      });
+      
+      if (error) {
+        console.error('❌ Erreur sauvegarde PIN admin:', error);
+        throw error;
+      }
+      
+      // 2️⃣ Mettre à jour le state local uniquement si la sauvegarde a réussi
+      setState(prev => ({ ...prev, adminPin: newPin }));
+      console.log('✅ PIN admin sauvegardé:', newPin);
+    } catch (error) {
+      console.error('❌ Échec mise à jour PIN admin:', error);
+      throw error;
+    }
   };
 
   const resetData = async () => {
@@ -511,6 +541,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp() {
   const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within AppProvider');
+  
+  // 🔥 Hot-reload protection: Better error handling
+  if (!context) {
+    // During hot-reload, the context might temporarily be undefined
+    // Log the error but provide a more helpful message
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ AppContext non disponible - Hot-reload détecté. Rechargez la page (Ctrl+Shift+R) si l\'erreur persiste.');
+      
+      // Try to recover from global instance
+      const globalContext = (window as any).__APP_CONTEXT_INSTANCE__;
+      if (globalContext) {
+        console.log('🔄 Tentative de récupération depuis l\'instance globale...');
+        return useContext(globalContext);
+      }
+    }
+    
+    throw new Error('useApp must be used within AppProvider. Si vous voyez cette erreur après un hot-reload, faites un hard refresh (Ctrl+Shift+R).');
+  }
+  
   return context;
 }

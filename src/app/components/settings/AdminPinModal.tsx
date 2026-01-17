@@ -18,28 +18,33 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
   });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (formData.currentPin !== adminPin) {
-      setError('PIN actuel incorrect');
+      setError('❌ PIN actuel incorrect');
       return;
     }
 
     if (formData.newPin.length !== 4) {
-      setError('Le nouveau PIN doit contenir 4 chiffres');
+      setError('❌ Le nouveau PIN doit contenir 4 chiffres');
       return;
     }
 
     if (formData.newPin !== formData.confirmPin) {
-      setError('Les PINs ne correspondent pas');
+      setError('❌ Les PINs ne correspondent pas');
       return;
     }
 
-    updateAdminPin(formData.newPin);
-    alert('PIN administrateur modifié avec succès');
-    onClose();
+    try {
+      await updateAdminPin(formData.newPin);
+      alert('✅ PIN administrateur modifié avec succès !');
+      onClose();
+    } catch (error) {
+      setError('❌ Erreur lors de la sauvegarde. Veuillez réessayer.');
+      console.error('Erreur modification PIN:', error);
+    }
   };
 
   return (

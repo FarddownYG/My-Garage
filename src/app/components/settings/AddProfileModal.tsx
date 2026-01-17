@@ -10,7 +10,7 @@ interface AddProfileModalProps {
   onClose: () => void;
 }
 
-const avatars = ['👤', '👨', '👩', '👦', '👧', '🧑', '👴', '👵', '🚗', '🏍️', '🚙', '🚕'];
+const avatars = ['👤', '👨', '👩', '👦', '👧', '🧑', '👴', '👵', '🚗', '🏍️', '🚙', '🚕', '🏎️', '🚌', '🛵', '🚲', '⚙️', '🔧', '🛠️', '💼', '🎯', '⭐', '🔥', '💎', '🎨', '🌟', '✨', '💫', '🌈'];
 
 export function AddProfileModal({ onClose }: AddProfileModalProps) {
   const { addProfile } = useApp();
@@ -28,8 +28,9 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
     e.preventDefault();
     setError('');
     
-    if (!formData.firstName || !formData.lastName) {
-      setError('Veuillez remplir tous les champs');
+    // Validation : seul le prénom est obligatoire
+    if (!formData.firstName.trim()) {
+      setError('❌ Le prénom est obligatoire');
       return;
     }
     
@@ -44,11 +45,16 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
       }
     }
 
+    // Construire le nom complet (avec ou sans nom de famille)
+    const name = formData.lastName.trim() 
+      ? `${formData.firstName.trim()} ${formData.lastName.trim()}`
+      : formData.firstName.trim();
+
     addProfile({
       id: Date.now().toString(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      name: `${formData.firstName} ${formData.lastName}`,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim() || undefined,
+      name,
       avatar: formData.avatar,
       isPinProtected: formData.isPinProtected,
       pin: formData.isPinProtected ? formData.pin : undefined,
@@ -70,16 +76,16 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           <div>
             <Label className="text-zinc-400 mb-3 block">Avatar</Label>
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-10 gap-2 bg-zinc-800 rounded-lg p-3 max-h-48 overflow-y-auto">
               {avatars.map((avatar) => (
                 <button
                   key={avatar}
                   type="button"
                   onClick={() => setFormData({ ...formData, avatar })}
-                  className={`w-full aspect-square rounded-xl flex items-center justify-center text-3xl transition-all ${
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-2xl transition-all ${
                     formData.avatar === avatar
-                      ? 'bg-blue-600 scale-110'
-                      : 'bg-zinc-800 hover:bg-zinc-700'
+                      ? 'bg-blue-600 scale-110 shadow-lg'
+                      : 'bg-zinc-700 hover:bg-zinc-600 active:scale-95'
                   }`}
                 >
                   {avatar}
@@ -102,14 +108,15 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
           </div>
 
           <div>
-            <Label htmlFor="lastName" className="text-zinc-400">Nom *</Label>
+            <Label htmlFor="lastName" className="text-zinc-400">
+              Nom de famille <span className="text-zinc-600 text-xs">(facultatif)</span>
+            </Label>
             <Input
               id="lastName"
               value={formData.lastName}
               onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              placeholder="Ex: Dupont"
+              placeholder="Ex: Dupont (optionnel)"
               className="bg-zinc-800 border-zinc-700 text-white"
-              required
             />
           </div>
 
