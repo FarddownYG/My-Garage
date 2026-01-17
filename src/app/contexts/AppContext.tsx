@@ -5,6 +5,7 @@ import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
 
+// v1.1.0 - Security fix: No auto-login on shared links
 interface AppContextType extends AppState {
   maintenances: MaintenanceRecord[];
   setCurrentProfile: (profile: Profile | null) => void;
@@ -169,12 +170,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // 🔒 SÉCURITÉ : Ne pas restaurer automatiquement la session (bug de partage de lien)
+      // Forcer la déconnexion à chaque chargement pour éviter l'accès non autorisé
       let currentProfile = null;
-      if (config?.current_profile_id && profiles) {
-        const p = profiles.find(p => p.id === config.current_profile_id);
-        if (p) currentProfile = { id: p.id, firstName: p.first_name, lastName: p.last_name, name: p.name,
-          avatar: p.avatar, isPinProtected: p.is_pin_protected, pin: p.pin || undefined, isAdmin: p.is_admin };
-      }
 
       setState({
         adminPin: config?.admin_pin || '1234',

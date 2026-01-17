@@ -6,6 +6,7 @@ import { ProfileManagement } from './ProfileManagement';
 import { AdminPinModal } from './AdminPinModal';
 import { MaintenanceSettings } from './MaintenanceSettings';
 import { Footer } from '../shared/Footer';
+import { UserPinModal } from './UserPinModal';
 
 interface SettingsProps {
   onLogout: () => void;
@@ -16,6 +17,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showProfileManagement, setShowProfileManagement] = useState(false);
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
+  const [showUserPinModal, setShowUserPinModal] = useState(false);
 
   const handleResetData = () => {
     if (confirm('⚠️ Cette action supprimera TOUTES les données de l\'application. Êtes-vous sûr ?')) {
@@ -86,6 +88,32 @@ export function Settings({ onLogout }: SettingsProps) {
           </div>
         )}
 
+        {/* User Security Section */}
+        {!currentProfile?.isAdmin && currentProfile?.isPinProtected && (
+          <div>
+            <h2 className="text-sm text-zinc-500 mb-3">SÉCURITÉ</h2>
+            <div className="space-y-2">
+              <Card
+                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                onClick={() => setShowUserPinModal(true)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Shield className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-white">Modifier mon code PIN</p>
+                      <p className="text-sm text-zinc-500">Changer le code de connexion</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {/* Maintenance Section */}
         <div>
           <h2 className="text-sm text-zinc-500 mb-3">ENTRETIEN</h2>
@@ -147,6 +175,14 @@ export function Settings({ onLogout }: SettingsProps) {
       {showAdminPinModal && (
         <AdminPinModal onClose={() => setShowAdminPinModal(false)} />
       )}
+      
+      {showUserPinModal && currentProfile && (
+        <UserPinModal 
+          profile={currentProfile}
+          onClose={() => setShowUserPinModal(false)} 
+        />
+      )}
+      
       <Footer />
     </div>
   );

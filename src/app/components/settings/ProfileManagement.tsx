@@ -12,6 +12,7 @@ interface ProfileManagementProps {
 export function ProfileManagement({ onBack }: ProfileManagementProps) {
   const { profiles, deleteProfile } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedProfileForPin, setSelectedProfileForPin] = useState<string | null>(null);
 
   // Filter out admin profiles (they don't appear in management)
   const userProfiles = profiles.filter(p => !p.isAdmin);
@@ -19,6 +20,13 @@ export function ProfileManagement({ onBack }: ProfileManagementProps) {
   const handleDeleteProfile = (id: string, name: string) => {
     if (confirm(`Supprimer le profil "${name}" ?`)) {
       deleteProfile(id);
+    }
+  };
+
+  const copyPinToClipboard = (pin: string | undefined, name: string) => {
+    if (pin) {
+      navigator.clipboard.writeText(pin);
+      alert(`Code PIN de ${name} copié : ${pin}`);
     }
   };
 
@@ -46,10 +54,25 @@ export function ProfileManagement({ onBack }: ProfileManagementProps) {
               </div>
               <div className="flex-1">
                 <h3 className="text-white font-medium">{profile.firstName} {profile.lastName}</h3>
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-2 mt-1 flex-wrap">
                   {profile.isPinProtected && (
-                    <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
-                      Protégé par PIN
+                    <>
+                      <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                        Protégé par PIN
+                      </span>
+                      {profile.pin && (
+                        <button
+                          onClick={() => copyPinToClipboard(profile.pin, profile.name)}
+                          className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30 transition-colors"
+                        >
+                          📋 Code: {profile.pin}
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {!profile.isPinProtected && (
+                    <span className="text-xs px-2 py-0.5 bg-zinc-700 text-zinc-400 rounded">
+                      Sans protection
                     </span>
                   )}
                 </div>

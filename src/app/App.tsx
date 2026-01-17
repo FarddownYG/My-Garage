@@ -15,6 +15,7 @@ import type { Profile, UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
 import { calculateUpcomingAlerts } from './utils/alerts';
 
+// v1.1.0 - Security & Features Update
 type AppStage = 'welcome' | 'profile-selector' | 'pin-entry' | 'app';
 type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
 type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
