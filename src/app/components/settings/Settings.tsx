@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench, User, Type } from 'lucide-react';
+import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Lock, LockOpen } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
@@ -7,19 +7,22 @@ import { AdminPinModal } from './AdminPinModal';
 import { MaintenanceSettings } from './MaintenanceSettings';
 import { EditProfileModal } from './EditProfileModal';
 import { UserPinModal } from './UserPinModal';
+import { PinSetupModal } from './PinSetupModal';
 import { Footer } from '../shared/Footer';
+import { Switch } from '../ui/switch';
 
 interface SettingsProps {
   onLogout: () => void;
 }
 
 export function Settings({ onLogout }: SettingsProps) {
-  const { currentProfile, resetData, updateFontSize } = useApp();
+  const { currentProfile, resetData, updateFontSize, updateProfile } = useApp();
   const [showProfileManagement, setShowProfileManagement] = useState(false);
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
   const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showPinSetupModal, setShowPinSetupModal] = useState(false);
   
   // Utiliser le fontSize du profil courant
   const fontSize = currentProfile?.fontSize || 50;
@@ -30,6 +33,29 @@ export function Settings({ onLogout }: SettingsProps) {
         resetData();
         onLogout();
       }
+    }
+  };
+
+  const handleTogglePinProtection = async () => {
+    if (!currentProfile) return;
+
+    if (currentProfile.isPinProtected) {
+      // Désactiver le verrouillage
+      if (confirm('Êtes-vous sûr de vouloir désactiver le verrouillage par PIN ?')) {
+        try {
+          await updateProfile(currentProfile.id, {
+            isPinProtected: false,
+            pin: undefined
+          });
+          console.log('✅ Verrouillage désactivé');
+        } catch (error) {
+          console.error('❌ Erreur désactivation verrouillage:', error);
+          alert('Erreur lors de la désactivation du verrouillage');
+        }
+      }
+    } else {
+      // Activer le verrouillage - ouvrir le modal pour définir le PIN
+      setShowPinSetupModal(true);
     }
   };
 
@@ -118,27 +144,55 @@ export function Settings({ onLogout }: SettingsProps) {
         </div>
 
         {/* User Security Section */}
-        {!currentProfile?.isAdmin && currentProfile?.isPinProtected && (
+        {!currentProfile?.isAdmin && (
           <div>
             <h2 className="text-sm text-zinc-500 mb-3">SÉCURITÉ</h2>
             <div className="space-y-2">
-              <Card
-                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
-                onClick={() => setShowUserPinModal(true)}
-              >
+              {/* Toggle verrouillage */}
+              <Card className="bg-zinc-900 border-zinc-800 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Shield className="w-5 h-5 text-blue-500" />
+                    <div className={`p-2 rounded-lg ${currentProfile?.isPinProtected ? 'bg-green-500/10' : 'bg-zinc-700/30'}`}>
+                      {currentProfile?.isPinProtected ? (
+                        <Lock className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <LockOpen className="w-5 h-5 text-zinc-500" />
+                      )}
                     </div>
                     <div>
-                      <p className="text-white">Modifier mon code PIN</p>
-                      <p className="text-sm text-zinc-500">Changer le code de connexion</p>
+                      <p className="text-white">Verrouillage du profil</p>
+                      <p className="text-sm text-zinc-500">
+                        {currentProfile?.isPinProtected ? 'Profil protégé par PIN' : 'Profil non protégé'}
+                      </p>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                  <Switch
+                    checked={currentProfile?.isPinProtected || false}
+                    onCheckedChange={handleTogglePinProtection}
+                  />
                 </div>
               </Card>
+
+              {/* Modifier le PIN (uniquement si activé) */}
+              {currentProfile?.isPinProtected && (
+                <Card
+                  className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                  onClick={() => setShowUserPinModal(true)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <Shield className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-white">Modifier mon code PIN</p>
+                        <p className="text-sm text-zinc-500">Changer le code de connexion</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-zinc-600" />
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
         )}
@@ -266,6 +320,12 @@ export function Settings({ onLogout }: SettingsProps) {
         <EditProfileModal 
           profile={currentProfile}
           onClose={() => setShowEditProfileModal(false)} 
+        />
+      )}
+      
+      {showPinSetupModal && currentProfile && (
+        <PinSetupModal 
+          onClose={() => setShowPinSetupModal(false)} 
         />
       )}
       

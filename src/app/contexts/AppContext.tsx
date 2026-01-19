@@ -296,13 +296,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.name) s.name = sanitizeInput(updates.name);
     
     // Préparer les données pour Supabase (sans font_size)
-    const db: any = {};
+    const db: any = {}!;
     if (s.firstName !== undefined) db.first_name = s.firstName;
     if ('lastName' in s) db.last_name = s.lastName || ''; // ✅ Chaîne vide au lieu de null
     if (s.name !== undefined) db.name = s.name;
     if (s.avatar !== undefined) db.avatar = s.avatar;
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
-    if (s.pin !== undefined) db.pin = s.pin;
+    if ('pin' in s) db.pin = s.pin || null; // ✅ Convertir undefined en null pour Supabase
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
     // fontSize est géré en local uniquement (pas de colonne font_size dans Supabase)
     
@@ -432,16 +432,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .filter(link => link.url)                // Garde uniquement les liens valides
       : null;
     
-    await supabase.from('tasks').insert({ 
+    // ✅ CORRECTION : Ajouter created_at pour éviter les bugs de disparition
+    const taskToInsert = {
       id: s.id, 
       vehicle_id: s.vehicleId, 
       title: s.title,
       description: s.description || null, 
       links: optimizedLinks, 
-      completed: s.completed 
-    });
+      completed: s.completed,
+      created_at: s.createdAt || new Date().toISOString() // Utiliser createdAt ou maintenant
+    };
     
-    setState(prev => ({ ...prev, tasks: [...prev.tasks, { ...s, links: optimizedLinks || undefined }] }));
+    console.log('💾 Ajout tâche dans Supabase:', taskToInsert);
+    
+    const { error } = await supabase.from('tasks').insert(taskToInsert);
+    
+    if (error) {
+      console.error('❌ Erreur ajout tâche:', error);
+      throw error;
+    }
+    
+    console.log('✅ Tâche ajoutée avec succès');
+    
+    setState(prev => ({ ...prev, tasks: [...prev.tasks, { ...s, links: optimizedLinks || undefined, createdAt: taskToInsert.created_at }] }));
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {

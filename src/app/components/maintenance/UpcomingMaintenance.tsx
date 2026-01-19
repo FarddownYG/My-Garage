@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertCircle, Calendar, Gauge, ChevronRight } from 'lucide-react';
 import type { UpcomingAlert } from '../../utils/alerts';
 import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { useApp } from '../../contexts/AppContext';
 
 interface UpcomingMaintenanceProps {
   alerts: UpcomingAlert[];
@@ -10,6 +12,12 @@ interface UpcomingMaintenanceProps {
 }
 
 export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMaintenanceProps) {
+  const { vehicles, currentProfile } = useApp();
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
+
+  // Filtrer les véhicules de l'utilisateur actuel
+  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case 'expired':
@@ -41,6 +49,9 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
   const DATE_THRESHOLD_DAYS = 60; // ~2 mois
 
   const filteredAlerts = alerts.filter((alert) => {
+    // Filtre par véhicule
+    if (selectedVehicleId !== 'all' && alert.vehicleId !== selectedVehicleId) return false;
+    
     // Toujours afficher les alertes expirées
     if (alert.isExpired) return true;
 
@@ -100,6 +111,33 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
         <h1 className="text-3xl text-white mb-2">Échéances à venir</h1>
         <p className="text-zinc-500">{filteredAlerts.length} alerte{filteredAlerts.length !== 1 ? 's' : ''} proche{filteredAlerts.length !== 1 ? 's' : ''}</p>
       </div>
+
+      {/* Sélecteur de véhicule */}
+      {userVehicles.length > 1 && (
+        <div className="px-6 pt-4 pb-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <Button
+              onClick={() => setSelectedVehicleId('all')}
+              variant={selectedVehicleId === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={selectedVehicleId === 'all' ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+            >
+              Tous les véhicules
+            </Button>
+            {userVehicles.map(vehicle => (
+              <Button
+                key={vehicle.id}
+                onClick={() => setSelectedVehicleId(vehicle.id)}
+                variant={selectedVehicleId === vehicle.id ? 'default' : 'outline'}
+                size="sm"
+                className={selectedVehicleId === vehicle.id ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+              >
+                {vehicle.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-6 space-y-6">
         {filteredAlerts.length === 0 ? (

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight } from 'lucide-react';
+import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight, ExternalLink, BookOpen, Video, Star } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { calculateUpcomingAlerts } from '../../utils/alerts';
@@ -84,6 +84,102 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
           >
             <LogOut className="w-5 h-5" />
           </button>
+        </div>
+      </div>
+
+      {/* Ressources Maintenance & Entretiens */}
+      <div className="px-4 sm:px-6 py-4">
+        <div className="flex items-center gap-2 mb-4">
+          <BookOpen className="w-5 h-5 text-purple-500" />
+          <h2 className="text-base sm:text-lg text-white">Maintenance & Entretiens</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* CarCareKiosk */}
+          <a
+            href="https://www.carcarekiosk.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group"
+          >
+            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 border-purple-800/30 p-4 hover:border-purple-600/50 transition-all hover-lift">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start justify-between">
+                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                    <Video className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div>
+                  <h3 className="text-white font-medium mb-1 flex items-center gap-2">
+                    CarCareKiosk
+                    <div className="flex items-center gap-1 text-xs">
+                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                      <span className="text-yellow-500">4.2</span>
+                    </div>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Tutoriels vidéo gratuits et bien faits</p>
+                </div>
+              </div>
+            </Card>
+          </a>
+
+          {/* Auto-Doc */}
+          <a
+            href="https://club.autodoc.fr/entretien"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group"
+          >
+            <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border-blue-800/30 p-4 hover:border-blue-600/50 transition-all hover-lift">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start justify-between">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <BookOpen className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div>
+                  <h3 className="text-white font-medium mb-1 flex items-center gap-2">
+                    Club Auto-Doc
+                    <div className="flex items-center gap-1 text-xs">
+                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                      <span className="text-yellow-500">4.1</span>
+                    </div>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Guides et vidéos solides (connexion requise)</p>
+                </div>
+              </div>
+            </Card>
+          </a>
+
+          {/* Mister-Auto */}
+          <a
+            href="https://www.mister-auto.com/tutoriels/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group"
+          >
+            <Card className="bg-gradient-to-br from-orange-900/20 to-orange-800/10 border-orange-800/30 p-4 hover:border-orange-600/50 transition-all hover-lift">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start justify-between">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Wrench className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div>
+                  <h3 className="text-white font-medium mb-1 flex items-center gap-2">
+                    Mister-Auto
+                    <div className="flex items-center gap-1 text-xs">
+                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                      <span className="text-yellow-500">3.3</span>
+                    </div>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Tutoriels pratiques pour guides et pièces</p>
+                </div>
+              </div>
+            </Card>
+          </a>
         </div>
       </div>
 

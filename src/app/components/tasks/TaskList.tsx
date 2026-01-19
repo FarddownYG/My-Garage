@@ -8,25 +8,46 @@ import { EditTaskModal } from './EditTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 
 export function TaskList() {
-  const { tasks, vehicles, updateTask, deleteTask } = useApp();
+  const { tasks, vehicles, currentProfile, updateTask, deleteTask } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [viewingTask, setViewingTask] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
 
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'pending') return !task.completed;
-    if (filter === 'completed') return task.completed;
-    return true;
-  }).sort((a, b) => {
-    if (a.completed === b.completed) {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-    return a.completed ? 1 : -1;
-  });
+  // Filtrer les véhicules de l'utilisateur actuel
+  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
 
-  const pendingCount = tasks.filter(t => !t.completed).length;
-  const completedCount = tasks.filter(t => t.completed).length;
+  const filteredTasks = tasks
+    .filter(task => {
+      // Filtre par véhicule
+      if (selectedVehicleId !== 'all' && task.vehicleId !== selectedVehicleId) return false;
+      
+      // Filtre par véhicule de l'utilisateur actuel
+      const vehicle = vehicles.find(v => v.id === task.vehicleId);
+      if (!vehicle || vehicle.ownerId !== currentProfile?.id) return false;
+      
+      // Filtre par statut
+      if (filter === 'pending') return !task.completed;
+      if (filter === 'completed') return task.completed;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.completed === b.completed) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return a.completed ? 1 : -1;
+    });
+
+  const pendingCount = tasks.filter(t => {
+    const vehicle = vehicles.find(v => v.id === t.vehicleId);
+    return vehicle?.ownerId === currentProfile?.id && !t.completed;
+  }).length;
+  
+  const completedCount = tasks.filter(t => {
+    const vehicle = vehicles.find(v => v.id === t.vehicleId);
+    return vehicle?.ownerId === currentProfile?.id && t.completed;
+  }).length;
 
   return (
     <div className="min-h-screen bg-black pb-24">
@@ -34,6 +55,33 @@ export function TaskList() {
         <h1 className="text-3xl text-white mb-2">Tâches</h1>
         <p className="text-zinc-500">{pendingCount} en attente · {completedCount} terminée{completedCount !== 1 ? 's' : ''}</p>
       </div>
+
+      {/* Sélecteur de véhicule */}
+      {userVehicles.length > 1 && (
+        <div className="px-6 pt-4 pb-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <Button
+              onClick={() => setSelectedVehicleId('all')}
+              variant={selectedVehicleId === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={selectedVehicleId === 'all' ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+            >
+              Tous les véhicules
+            </Button>
+            {userVehicles.map(vehicle => (
+              <Button
+                key={vehicle.id}
+                onClick={() => setSelectedVehicleId(vehicle.id)}
+                variant={selectedVehicleId === vehicle.id ? 'default' : 'outline'}
+                size="sm"
+                className={selectedVehicleId === vehicle.id ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+              >
+                {vehicle.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-6 py-4 flex gap-2">
@@ -43,7 +91,10 @@ export function TaskList() {
           size="sm"
           className={filter === 'all' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
         >
-          Toutes ({tasks.length})
+          Toutes ({tasks.filter(t => {
+            const vehicle = vehicles.find(v => v.id === t.vehicleId);
+            return vehicle?.ownerId === currentProfile?.id;
+          }).length})
         </Button>
         <Button
           onClick={() => setFilter('pending')}
