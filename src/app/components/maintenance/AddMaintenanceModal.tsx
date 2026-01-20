@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search } from 'lucide-react';
+import { X, Search, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -25,7 +25,7 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
   const vehicle = vehicles.find(v => v.id === vehicleId);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]); // Changé en tableau
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     mileage: vehicle?.mileage.toString() || '',
@@ -86,71 +86,73 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTemplate) {
+    if (selectedTemplates.length === 0) {
       alert('Veuillez sélectionner un type d\'entretien');
       return;
     }
 
-    const template = maintenanceTemplates.find(t => t.id === selectedTemplate);
-    
-    const entry = {
-      id: Date.now().toString(),
-      vehicleId,
-      type: 'other',
-      customType: template?.name || selectedTemplate,
-      customIcon: template?.icon || '🔨', // Ajout de l'icône du template
-      date: formData.date,
-      mileage: parseInt(formData.mileage),
-      cost: formData.cost ? parseFloat(formData.cost) : undefined,
-      notes: formData.notes || undefined,
-    };
+    selectedTemplates.forEach((selectedTemplate, index) => {
+      const template = maintenanceTemplates.find(t => t.id === selectedTemplate);
+      
+      const entry = {
+        id: `${Date.now()}-${index}`, // ID unique pour chaque entrée
+        vehicleId,
+        type: 'other',
+        customType: template?.name || selectedTemplate,
+        customIcon: template?.icon || '🔨', // Ajout de l'icône du template
+        date: formData.date,
+        mileage: parseInt(formData.mileage),
+        cost: formData.cost ? parseFloat(formData.cost) : undefined,
+        notes: formData.notes || undefined,
+      };
 
-    addMaintenanceEntry(entry);
+      addMaintenanceEntry(entry);
 
-    // Calculate next reminder based on template intervals
-    if (template && (template.intervalMonths || template.intervalKm)) {
-      const entryDate = new Date(formData.date);
-      const entryMileage = parseInt(formData.mileage);
+      // Calculate next reminder based on template intervals
+      if (template && (template.intervalMonths || template.intervalKm)) {
+        const entryDate = new Date(formData.date);
+        const entryMileage = parseInt(formData.mileage);
 
-      let dueDate: string | undefined;
-      let dueMileage: number | undefined;
+        let dueDate: string | undefined;
+        let dueMileage: number | undefined;
 
-      if (template.intervalMonths) {
-        const nextDate = new Date(entryDate);
-        nextDate.setMonth(nextDate.getMonth() + template.intervalMonths);
-        dueDate = nextDate.toISOString().split('T')[0];
+        if (template.intervalMonths) {
+          const nextDate = new Date(entryDate);
+          nextDate.setMonth(nextDate.getMonth() + template.intervalMonths);
+          dueDate = nextDate.toISOString().split('T')[0];
+        }
+
+        if (template.intervalKm) {
+          dueMileage = entryMileage + template.intervalKm;
+        }
+
+        // Check if reminder already exists for this type and vehicle
+        const existingReminder = reminders.find(
+          r => r.vehicleId === vehicleId && r.type === template.name
+        );
+
+        if (existingReminder) {
+          // Update existing reminder
+          updateReminder(existingReminder.id, {
+            dueDate,
+            dueMileage,
+            status: 'ok',
+            description: `Prochain ${template.name.toLowerCase()}`,
+          });
+        } else {
+          // Create new reminder
+          addReminder({
+            id: `${Date.now()}-${index}-reminder`,
+            vehicleId,
+            type: template.name,
+            dueDate,
+            dueMileage,
+            status: 'ok',
+            description: `Prochain ${template.name.toLowerCase()}`,
+          });
+        }
       }
-
-      if (template.intervalKm) {
-        dueMileage = entryMileage + template.intervalKm;
-      }
-
-      // Check if reminder already exists for this type and vehicle
-      const existingReminder = reminders.find(
-        r => r.vehicleId === vehicleId && r.type === template.name
-      );
-
-      if (existingReminder) {
-        // Update existing reminder
-        updateReminder(existingReminder.id, {
-          dueDate,
-          dueMileage,
-          status: 'ok',
-          description: `Prochain ${template.name.toLowerCase()}`,
-        });
-      } else {
-        // Create new reminder
-        addReminder({
-          id: Date.now().toString() + '-reminder',
-          vehicleId,
-          type: template.name,
-          dueDate,
-          dueMileage,
-          status: 'ok',
-          description: `Prochain ${template.name.toLowerCase()}`,
-        });
-      }
-    }
+    });
 
     onClose();
   };
@@ -159,7 +161,14 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6">
       <div className="bg-zinc-900 w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-          <h2 className="text-xl text-white">Ajouter un entretien</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl text-white">Ajouter un entretien</h2>
+            {selectedTemplates.length > 0 && (
+              <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded-full font-medium animate-fade-in">
+                {selectedTemplates.length} sélectionné{selectedTemplates.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
             <X className="w-6 h-6" />
           </button>
@@ -176,21 +185,45 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                 </span>
               )}
             </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-              <Input
-                id="search"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un entretien..."
-                className="bg-zinc-800 border-zinc-700 text-white pl-10"
-              />
+            <div className="flex gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Input
+                  id="search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher un entretien..."
+                  className="bg-zinc-800 border-zinc-700 text-white pl-10"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedTemplates.length === filteredTemplates.length) {
+                    setSelectedTemplates([]);
+                  } else {
+                    setSelectedTemplates(filteredTemplates.map(t => t.id));
+                  }
+                }}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded-lg transition-all duration-300 text-sm whitespace-nowrap"
+              >
+                {selectedTemplates.length === filteredTemplates.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
             </div>
           </div>
 
           {/* Liste des entretiens */}
           <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
+            {/* Info sélection multiple */}
+            {selectedTemplates.length === 0 && (
+              <div className="bg-blue-600/10 border border-blue-600/30 rounded-xl p-3 mb-4 animate-fade-in">
+                <p className="text-sm text-blue-300">
+                  💡 <strong>Astuce :</strong> Vous pouvez sélectionner plusieurs entretiens pour les ajouter en une seule fois !
+                </p>
+              </div>
+            )}
+
             {Object.keys(groupedTemplates).length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-zinc-500">Aucun entretien trouvé</p>
@@ -204,9 +237,9 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                       <button
                         key={template.id}
                         type="button"
-                        onClick={() => setSelectedTemplate(template.id)}
-                        className={`p-3 rounded-xl border transition-all text-left ${
-                          selectedTemplate === template.id
+                        onClick={() => setSelectedTemplates(prev => prev.includes(template.id) ? prev.filter(id => id !== template.id) : [...prev, template.id])}
+                        className={`p-3 rounded-xl border transition-all text-left relative ${
+                          selectedTemplates.includes(template.id)
                             ? 'bg-blue-600 border-blue-500 text-white'
                             : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
                         }`}
@@ -221,6 +254,11 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                               {template.intervalMonths && `${template.intervalMonths} mois`}
                             </p>
                           </div>
+                          {selectedTemplates.includes(template.id) && (
+                            <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center animate-fade-in">
+                              <Check className="w-4 h-4 text-blue-600" />
+                            </div>
+                          )}
                         </div>
                       </button>
                     ))}
@@ -294,9 +332,12 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
               <Button
                 type="submit"
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={!selectedTemplate}
+                disabled={selectedTemplates.length === 0}
               >
-                Ajouter
+                {selectedTemplates.length === 0 
+                  ? 'Ajouter' 
+                  : `Ajouter ${selectedTemplates.length} entretien${selectedTemplates.length > 1 ? 's' : ''}`
+                }
               </Button>
             </div>
           </div>
