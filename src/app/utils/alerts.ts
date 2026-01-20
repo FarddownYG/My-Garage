@@ -50,12 +50,29 @@ export function calculateUpcomingAlerts(
       (m) => m.vehicleId === vehicle.id
     );
 
-    // Filtrer les templates selon le type de motorisation du véhicule
+    // Filtrer les templates selon le type de motorisation ET transmission du véhicule
     const applicableTemplates = templates.filter((template) => {
-      if (!vehicle.fuelType) return template.fuelType === 'both'; // Par défaut, seulement les communs
-      return (
-        template.fuelType === 'both' || template.fuelType === vehicle.fuelType
-      );
+      // Filtrage par motorisation (essence/diesel)
+      const vehicleFuelType = vehicle.engineType || vehicle.fuelType;
+      if (!vehicleFuelType) {
+        // Si pas de motorisation définie, seulement les templates "both"
+        if (template.fuelType !== 'both') return false;
+      } else {
+        const fuelMatch = template.fuelType === 'both' || 
+          template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
+        if (!fuelMatch) return false;
+      }
+
+      // Filtrage par transmission (4x2/4x4)
+      const vehicleDriveType = vehicle.driveType;
+      if (template.driveType && template.driveType !== 'both') {
+        // Si le template a un driveType spécifique (pas "both" ou undefined)
+        if (!vehicleDriveType || vehicleDriveType !== template.driveType) {
+          return false; // Ne pas afficher si incompatible
+        }
+      }
+
+      return true;
     });
 
     // Pour chaque template applicable, vérifier si un entretien existe et calculer l'échéance
@@ -126,18 +143,20 @@ export function calculateUpcomingAlerts(
       if (mileageAlert || dateAlert) {
         let urgency: 'expired' | 'high' | 'medium' | 'low' = 'low';
 
+        // ROUGE : Expiré
         if (hasExpired) {
           urgency = 'expired';
-        } else if (
-          (mileageAlert && mileageAlert.remainingKm < 1000) ||
-          (dateAlert && dateAlert.remainingDays < 15)
+        } 
+        // ORANGE : Dans les 750km OU dans 1 mois (30 jours)
+        else if (
+          (mileageAlert && mileageAlert.remainingKm <= 750) ||
+          (dateAlert && dateAlert.remainingDays <= 30)
         ) {
           urgency = 'high';
-        } else if (
-          (mileageAlert && mileageAlert.remainingKm < 3000) ||
-          (dateAlert && dateAlert.remainingDays < 60)
-        ) {
-          urgency = 'medium';
+        } 
+        // VERT : Tout le reste (au-dessus de orange)
+        else {
+          urgency = 'low';
         }
 
         const category = categoryNames[template.icon] || 'Autre';
@@ -166,27 +185,22 @@ export function calculateUpcomingAlerts(
     });
   });
 
-  // Trier par catégorie d'abord, puis par urgence
+  // Trier par urgence (rouge → orange → vert), puis par proximité à l'intérieur de chaque niveau
   return alerts.sort((a, b) => {
-    // D'abord par urgence (expirées en premier)
+    // D'abord par urgence (expirées en premier = rouge, puis orange, puis vert)
     const urgencyOrder = { expired: 0, high: 1, medium: 2, low: 3 };
     const urgencyDiff = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
 
     if (urgencyDiff !== 0) return urgencyDiff;
 
-    // Ensuite par catégorie
-    if (a.category !== b.category) {
-      return a.category.localeCompare(b.category);
-    }
+    // À l'intérieur du même niveau d'urgence, trier par proximité (plus proche en premier)
+    // Utiliser le plus petit des deux indicateurs (km ou jours)
+    const getProximity = (alert: UpcomingAlert): number => {
+      const kmProximity = alert.mileageAlert ? alert.mileageAlert.remainingKm : Infinity;
+      const daysProximity = alert.dateAlert ? alert.dateAlert.remainingDays * 10 : Infinity; // x10 pour équilibrer avec km
+      return Math.min(kmProximity, daysProximity);
+    };
 
-    // Ensuite par km/jours restants
-    if (a.mileageAlert && b.mileageAlert) {
-      return a.mileageAlert.remainingKm - b.mileageAlert.remainingKm;
-    }
-    if (a.dateAlert && b.dateAlert) {
-      return a.dateAlert.remainingDays - b.dateAlert.remainingDays;
-    }
-
-    return 0;
+    return getProximity(a) - getProximity(b);
   });
 }

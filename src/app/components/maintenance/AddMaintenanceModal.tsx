@@ -45,12 +45,22 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
       const fuelMatch = template.fuelType === 'both' || 
         template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
       
-      // Filtrage par transmission (4x2/4x4)
-      const driveMatch = !template.driveType || 
-        template.driveType === 'both' || 
-        template.driveType === vehicleDriveType;
+      if (!fuelMatch) return false;
       
-      return fuelMatch && driveMatch;
+      // Filtrage par transmission (4x2/4x4)
+      // Si le template n'a pas de driveType ou est "both", toujours l'afficher
+      if (!template.driveType || template.driveType === 'both') {
+        return true;
+      }
+      
+      // Si le template a un driveType spécifique, vérifier la compatibilité
+      // Si le véhicule n'a pas de driveType, afficher quand même
+      if (!vehicleDriveType) {
+        return true;
+      }
+      
+      // Vérifier la correspondance
+      return template.driveType === vehicleDriveType;
     });
   }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType, vehicle?.driveType]);
 
