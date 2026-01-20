@@ -25,10 +25,10 @@ export function AdminLogin({ onSuccess }: AdminLoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-black flex items-center justify-center p-6 animate-fade-in">
+      <div className="w-full max-w-sm animate-scale-in">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-zinc-900 rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-zinc-900 rounded-full mb-6 shadow-glow-purple backdrop-blur-md border border-zinc-800">
             <Lock className="w-10 h-10 text-zinc-400" />
           </div>
           <h1 className="text-3xl text-white mb-2">Valcar</h1>
@@ -53,18 +53,14 @@ export function AdminLogin({ onSuccess }: AdminLoginProps) {
               autoFocus
             />
             {error && (
-              <p className="text-red-500 text-sm mt-2">PIN incorrect</p>
+              <p className="text-red-500 text-sm mt-2 animate-fade-in">PIN incorrect</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-            Se connecter
-          </Button>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white hover-glow">{
+            'Connexion'
+          }</Button>
         </form>
-
-        <div className="mt-8 text-center">
-          <p className="text-xs text-zinc-600">PIN par défaut : 1234</p>
-        </div>
       </div>
     </div>
   );

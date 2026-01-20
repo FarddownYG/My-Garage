@@ -5,6 +5,8 @@ import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
 import { AdminPinModal } from './AdminPinModal';
 import { MaintenanceSettings } from './MaintenanceSettings';
+import { CustomMaintenanceProfiles } from './CustomMaintenanceProfiles';
+import { MaintenanceProfileDetail } from './MaintenanceProfileDetail';
 import { EditProfileModal } from './EditProfileModal';
 import { UserPinModal } from './UserPinModal';
 import { PinSetupModal } from './PinSetupModal';
@@ -20,6 +22,8 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showProfileManagement, setShowProfileManagement] = useState(false);
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
+  const [showCustomProfiles, setShowCustomProfiles] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showPinSetupModal, setShowPinSetupModal] = useState(false);
@@ -64,7 +68,27 @@ export function Settings({ onLogout }: SettingsProps) {
   }
 
   if (showMaintenanceSettings) {
-    return <MaintenanceSettings onBack={() => setShowMaintenanceSettings(false)} />;
+    return <MaintenanceSettings 
+      onBack={() => setShowMaintenanceSettings(false)} 
+      onOpenCustomProfiles={() => {
+        setShowMaintenanceSettings(false);
+        setShowCustomProfiles(true);
+      }}
+    />;
+  }
+
+  if (showCustomProfiles) {
+    return <CustomMaintenanceProfiles
+      onBack={() => setShowCustomProfiles(false)}
+      onOpenProfileDetail={setSelectedProfileId}
+    />;
+  }
+
+  if (selectedProfileId) {
+    return <MaintenanceProfileDetail
+      profileId={selectedProfileId}
+      onBack={() => setSelectedProfileId(null)}
+    />;
   }
 
   return (
@@ -262,6 +286,24 @@ export function Settings({ onLogout }: SettingsProps) {
                   </div>
                   <div>
                     <p className="text-white">Paramètres d'entretien</p>
+                    <p className="text-sm text-zinc-500">Types et intervalles</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-600" />
+              </div>
+            </Card>
+
+            <Card
+              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              onClick={() => setShowCustomProfiles(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Wrench className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-white">Profils d'entretien personnalisés</p>
                     <p className="text-sm text-zinc-500">Types et intervalles</p>
                   </div>
                 </div>

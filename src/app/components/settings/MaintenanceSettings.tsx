@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, User } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -7,9 +7,10 @@ import type { MaintenanceTemplate } from '../../types';
 
 interface MaintenanceSettingsProps {
   onBack: () => void;
+  onOpenCustomProfiles: () => void;
 }
 
-export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
+export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: MaintenanceSettingsProps) {
   const { maintenanceTemplates, addMaintenanceTemplate, deleteMaintenanceTemplate, updateMaintenanceTemplate } = useApp();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -102,6 +103,16 @@ export function MaintenanceSettings({ onBack }: MaintenanceSettingsProps) {
       </div>
 
       <div className="px-6 py-6 space-y-6">
+        {/* Bouton Entretiens Perso */}
+        <button
+          onClick={onOpenCustomProfiles}
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl animate-fade-in"
+        >
+          <User className="w-5 h-5" />
+          <span className="font-medium">Entretiens Perso</span>
+          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Nouveau</span>
+        </button>
+
         {/* Filtres motorisation */}
         <div className="flex gap-3">
           <button

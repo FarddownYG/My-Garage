@@ -36,15 +36,15 @@ export function ProfileSelector({ onProfileSelect, onAdminAccess }: ProfileSelec
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col animate-fade-in">
       {/* Header with Admin Button */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-zinc-800">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-zinc-800 shadow-lg">
         <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
           <div className="w-10" /> {/* Spacer for centering */}
           <h1 className="font-semibold">Sélectionner un Profil</h1>
           <button
             onClick={() => setShowAdminLogin(true)}
-            className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 active:scale-95 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 backdrop-blur-sm"
           >
             <Settings className="w-5 h-5 text-zinc-400" />
           </button>

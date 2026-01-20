@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord } from '../types';
+import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord, MaintenanceProfile } from '../types';
 import { loadEncryptedFromStorage, exportEncryptedJSON, importEncryptedJSON } from '../utils/encryption';
 import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
@@ -28,6 +28,9 @@ interface AppContextType extends AppState {
   addMaintenanceTemplate: (template: MaintenanceTemplate) => void;
   updateMaintenanceTemplate: (id: string, template: Partial<MaintenanceTemplate>) => void;
   deleteMaintenanceTemplate: (id: string) => void;
+  addMaintenanceProfile: (profile: MaintenanceProfile) => void;
+  updateMaintenanceProfile: (id: string, profile: Partial<MaintenanceProfile>) => void;
+  deleteMaintenanceProfile: (id: string) => void;
   updateAdminPin: (newPin: string) => Promise<void>;
   updateFontSize: (fontSize: number) => Promise<void>;
   resetData: () => void;
@@ -45,6 +48,7 @@ const defaultState: AppState = {
   reminders: [],
   tasks: [],
   maintenanceTemplates: [],
+  maintenanceProfiles: [],
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -157,6 +161,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
       const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
       const { data: templates } = await supabase.from('maintenance_templates').select('*').order('name');
+      const { data: maintenanceProfiles } = await supabase.from('maintenance_profiles').select('*').order('name');
 
       // 🔧 Initialiser les templates pour les profils qui n'en ont pas
       if (profiles && profiles.length > 0) {
@@ -220,7 +225,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description })),
         maintenanceTemplates: (templates || []).map(t => ({ id: t.id, name: t.name, icon: t.icon,
           category: t.category || undefined, intervalMonths: t.interval_months || undefined, intervalKm: t.interval_km || undefined,
-          fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id })),
+          fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined })),
+        maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
+          vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
       });
     } catch (error) {
       console.error('Erreur chargement:', error);
@@ -528,6 +535,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) }));
   };
 
+  const addMaintenanceProfile = async (profile: MaintenanceProfile) => {
+    if (!state.currentProfile) return;
+    const p = { ...profile, ownerId: state.currentProfile.id };
+    await supabase.from('maintenance_profiles').insert({
+      id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom, created_at: p.createdAt
+    });
+    setState(prev => ({ ...prev, maintenanceProfiles: [...prev.maintenanceProfiles, p] }));
+  };
+
+  const updateMaintenanceProfile = async (id: string, updates: Partial<MaintenanceProfile>) => {
+    const db: any = {};
+    if (updates.name) db.name = updates.name;
+    if (updates.vehicleIds !== undefined) db.vehicle_ids = updates.vehicleIds;
+    if (updates.isCustom !== undefined) db.is_custom = updates.isCustom;
+    await supabase.from('maintenance_profiles').update(db).eq('id', id);
+    setState(prev => ({ ...prev, maintenanceProfiles: prev.maintenanceProfiles.map(p => p.id === id ? { ...p, ...updates } : p) }));
+  };
+
+  const deleteMaintenanceProfile = async (id: string) => {
+    await supabase.from('maintenance_profiles').delete().eq('id', id);
+    setState(prev => ({ ...prev, maintenanceProfiles: prev.maintenanceProfiles.filter(p => p.id !== id) }));
+  };
+
   const updateAdminPin = async (newPin: string) => {
     try {
       console.log('🔐 Début mise à jour PIN admin:', { newPin, currentProfileId: state.currentProfile?.id });
@@ -623,7 +653,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentProfile, addProfile, updateProfile, deleteProfile,
       addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
       addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,
-      addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, updateAdminPin, updateFontSize,
+      addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, addMaintenanceProfile, updateMaintenanceProfile, deleteMaintenanceProfile, updateAdminPin, updateFontSize,
       resetData, exportData, importData, isLoading }}>
       {children}
     </AppContext.Provider>

@@ -38,18 +38,16 @@ export function PinEntry({ profile, onSuccess, onBack }: PinEntryProps) {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
       <button
         onClick={onBack}
-        className="absolute top-6 left-6 text-zinc-400 hover:text-white transition-colors"
+        className="absolute top-6 left-6 text-zinc-400 hover:text-white transition-all duration-300 hover:-translate-x-1"
       >
         <ArrowLeft className="w-6 h-6" />
       </button>
 
-      <div className="w-full max-w-sm text-center mb-12">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-5xl border-2 border-zinc-700 mx-auto mb-6">
-          {profile.avatar}
-        </div>
+      <div className="w-full max-w-sm text-center mb-12 animate-scale-in">
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-5xl border-2 border-zinc-700 mx-auto mb-6 shadow-glow-blue backdrop-blur-md">{profile.avatar}</div>
         <h2 className="text-2xl text-white mb-2">{profile.name}</h2>
         <p className="text-zinc-500">Entrez votre PIN</p>
       </div>
@@ -74,7 +72,7 @@ export function PinEntry({ profile, onSuccess, onBack }: PinEntryProps) {
           <button
             key={num}
             onClick={() => handleNumberClick(num.toString())}
-            className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all active:scale-95 text-white text-2xl"
+            className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all duration-300 active:scale-95 text-white text-2xl backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
           >
             {num}
           </button>
@@ -82,13 +80,13 @@ export function PinEntry({ profile, onSuccess, onBack }: PinEntryProps) {
         <div />
         <button
           onClick={() => handleNumberClick('0')}
-          className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all active:scale-95 text-white text-2xl"
+          className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all duration-300 active:scale-95 text-white text-2xl backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/20"
         >
           0
         </button>
         <button
           onClick={handleDelete}
-          className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all active:scale-95 text-white text-xl"
+          className="w-full aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 transition-all duration-300 active:scale-95 text-white text-xl backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/20"
         >
           ⌫
         </button>

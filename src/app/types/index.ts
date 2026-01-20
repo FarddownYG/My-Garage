@@ -50,6 +50,16 @@ export interface MaintenanceTemplate {
   driveType?: '4x2' | '4x4' | 'both'; // Compatibilité transmission (nouveau)
   engineType?: 'gasoline' | 'diesel' | 'both'; // Alias pour compatibilité
   ownerId: string; // Propriétaire du template (profil)
+  profileId?: string; // ID du profil d'entretien auquel ce template appartient (optionnel)
+}
+
+export interface MaintenanceProfile {
+  id: string;
+  name: string; // Nom du profil (ex: "Entretien Sportif", "Entretien Ville")
+  vehicleIds: string[]; // Liste des IDs des véhicules associés
+  ownerId: string; // Propriétaire du profil (utilisateur)
+  isCustom: boolean; // true = entretiens personnalisés, false = basé sur templates
+  createdAt: string;
 }
 
 export interface Reminder {
@@ -93,6 +103,7 @@ export interface AppState {
   reminders: Reminder[]
   tasks: Task[];
   maintenanceTemplates: MaintenanceTemplate[];
+  maintenanceProfiles: MaintenanceProfile[];
 }
 
 // Re-export from alerts.ts for convenience

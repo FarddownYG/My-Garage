@@ -63,11 +63,11 @@ export function AddTaskModal({ onClose }: AddTaskModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6">
-      <div className="bg-zinc-900 w-full md:max-w-lg md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in">
+      <div className="bg-zinc-900/95 backdrop-blur-2xl w-full md:max-w-lg md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl border border-zinc-800/50 animate-scale-in">
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-xl text-white">Nouvelle tâche</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-all duration-300 hover:rotate-90">
             <X className="w-6 h-6" />
           </button>
         </div>
