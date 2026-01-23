@@ -21,7 +21,7 @@ function normalizeText(text: string): string {
 }
 
 export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddMaintenanceModalProps) {
-  const { addMaintenanceEntry, vehicles, maintenanceTemplates, addReminder, updateReminder, reminders } = useApp();
+  const { addMaintenanceEntry, vehicles, maintenanceTemplates, addReminder, updateReminder, reminders, maintenanceProfiles } = useApp();
   const vehicle = vehicles.find(v => v.id === vehicleId);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,14 +33,44 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     notes: '',
   });
 
+  // Trouver le profil d'entretien associé à ce véhicule (si existant)
+  const assignedProfile = maintenanceProfiles.find(p => p.vehicleIds.includes(vehicleId));
+
   // Filtrer les templates selon la motorisation ET le type de transmission du véhicule
   const filteredByEngine = useMemo(() => {
     const vehicleFuelType = vehicle?.engineType || vehicle?.fuelType;
     const vehicleDriveType = vehicle?.driveType;
     
-    if (!vehicleFuelType) return maintenanceTemplates;
+    // Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
+    if (assignedProfile) {
+      const profileTemplates = maintenanceTemplates.filter(t => t.profileId === assignedProfile.id);
+      
+      // Dédupliquer par nom de template
+      const uniqueTemplates = new Map();
+      profileTemplates.forEach(t => {
+        if (!uniqueTemplates.has(t.name)) {
+          uniqueTemplates.set(t.name, t);
+        }
+      });
+      
+      return Array.from(uniqueTemplates.values());
+    }
     
-    return maintenanceTemplates.filter(template => {
+    // Sinon, afficher les templates généraux (sans profileId)
+    const generalTemplates = maintenanceTemplates.filter(t => !t.profileId);
+    
+    if (!vehicleFuelType) {
+      // Dédupliquer par nom
+      const uniqueTemplates = new Map();
+      generalTemplates.forEach(t => {
+        if (!uniqueTemplates.has(t.name)) {
+          uniqueTemplates.set(t.name, t);
+        }
+      });
+      return Array.from(uniqueTemplates.values());
+    }
+    
+    const filtered = generalTemplates.filter(template => {
       // Filtrage par motorisation (essence/diesel)
       const fuelMatch = template.fuelType === 'both' || 
         template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
@@ -62,21 +92,35 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
       // Vérifier la correspondance
       return template.driveType === vehicleDriveType;
     });
-  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType, vehicle?.driveType]);
+    
+    // Dédupliquer par nom
+    const uniqueTemplates = new Map();
+    filtered.forEach(t => {
+      if (!uniqueTemplates.has(t.name)) {
+        uniqueTemplates.set(t.name, t);
+      }
+    });
+    
+    return Array.from(uniqueTemplates.values());
+  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType, vehicle?.driveType, assignedProfile]);
 
   // Filtrer par recherche
   const filteredTemplates = useMemo(() => {
-    if (!searchQuery.trim()) return filteredByEngine;
-    
-    const normalizedQuery = normalizeText(searchQuery);
-    
-    return filteredByEngine.filter(template => {
-      const normalizedName = normalizeText(template.name);
-      const normalizedCategory = normalizeText(template.category || '');
+    // Si une recherche est en cours, chercher dans TOUS les templates
+    if (searchQuery.trim()) {
+      const normalizedQuery = normalizeText(searchQuery);
       
-      return normalizedName.includes(normalizedQuery) || normalizedCategory.includes(normalizedQuery);
-    });
-  }, [filteredByEngine, searchQuery]);
+      return maintenanceTemplates.filter(template => {
+        const normalizedName = normalizeText(template.name);
+        const normalizedCategory = normalizeText(template.category || '');
+        
+        return normalizedName.includes(normalizedQuery) || normalizedCategory.includes(normalizedQuery);
+      });
+    }
+    
+    // Sinon, afficher les templates filtrés par motorisation/profil
+    return filteredByEngine;
+  }, [filteredByEngine, searchQuery, maintenanceTemplates]);
 
   // Grouper par catégorie
   const groupedTemplates = useMemo(() => {
@@ -189,11 +233,15 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
           <div className="p-6 pb-4 border-b border-zinc-800">
             <Label htmlFor="search" className="text-zinc-400 mb-2 block">
               Type d'entretien * 
-              {vehicle?.engineType && (
+              {assignedProfile && assignedProfile.isCustom ? (
+                <span className="ml-2 text-xs text-purple-400">
+                  (Profil: {assignedProfile.name})
+                </span>
+              ) : vehicle?.engineType ? (
                 <span className="ml-2 text-xs text-blue-400">
                   (Filtré: {vehicle.engineType === 'gasoline' ? 'Essence' : 'Diesel'})
                 </span>
-              )}
+              ) : null}
             </Label>
             <div className="flex gap-2 mb-3">
               <div className="relative flex-1">

@@ -14,7 +14,9 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
   
   const [name, setName] = useState(profile?.name || '');
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(profile?.vehicleIds || []);
-  const [isCustom, setIsCustom] = useState(profile?.isCustom || false);
+  const [profileType, setProfileType] = useState<'custom' | 'essence' | 'diesel'>(
+    profile?.isCustom ? 'custom' : 'essence'
+  );
   const [error, setError] = useState('');
 
   // Filtrer les véhicules de l'utilisateur courant
@@ -48,7 +50,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
         await updateMaintenanceProfile(profile.id, {
           name: name.trim(),
           vehicleIds: selectedVehicleIds,
-          isCustom,
+          isCustom: profileType === 'custom',
         });
       } else {
         // Mode création
@@ -57,47 +59,60 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           name: name.trim(),
           vehicleIds: selectedVehicleIds,
           ownerId: currentProfile!.id,
-          isCustom,
+          isCustom: profileType === 'custom',
           createdAt: new Date().toISOString(),
         };
 
         await addMaintenanceProfile(newProfile);
 
         // Si c'est un profil pré-rempli, créer les templates par défaut
-        if (!isCustom) {
+        if (profileType !== 'custom') {
           const selectedVehicles = vehicles.filter(v => selectedVehicleIds.includes(v.id));
           
-          // Détecter les types de carburant des véhicules sélectionnés
+          // Détecter les types de carburant et transmission des véhicules sélectionnés
           const fuelTypes = new Set(selectedVehicles.map(v => v.fuelType).filter(Boolean));
+          const driveTypes = new Set(selectedVehicles.map(v => v.driveType).filter(Boolean));
           
-          // Créer les templates adaptés
-          for (const vehicle of selectedVehicles) {
-            const vehicleFuelType = vehicle.fuelType;
-            const vehicleDriveType = vehicle.driveType;
-
-            // Filtrer les templates par motorisation et transmission
-            const applicableTemplates = defaultMaintenanceTemplates.filter(template => {
-              const fuelMatch = !template.fuelType || template.fuelType === 'both' || template.fuelType === vehicleFuelType;
-              const driveMatch = !template.driveType || template.driveType === 'both' || template.driveType === vehicleDriveType;
+          // Si aucun type n'est défini, inclure tous les templates
+          const shouldIncludeAll = fuelTypes.size === 0 && driveTypes.size === 0;
+          
+          // Créer un Set pour éviter les doublons de templates
+          const addedTemplates = new Set<string>();
+          
+          // Parcourir tous les templates par défaut
+          for (const template of defaultMaintenanceTemplates) {
+            // Vérifier si ce template correspond à au moins un véhicule
+            const isApplicable = shouldIncludeAll || selectedVehicles.some(vehicle => {
+              const vehicleFuelType = vehicle.fuelType;
+              const vehicleDriveType = vehicle.driveType;
+              
+              // Vérifier correspondance motorisation
+              const fuelMatch = !template.fuelType || 
+                template.fuelType === 'both' || 
+                template.fuelType === vehicleFuelType;
+              
+              // Vérifier correspondance transmission
+              const driveMatch = !template.driveType || 
+                template.driveType === 'both' || 
+                template.driveType === vehicleDriveType;
+              
               return fuelMatch && driveMatch;
             });
-
-            // Ajouter les templates avec profileId
-            for (const template of applicableTemplates) {
-              const exists = maintenanceTemplates.some(
-                t => t.name === template.name && t.ownerId === currentProfile!.id && t.profileId === newProfile.id
-              );
-
-              if (!exists) {
-                await addMaintenanceTemplate({
-                  ...template,
-                  id: `${template.id}-${newProfile.id}-${vehicle.id}-${Date.now()}`,
-                  ownerId: currentProfile!.id,
-                  profileId: newProfile.id,
-                });
-              }
+            
+            // Ajouter le template s'il est applicable et pas déjà ajouté
+            if (isApplicable && !addedTemplates.has(template.name)) {
+              await addMaintenanceTemplate({
+                ...template,
+                id: `${template.id}-${newProfile.id}-${Date.now()}`,
+                ownerId: currentProfile!.id,
+                profileId: newProfile.id,
+              });
+              
+              addedTemplates.add(template.name);
             }
           }
+          
+          console.log(`✅ Profil pré-rempli créé avec ${addedTemplates.size} templates`);
         }
       }
 
@@ -150,9 +165,9 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setIsCustom(false)}
+                onClick={() => setProfileType('essence')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  !isCustom
+                  profileType === 'essence'
                     ? 'bg-blue-600/20 border-blue-600 shadow-glow-blue'
                     : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
                 }`}
@@ -166,9 +181,9 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
 
               <button
                 type="button"
-                onClick={() => setIsCustom(true)}
+                onClick={() => setProfileType('custom')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  isCustom
+                  profileType === 'custom'
                     ? 'bg-purple-600/20 border-purple-600 shadow-glow-purple'
                     : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
                 }`}
@@ -245,18 +260,18 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           {/* Info sur le type de profil */}
           {selectedVehicleIds.length > 0 && (
             <div className={`p-4 rounded-xl border ${
-              isCustom
+              profileType === 'custom'
                 ? 'bg-purple-600/10 border-purple-600/30'
                 : 'bg-blue-600/10 border-blue-600/30'
             }`}>
               <div className="flex gap-3">
-                {isCustom ? (
+                {profileType === 'custom' ? (
                   <Wrench className="w-5 h-5 text-purple-400 flex-shrink-0" />
                 ) : (
                   <FileText className="w-5 h-5 text-blue-400 flex-shrink-0" />
                 )}
                 <div className="text-sm">
-                  {isCustom ? (
+                  {profileType === 'custom' ? (
                     <p className="text-purple-300">
                       Profil personnalisé : Vous pourrez ajouter vos propres types d'entretien après la création.
                     </p>

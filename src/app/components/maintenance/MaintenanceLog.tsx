@@ -23,13 +23,13 @@ const maintenanceTypeLabels: Record<string, string> = {
 };
 
 const maintenanceTypeIcons: Record<string, string> = {
-  oil: '🛢️',
-  tires: '🛞',
+  oil: '💧',
+  tires: '🔩',
   brakes: '⚙️',
   filter: '🔧',
-  battery: '🔋',
+  battery: '⚡',
   inspection: '✅',
-  other: '🔨',
+  other: '🔧',
 };
 
 export function MaintenanceLog({ vehicleId, onOpenSettings }: MaintenanceLogProps) {

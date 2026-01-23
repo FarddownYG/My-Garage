@@ -1,20 +1,23 @@
 import type { MaintenanceTemplate } from '../types';
 
 /**
- * Templates d'entretien par défaut - 35 templates
+ * Templates d'entretien par défaut - 41 templates
  * Chargés automatiquement au démarrage de l'application
  * Organisés par motorisation : essence/diesel/both
+ * 
+ * ⚠️ EMOJIS UNIVERSELS UNIQUEMENT (compatibles Windows/Mac/iOS/Android)
+ * Utilise uniquement les symboles Unicode de base (6.0+)
  */
 export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   // ========================================
   // COMMUN AUX DEUX MOTORISATIONS (28)
   // ========================================
   
-  // 🛢️ Entretien courant (5)
+  // 🔧 Entretien courant (5)
   {
     id: 'vidange-huile',
     name: 'Vidange huile moteur',
-    icon: '🛢️',
+    icon: '🔧',
     intervalMonths: 12,
     intervalKm: 15000,
     fuelType: 'both',
@@ -22,7 +25,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'filtre-huile',
     name: 'Filtre à huile',
-    icon: '🛢️',
+    icon: '🔧',
     intervalMonths: 12,
     intervalKm: 15000,
     fuelType: 'both',
@@ -30,7 +33,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'filtre-air',
     name: 'Filtre à air moteur',
-    icon: '🛢️',
+    icon: '🔧',
     intervalMonths: 24,
     intervalKm: 30000,
     fuelType: 'both',
@@ -38,7 +41,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'filtre-habitacle',
     name: 'Filtre d\'habitacle',
-    icon: '🛢️',
+    icon: '🔧',
     intervalMonths: 12,
     intervalKm: 15000,
     fuelType: 'both',
@@ -46,17 +49,17 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'revision-complete',
     name: 'Révision complète',
-    icon: '🛢️',
+    icon: '🔧',
     intervalMonths: 12,
     intervalKm: 20000,
     fuelType: 'both',
   },
 
-  // 🧴 Fluides (3)
+  // 💧 Fluides (3)
   {
     id: 'liquide-frein',
     name: 'Liquide de frein',
-    icon: '🧴',
+    icon: '💧',
     intervalMonths: 24,
     intervalKm: 40000,
     fuelType: 'both',
@@ -64,7 +67,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'liquide-refroidissement',
     name: 'Liquide de refroidissement',
-    icon: '🧴',
+    icon: '💧',
     intervalMonths: 54,
     intervalKm: 100000,
     fuelType: 'both',
@@ -72,17 +75,17 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'liquide-direction',
     name: 'Liquide de direction assistée',
-    icon: '🧴',
+    icon: '💧',
     intervalMonths: 36,
     intervalKm: 60000,
     fuelType: 'both',
   },
 
-  // 🛑 Freinage (4)
+  // ⛔ Freinage (4)
   {
     id: 'plaquettes-av',
     name: 'Plaquettes de frein AV',
-    icon: '🛑',
+    icon: '⛔',
     intervalMonths: 24,
     intervalKm: 30000,
     fuelType: 'both',
@@ -90,7 +93,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'plaquettes-ar',
     name: 'Plaquettes de frein AR',
-    icon: '🛑',
+    icon: '⛔',
     intervalMonths: 36,
     intervalKm: 50000,
     fuelType: 'both',
@@ -98,7 +101,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'disques-av',
     name: 'Disques de frein AV',
-    icon: '🛑',
+    icon: '⛔',
     intervalMonths: 48,
     intervalKm: 60000,
     fuelType: 'both',
@@ -106,17 +109,17 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'disques-ar',
     name: 'Disques de frein AR',
-    icon: '🛑',
+    icon: '⛔',
     intervalMonths: 54,
     intervalKm: 80000,
     fuelType: 'both',
   },
 
-  // 🛞 Pneus & géométrie (4)
+  // 🔩 Pneus & géométrie (4)
   {
     id: 'pneus',
     name: 'Pneumatiques (x4)',
-    icon: '🛞',
+    icon: '🔩',
     intervalMonths: 54,
     intervalKm: 50000,
     fuelType: 'both',
@@ -124,33 +127,33 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'permutation-pneus',
     name: 'Permutation des pneus',
-    icon: '🛞',
+    icon: '🔩',
     intervalMonths: 12,
-    intervalKm: 15000,
+    intervalKm: 10000,
     fuelType: 'both',
   },
   {
     id: 'equilibrage',
     name: 'Équilibrage',
-    icon: '🛞',
+    icon: '🔩',
     intervalMonths: 12,
-    intervalKm: 15000,
+    intervalKm: 10000,
     fuelType: 'both',
   },
   {
     id: 'geometrie',
     name: 'Géométrie / Parallélisme',
-    icon: '🛞',
+    icon: '🔩',
     intervalMonths: 24,
     intervalKm: 30000,
     fuelType: 'both',
   },
 
-  // ⛓️ Distribution (2)
+  // ⚙️ Distribution (2)
   {
     id: 'courroie-distribution',
     name: 'Courroie de distribution',
-    icon: '⛓️',
+    icon: '⚙️',
     intervalMonths: 60,
     intervalKm: 100000,
     fuelType: 'both',
@@ -158,24 +161,24 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'courroie-accessoires',
     name: 'Courroie d\'accessoires',
-    icon: '⛓️',
+    icon: '⚙️',
     intervalMonths: 48,
     intervalKm: 80000,
     fuelType: 'both',
   },
 
-  // 🔋 Électricité / contrôles (2)
+  // ⚡ Électricité / contrôles (2)
   {
     id: 'batterie',
     name: 'Batterie',
-    icon: '🔋',
+    icon: '⚡',
     intervalMonths: 48,
     fuelType: 'both',
   },
   {
     id: 'controle-technique',
     name: 'Contrôle technique',
-    icon: '🔋',
+    icon: '✅',
     intervalMonths: 24,
     fuelType: 'both',
   },
@@ -189,11 +192,11 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
     fuelType: 'both',
   },
 
-  // 🛞 Suspension / structure (4)
+  // ⚙️ Suspension / structure (4)
   {
     id: 'amortisseurs-av',
     name: 'Amortisseurs AV',
-    icon: '🛞',
+    icon: '⚙️',
     intervalMonths: 54,
     intervalKm: 80000,
     fuelType: 'both',
@@ -201,7 +204,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'amortisseurs-ar',
     name: 'Amortisseurs AR',
-    icon: '🛞',
+    icon: '⚙️',
     intervalMonths: 54,
     intervalKm: 80000,
     fuelType: 'both',
@@ -209,7 +212,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'rotules',
     name: 'Rotules de suspension (contrôle)',
-    icon: '🛞',
+    icon: '⚙️',
     intervalMonths: 48,
     intervalKm: 60000,
     fuelType: 'both',
@@ -217,17 +220,17 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'silent-blocs',
     name: 'Silent-blocs (contrôle)',
-    icon: '🛞',
+    icon: '⚙️',
     intervalMonths: 54,
     intervalKm: 80000,
     fuelType: 'both',
   },
 
-  // 🚗 Transmission (2)
+  // 🔧 Transmission (2)
   {
     id: 'huile-boite',
     name: 'Huile de boîte de vitesses',
-    icon: '🚗',
+    icon: '🔧',
     intervalMonths: 54,
     intervalKm: 100000,
     fuelType: 'both',
@@ -235,17 +238,17 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'catalyseur',
     name: 'Catalyseur',
-    icon: '🚗',
+    icon: '⚙️',
     intervalMonths: 96,
     intervalKm: 150000,
     fuelType: 'both',
   },
 
-  // 🧼 Divers (1)
+  // 💧 Divers (1)
   {
     id: 'essuie-glaces',
     name: 'Balais d\'essuie-glaces',
-    icon: '🧼',
+    icon: '💧',
     intervalMonths: 12,
     fuelType: 'both',
   },
@@ -294,11 +297,11 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
     fuelType: 'diesel',
   },
 
-  // 🌫️ Dépollution (diesel)
+  // ⚙️ Dépollution (diesel)
   {
     id: 'fap',
     name: 'Filtre à particules (FAP – contrôle)',
-    icon: '🌫️',
+    icon: '⚙️',
     intervalMonths: 54,
     intervalKm: 120000,
     fuelType: 'diesel',
@@ -306,7 +309,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'vanne-egr',
     name: 'Vanne EGR (contrôle / nettoyage)',
-    icon: '🌫️',
+    icon: '⚙️',
     intervalMonths: 54,
     intervalKm: 100000,
     fuelType: 'diesel',
@@ -316,11 +319,11 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   // SPÉCIFIQUE 4x4 (7)
   // ========================================
 
-  // 🚙 Transmission 4x4
+  // 🔧 Transmission 4x4
   {
     id: 'boite-transfert',
     name: 'Boîte de transfert',
-    icon: '🚙',
+    icon: '🔧',
     intervalMonths: 48,
     intervalKm: 60000,
     fuelType: 'both',
@@ -329,7 +332,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'pont-avant',
     name: 'Pont avant',
-    icon: '🚙',
+    icon: '🔧',
     intervalMonths: 48,
     intervalKm: 50000,
     fuelType: 'both',
@@ -338,7 +341,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'pont-arriere-4x4',
     name: 'Pont arrière 4x4',
-    icon: '🚙',
+    icon: '🔧',
     intervalMonths: 48,
     intervalKm: 50000,
     fuelType: 'both',
@@ -347,7 +350,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'systeme-awd',
     name: 'Système AWD',
-    icon: '🚙',
+    icon: '⚙️',
     intervalMonths: 36,
     intervalKm: 60000,
     fuelType: 'both',
@@ -356,7 +359,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'arbres-transmission',
     name: 'Arbres de transmission',
-    icon: '🚙',
+    icon: '⚙️',
     intervalMonths: 24,
     intervalKm: 30000,
     fuelType: 'both',
@@ -365,7 +368,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'moyeux-debrayables',
     name: 'Moyeux débrayables',
-    icon: '🚙',
+    icon: '🔧',
     intervalMonths: 36,
     intervalKm: 40000,
     fuelType: 'both',
@@ -374,7 +377,7 @@ export const defaultMaintenanceTemplates: MaintenanceTemplate[] = [
   {
     id: 'controle-transmission-4x4',
     name: 'Contrôle transmission 4x4',
-    icon: '🚙',
+    icon: '✅',
     intervalMonths: 12,
     intervalKm: 20000,
     fuelType: 'both',

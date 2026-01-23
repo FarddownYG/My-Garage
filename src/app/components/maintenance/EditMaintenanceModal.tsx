@@ -12,12 +12,12 @@ interface EditMaintenanceModalProps {
 }
 
 const defaultTemplates = [
-  { id: 'oil', name: 'Vidange', icon: '🛢️', intervalMonths: 12, intervalKm: 15000 },
-  { id: 'tires', name: 'Pneus', icon: '🛞', intervalMonths: 48, intervalKm: 40000 },
-  { id: 'brakes', name: 'Freins', icon: '🛑', intervalMonths: 24, intervalKm: 30000 },
+  { id: 'oil', name: 'Vidange', icon: '💧', intervalMonths: 12, intervalKm: 15000 },
+  { id: 'tires', name: 'Pneus', icon: '🔩', intervalMonths: 48, intervalKm: 40000 },
+  { id: 'brakes', name: 'Freins', icon: '⛔', intervalMonths: 24, intervalKm: 30000 },
   { id: 'filter', name: 'Filtre à air', icon: '🔧', intervalMonths: 12, intervalKm: 20000 },
-  { id: 'battery', name: 'Batterie', icon: '🔋', intervalMonths: 48, intervalKm: 0 },
-  { id: 'inspection', name: 'Contrôle technique', icon: '✓', intervalMonths: 24, intervalKm: 0 },
+  { id: 'battery', name: 'Batterie', icon: '⚡', intervalMonths: 48, intervalKm: 0 },
+  { id: 'inspection', name: 'Contrôle technique', icon: '✅', intervalMonths: 24, intervalKm: 0 },
 ];
 
 export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMaintenanceModalProps) {
@@ -120,12 +120,12 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
               value={formData.customType || formData.type}
               onChange={handleTypeChange}
               options={[
-                { value: 'oil', label: 'Vidange', icon: '🛢️' },
-                { value: 'tires', label: 'Pneus', icon: '🛞' },
-                { value: 'brakes', label: 'Freins', icon: '🛑' },
+                { value: 'oil', label: 'Vidange', icon: '💧' },
+                { value: 'tires', label: 'Pneus', icon: '🔩' },
+                { value: 'brakes', label: 'Freins', icon: '⛔' },
                 { value: 'filter', label: 'Filtre à air', icon: '🔧' },
-                { value: 'battery', label: 'Batterie', icon: '🔋' },
-                { value: 'inspection', label: 'Contrôle technique', icon: '✓' },
+                { value: 'battery', label: 'Batterie', icon: '⚡' },
+                { value: 'inspection', label: 'Contrôle technique', icon: '✅' },
                 ...maintenanceTemplates.map(template => ({
                   value: template.id,
                   label: template.name,

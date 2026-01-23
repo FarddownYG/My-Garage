@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Calendar, Gauge, ChevronRight } from 'lucide-react';
+import { AlertCircle, Calendar, Gauge, ChevronRight, CheckCircle } from 'lucide-react';
 import type { UpcomingAlert } from '../../utils/alerts';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -12,11 +12,41 @@ interface UpcomingMaintenanceProps {
 }
 
 export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMaintenanceProps) {
-  const { vehicles, currentProfile } = useApp();
+  const { vehicles, currentProfile, addMaintenanceEntry } = useApp();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Filtrer les véhicules de l'utilisateur actuel
   const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+
+  // Fonction pour marquer comme vérifié
+  const handleMarkAsChecked = (alert: UpcomingAlert, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher le clic sur la carte
+    
+    const vehicle = vehicles.find(v => v.id === alert.vehicleId);
+    if (!vehicle) return;
+
+    // Ajouter une entrée d'entretien avec la description "vérifié"
+    const newEntry: any = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      vehicleId: alert.vehicleId,
+      type: 'other', // Type générique car on utilise customType
+      customType: alert.maintenanceName, // 🔧 FIX: Le vrai nom de l'entretien
+      date: new Date().toISOString().split('T')[0], // Date du jour
+      mileage: vehicle.mileage, // Kilométrage actuel
+      // 🔧 FIX: Pas de coût (undefined au lieu de 0)
+      notes: '✓ Contrôle effectué - Pièce en bon état, pas de remplacement nécessaire', // 🔧 FIX: notes au lieu de description
+      photos: [],
+    };
+
+    addMaintenanceEntry(newEntry);
+    
+    // Feedback visuel
+    setToastMessage(`✓ ${alert.maintenanceName} marqué comme vérifié`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
@@ -180,10 +210,32 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
                   </div>
                 )}
               </div>
+
+              {/* Bouton pour marquer comme vérifié */}
+              <div className="mt-4 pt-3 border-t border-zinc-800">
+                <Button
+                  onClick={(e) => handleMarkAsChecked(alert, e)}
+                  size="sm"
+                  className="w-full bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 active:scale-95 transition-transform"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Marquer comme vérifié
+                </Button>
+              </div>
             </Card>
           ))
         )}
       </div>
+
+      {/* Toast pour feedback */}
+      {showToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 animate-fade-in max-w-sm w-full">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 justify-center">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium text-sm">{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

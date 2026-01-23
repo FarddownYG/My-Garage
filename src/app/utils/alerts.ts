@@ -44,6 +44,7 @@ export function calculateUpcomingAlerts(
 ): UpcomingAlert[] {
   const alerts: UpcomingAlert[] = [];
   const today = new Date();
+  let alertCounter = 0; // Compteur unique pour éviter les doublons de clés
 
   vehicles.forEach((vehicle) => {
     const vehicleMaintenances = maintenances.filter(
@@ -74,9 +75,18 @@ export function calculateUpcomingAlerts(
 
       return true;
     });
+    
+    // 🔧 DÉDUPLICATION : Filtrer pour garder seulement un template par nom
+    const uniqueTemplates = new Map<string, MaintenanceTemplate>();
+    applicableTemplates.forEach(template => {
+      if (!uniqueTemplates.has(template.name)) {
+        uniqueTemplates.set(template.name, template);
+      }
+    });
+    const deduplicatedTemplates = Array.from(uniqueTemplates.values());
 
     // Pour chaque template applicable, vérifier si un entretien existe et calculer l'échéance
-    applicableTemplates.forEach((template) => {
+    deduplicatedTemplates.forEach((template) => {
       // Trouver tous les entretiens de ce type pour ce véhicule
       const matchingMaintenances = vehicleMaintenances.filter(
         (m) => m.type === template.name
@@ -164,7 +174,7 @@ export function calculateUpcomingAlerts(
         alerts.push({
           id: maintenanceId
             ? `${vehicle.id}-${maintenanceId}-${template.name}`
-            : `${vehicle.id}-new-${template.id}`,
+            : `${vehicle.id}-new-${template.id}-${alertCounter++}`,
           vehicleId: vehicle.id,
           vehicleName: vehicle.name,
           maintenanceId,

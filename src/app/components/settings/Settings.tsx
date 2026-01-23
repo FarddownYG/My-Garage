@@ -77,17 +77,21 @@ export function Settings({ onLogout }: SettingsProps) {
     />;
   }
 
-  if (showCustomProfiles) {
-    return <CustomMaintenanceProfiles
-      onBack={() => setShowCustomProfiles(false)}
-      onOpenProfileDetail={setSelectedProfileId}
-    />;
-  }
-
   if (selectedProfileId) {
     return <MaintenanceProfileDetail
       profileId={selectedProfileId}
-      onBack={() => setSelectedProfileId(null)}
+      onBack={() => {
+        setSelectedProfileId(null);
+      }}
+    />;
+  }
+
+  if (showCustomProfiles) {
+    return <CustomMaintenanceProfiles
+      onBack={() => setShowCustomProfiles(false)}
+      onOpenProfileDetail={(id) => {
+        setSelectedProfileId(id);
+      }}
     />;
   }
 
@@ -186,7 +190,7 @@ export function Settings({ onLogout }: SettingsProps) {
                     <div>
                       <p className="text-white">Verrouillage du profil</p>
                       <p className="text-sm text-zinc-500">
-                        {currentProfile?.isPinProtected ? 'Profil protégé par PIN' : 'Profil non protégé'}
+                        {currentProfile?.isPinProtected ? 'Profil protégé par PIN' : 'Profil non protég��'}
                       </p>
                     </div>
                   </div>

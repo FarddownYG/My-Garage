@@ -70,13 +70,15 @@ export function CustomMaintenanceProfiles({ onBack, onOpenProfileDetail }: Custo
               const profileVehicles = vehicles.filter(v => profile.vehicleIds.includes(v.id));
               
               return (
-                <button
+                <div
                   key={profile.id}
-                  onClick={() => onOpenProfileDetail(profile.id)}
-                  className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 transition-all duration-300 group animate-fade-in text-left"
+                  className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 transition-all duration-300 group animate-fade-in"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => onOpenProfileDetail(profile.id)}
+                    >
                       <div className="flex items-center gap-3 mb-2">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
                           profile.isCustom 
@@ -117,17 +119,16 @@ export function CustomMaintenanceProfiles({ onBack, onOpenProfileDetail }: Custo
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                       <button
                         onClick={(e) => handleDelete(profile.id, profile.name, e)}
-                        className="p-2 bg-zinc-800 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
+                        className="p-2 bg-zinc-800 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 rounded-lg transition-all duration-300 active:scale-95"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      <ChevronRight className="w-6 h-6 text-zinc-600 group-hover:text-blue-400 transition-colors" />
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

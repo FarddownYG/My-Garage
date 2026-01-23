@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord, MaintenanceProfile } from '../types';
 import { loadEncryptedFromStorage, exportEncryptedJSON, importEncryptedJSON } from '../utils/encryption';
 import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
+import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
 
 // v1.1.0 - Security fix: No auto-login on shared links
 interface AppContextType extends AppState {
@@ -142,7 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       await supabase.from('app_config').upsert({
         id: 'global', admin_pin: localData.adminPin || '1234', current_profile_id: localData.currentProfile?.id || null
-      });
+      }, { onConflict: 'id' });
       
       console.log('✅ Migration terminée !');
       localStorage.removeItem('valcar-app-state-encrypted-v4');
@@ -238,6 +239,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       await migrateToSupabase();
       await loadFromSupabase();
+      
+      // 🔧 Migration automatique des profile_id manquants
+      const needsMigration = await checkMigrationNeeded();
+      if (needsMigration) {
+        console.log('🔧 Migration des profile_id en cours...');
+        await migrateProfileIds();
+        // Recharger les données après migration
+        await loadFromSupabase();
+      }
+      
       setIsLoading(false);
     };
     init();
@@ -245,7 +256,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentProfile = async (profile: Profile | null) => {
     setState(prev => ({ ...prev, currentProfile: profile }));
-    await supabase.from('app_config').upsert({ id: 'global', admin_pin: state.adminPin, current_profile_id: profile?.id || null });
+    await supabase
+      .from('app_config')
+      .upsert({ id: 'global', admin_pin: state.adminPin, current_profile_id: profile?.id || null }, { onConflict: 'id' });
   };
 
   const addProfile = async (profile: Profile) => {
@@ -512,7 +525,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await supabase.from('maintenance_templates').insert({
       id: t.id, name: t.name, icon: t.icon, category: t.category || null,
       interval_months: t.intervalMonths || null, interval_km: t.intervalKm || null,
-      fuel_type: t.fuelType || null, drive_type: t.driveType || null, owner_id: t.ownerId
+      fuel_type: t.fuelType || null, drive_type: t.driveType || null, owner_id: t.ownerId,
+      profile_id: t.profileId || null // 🔧 FIX: Sauvegarder le profileId
     });
     setState(prev => ({ ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, t] }));
   };
@@ -526,6 +540,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.intervalKm !== undefined) db.interval_km = updates.intervalKm;
     if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
     if (updates.driveType !== undefined) db.drive_type = updates.driveType;
+    if (updates.profileId !== undefined) db.profile_id = updates.profileId; // 🔧 FIX: Sauvegarder le profileId
     await supabase.from('maintenance_templates').update(db).eq('id', id);
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) }));
   };
@@ -560,18 +575,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateAdminPin = async (newPin: string) => {
     try {
-      console.log('🔐 Début mise à jour PIN admin:', { newPin, currentProfileId: state.currentProfile?.id });
+      console.log('🔐 Début mise à jour PIN admin:', { newPin });
       
       // 1️⃣ Sauvegarder dans Supabase d'abord
+      // 🔧 FIX: Ne mettre à jour QUE le admin_pin, pas current_profile_id
       const payload = { 
         id: 'global', 
-        admin_pin: newPin, 
-        current_profile_id: state.currentProfile?.id || null 
+        admin_pin: newPin
       };
       
       console.log('📤 Tentative upsert Supabase:', payload);
       
-      const { data, error } = await supabase.from('app_config').upsert(payload);
+      const { data, error } = await supabase
+        .from('app_config')
+        .upsert(payload, { onConflict: 'id' });
       
       console.log('📥 Réponse Supabase:', { data, error });
       

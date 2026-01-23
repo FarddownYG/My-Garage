@@ -34,7 +34,8 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
     driveType: 'both' as '4x2' | '4x4' | 'both',
   });
 
-  const availableIcons = ['🔧', '🛠️', '⚙️', '🔩', '⚡', '💡', '🧰', '🪛', '⛽', '🧪', '🔌', '🌡️', '🛢️', '🧴', '🔥', '🛑', '🛞', '⛓️', '🌫️', '🔋', '❄️', '🚗', '🚙', '🧼'];
+  // ⚠️ EMOJIS UNIVERSELS uniquement (compatibles toutes plateformes)
+  const availableIcons = ['🔧', '⚙️', '🔩', '⚡', '💡', '🔥', '❄️', '💧', '⛔', '✅', '❌', '⭐'];
 
   const profile = maintenanceProfiles.find(p => p.id === profileId);
   if (!profile) {
@@ -59,9 +60,34 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
     v => v.ownerId === currentProfile?.id && !profile.vehicleIds.includes(v.id)
   );
 
+  // 🔧 Détecter la motorisation dominante des véhicules liés
+  const profileFuelType = (() => {
+    if (linkedVehicles.length === 0) return 'both'; // Pas de véhicules → both
+    
+    const fuelTypes = linkedVehicles
+      .map(v => v.engineType || v.fuelType)
+      .filter(Boolean);
+    
+    if (fuelTypes.length === 0) return 'both'; // Pas de motorisation définie
+    
+    const hasEssence = fuelTypes.some(f => f === 'gasoline' || f === 'essence');
+    const hasDiesel = fuelTypes.some(f => f === 'diesel');
+    
+    if (hasEssence && hasDiesel) return 'both'; // Mix essence + diesel
+    if (hasEssence) return 'essence';
+    if (hasDiesel) return 'diesel';
+    return 'both';
+  })();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
+
+    // 🔧 Validation : Vérifier que le fuelType est compatible avec les véhicules
+    if (profileFuelType !== 'both' && formData.fuelType !== 'both' && formData.fuelType !== profileFuelType) {
+      alert(`⚠️ Ce profil est lié à des véhicules ${profileFuelType === 'essence' ? 'essence' : 'diesel'}. Vous ne pouvez pas ajouter un template ${formData.fuelType === 'essence' ? 'essence' : 'diesel'}.`);
+      return;
+    }
 
     const template = {
       id: editingId || `template-${Date.now()}`,
@@ -190,7 +216,7 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
               {linkedVehicles.map(vehicle => (
                 <div
                   key={vehicle.id}
-                  className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl group"
+                  className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl"
                 >
                   <div className="flex items-center gap-3">
                     <Car className="w-5 h-5 text-zinc-400" />
@@ -212,7 +238,7 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
                   </div>
                   <button
                     onClick={() => handleUnlinkVehicle(vehicle.id)}
-                    className="p-2 text-red-400 hover:bg-red-600/20 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
+                    className="p-2 text-red-400 hover:bg-red-600/20 rounded-lg transition-all duration-300 active:scale-95"
                   >
                     <Unlink className="w-4 h-4" />
                   </button>
@@ -224,7 +250,14 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
 
         {/* Templates d'entretien */}
         <div>
-          <h2 className="text-lg text-white font-medium mb-4">Paramètres d'entretien</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg text-white font-medium">Paramètres d'entretien</h2>
+            {linkedVehicles.length > 0 && profileFuelType !== 'both' && (
+              <span className="text-xs px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+                🔧 Motorisation : {profileFuelType === 'essence' ? '⛽ Essence' : '💧 Diesel'}
+              </span>
+            )}
+          </div>
           
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -278,7 +311,7 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
                     options={[
                       { value: 'both', label: 'Essence + Diesel', icon: '🔧' },
                       { value: 'essence', label: 'Essence', icon: '⛽' },
-                      { value: 'diesel', label: 'Diesel', icon: '🛢️' },
+                      { value: 'diesel', label: 'Diesel', icon: '💧' },
                     ]}
                   />
                 </div>

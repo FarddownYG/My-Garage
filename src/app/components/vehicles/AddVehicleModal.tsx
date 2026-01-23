@@ -118,7 +118,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
               onChange={(value) => setFormData({ ...formData, fuelType: value as 'essence' | 'diesel' })}
               options={[
                 { value: 'essence', label: 'Essence', icon: '⛽' },
-                { value: 'diesel', label: 'Diesel', icon: '🛢️' },
+                { value: 'diesel', label: 'Diesel', icon: '💧' },
               ]}
               required
             />

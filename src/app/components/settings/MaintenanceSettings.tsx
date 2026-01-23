@@ -24,7 +24,8 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
     driveType: 'both' as '4x2' | '4x4' | 'both',
   });
 
-  const availableIcons = ['🔧', '🛠️', '⚙️', '🔩', '⚡', '💡', '🧰', '🪛', '⛽', '🧪', '🔌', '🌡️', '🛢️', '🧴', '🔥', '🛑', '🛞', '⛓️', '🌫️', '🔋', '❄️', '🚗', '🚙', '🧼'];
+  // ⚠️ EMOJIS UNIVERLS uniquement (compatibles toutes plateformes)
+  const availableIcons = ['🔧', '⚙️', '🔩', '⚡', '💡', '🔥', '❄️', '💧', '⛔', '✅', '❌', '⭐'];
 
   // Debug : afficher le nombre de templates chargés
   console.log('🔧 MaintenanceSettings - Templates chargés:', maintenanceTemplates.length);
@@ -133,7 +134,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                 : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
             }`}
           >
-            🛢️ Diesel
+            💧 Diesel
           </button>
         </div>
 
@@ -190,7 +191,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                   options={[
                     { value: 'both', label: 'Essence + Diesel', icon: '🔧' },
                     { value: 'essence', label: 'Essence', icon: '⛽' },
-                    { value: 'diesel', label: 'Diesel', icon: '🛢️' },
+                    { value: 'diesel', label: 'Diesel', icon: '💧' },
                   ]}
                 />
               </div>
@@ -328,30 +329,50 @@ function getCategoryForTemplate(template: MaintenanceTemplate, fuelType: 'essenc
   const icon = template.icon;
   const name = template.name.toLowerCase();
 
-  if (icon === '🛢️') return '🛢️ Entretien courant';
-  if (icon === '🧴') return '🧴 Fluides';
+  // 🔧 Entretien courant (vidange, filtres, révision)
+  if (icon === '🔧' && (name.includes('vidange') || name.includes('filtre') || name.includes('révision'))) {
+    return '🔧 Entretien courant';
+  }
   
+  // 💧 Fluides
+  if (icon === '💧') return '💧 Fluides';
+  
+  // 🔥 Allumage / carburant
   if (icon === '🔥') {
     if (fuelType === 'essence') return '🔥 Allumage / carburant';
     if (fuelType === 'diesel') return '🔥 Spécifique diesel';
   }
   
-  if (icon === '🛑') return '🛑 Freinage';
+  // ⛔ Freinage
+  if (icon === '⛔') return '⛔ Freinage';
   
-  if (icon === '🛞') {
-    if (name.includes('pneu') || name.includes('équilibrage') || name.includes('géométrie') || name.includes('permutation')) {
-      return '🛞 Pneus & géométrie';
+  // 🔩 Pneus & géométrie
+  if (icon === '🔩') return '🔩 Pneus & géométrie';
+  
+  // ⚙️ Distribution / Suspension / Dépollution
+  if (icon === '⚙️') {
+    if (name.includes('courroie') || name.includes('distribution')) return '⚙️ Distribution';
+    if (name.includes('amortisseur') || name.includes('rotule') || name.includes('silent-bloc')) {
+      return '⚙️ Suspension / structure';
     }
-    return '🛞 Suspension / structure';
+    if (name.includes('fap') || name.includes('egr') || name.includes('dépollution')) {
+      return '⚙️ Dépollution (diesel)';
+    }
+    if (name.includes('catalyseur')) return '⚙️ Transmission';
+    return '⚙️ Mécanique';
   }
   
-  if (icon === '⛓️') return '⛓️ Distribution';
-  if (icon === '🌫️') return '🌫️ Dépollution (diesel)';
-  if (icon === '🔋') return '🔋 Électricité / contrôles';
+  // ⚡ Électricité / contrôles
+  if (icon === '⚡') return '⚡ Électricité';
+  if (icon === '✅') return '✅ Contrôles';
+  
+  // ❄️ Confort
   if (icon === '❄️') return '❄️ Confort';
-  if (icon === '🚗') return '🚗 Transmission';
-  if (icon === '🚙') return '🚙 Spécifique 4x4';
-  if (icon === '🧼') return '🧼 Divers';
+  
+  // 🔧 Transmission / 4x4
+  if (icon === '🔧' && (name.includes('boîte') || name.includes('pont') || name.includes('transfert') || name.includes('4x4'))) {
+    return '🔧 Transmission / 4x4';
+  }
 
   return '🔧 Autre';
 }

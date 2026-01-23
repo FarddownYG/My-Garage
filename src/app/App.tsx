@@ -25,6 +25,35 @@ type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 function AppContent() {
   const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates } = useApp();
   
+  // ⚠️ TOUS LES HOOKS DOIVENT ÊTRE AU DÉBUT (règle de React)
+  // Restore session state from localStorage
+  const [stage, setStage] = useState<AppStage>('welcome');
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    const savedTab = localStorage.getItem('valcar-active-tab');
+    return (savedTab as AppTab) || 'home';
+  });
+
+  // View management for nested screens
+  const [currentView, setCurrentView] = useState<AppView>('main');
+  const [selectedVehicleIdForAlert, setSelectedVehicleIdForAlert] = useState<string | null>(null);
+  const [prefilledMaintenanceType, setPrefilledMaintenanceType] = useState<string | null>(null);
+
+  // Calculate alerts
+  const userVehicles = useMemo(() => 
+    vehicles.filter(v => v.ownerId === currentProfile?.id),
+    [vehicles, currentProfile?.id]
+  );
+  
+  const alerts = useMemo(() => {
+    console.log('🔄 Recalcul des alertes...', {
+      vehicles: userVehicles.length,
+      maintenances: maintenances.length,
+      templates: maintenanceTemplates.length,
+    });
+    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates);
+  }, [userVehicles, maintenances, maintenanceTemplates]);
+  
   // Apply font size globally via CSS variable (seulement si un profil est connecté)
   useEffect(() => {
     if (currentProfile) {
@@ -51,36 +80,6 @@ function AppContent() {
     }
   }, []);
   
-  // Restore session state from localStorage
-  const [stage, setStage] = useState<AppStage>('welcome');
-  
-  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-  
-  const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    const savedTab = localStorage.getItem('valcar-active-tab');
-    return (savedTab as AppTab) || 'home';
-  });
-
-  // View management for nested screens
-  const [currentView, setCurrentView] = useState<AppView>('main');
-  const [selectedVehicleIdForAlert, setSelectedVehicleIdForAlert] = useState<string | null>(null);
-  const [prefilledMaintenanceType, setPrefilledMaintenanceType] = useState<string | null>(null);
-
-  // Calculate alerts
-  const userVehicles = useMemo(() => 
-    vehicles.filter(v => v.ownerId === currentProfile?.id),
-    [vehicles, currentProfile?.id]
-  );
-  
-  const alerts = useMemo(() => {
-    console.log('🔄 Recalcul des alertes...', {
-      vehicles: userVehicles.length,
-      maintenances: maintenances.length,
-      templates: maintenanceTemplates.length,
-    });
-    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates);
-  }, [userVehicles, maintenances, maintenanceTemplates]);
-
   // Save activeTab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('valcar-active-tab', activeTab);
