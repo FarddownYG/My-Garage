@@ -13,7 +13,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles }: DashboardProps) {
-  const { vehicles, tasks, currentProfile, maintenances, maintenanceTemplates } = useApp();
+  const { vehicles, tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles } = useApp();
 
   // Filtrer par profil actuel
   const userVehicles = useMemo(
@@ -35,9 +35,10 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
       vehicles: userVehicles.length,
       maintenances: maintenances.length,
       templates: maintenanceTemplates.length,
+      profiles: maintenanceProfiles.length,
     });
-    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates);
-  }, [userVehicles, maintenances, maintenanceTemplates]);
+    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
+  }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
 
   // Filtrer les alertes proches (2000km ou 60 jours) ou expirées pour le Dashboard
   const MILEAGE_THRESHOLD = 2000; // km

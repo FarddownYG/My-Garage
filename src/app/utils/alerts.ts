@@ -1,4 +1,4 @@
-import type { MaintenanceRecord, Vehicle, MaintenanceTemplate } from '../types';
+import type { MaintenanceRecord, Vehicle, MaintenanceTemplate, MaintenanceProfile } from '../types';
 
 export interface UpcomingAlert {
   id: string;
@@ -40,7 +40,8 @@ const categoryNames: Record<string, string> = {
 export function calculateUpcomingAlerts(
   vehicles: Vehicle[],
   maintenances: MaintenanceRecord[],
-  templates: MaintenanceTemplate[]
+  templates: MaintenanceTemplate[],
+  maintenanceProfiles: MaintenanceProfile[] = []
 ): UpcomingAlert[] {
   const alerts: UpcomingAlert[] = [];
   const today = new Date();
@@ -51,30 +52,45 @@ export function calculateUpcomingAlerts(
       (m) => m.vehicleId === vehicle.id
     );
 
-    // Filtrer les templates selon le type de motorisation ET transmission du véhicule
-    const applicableTemplates = templates.filter((template) => {
-      // Filtrage par motorisation (essence/diesel)
-      const vehicleFuelType = vehicle.engineType || vehicle.fuelType;
-      if (!vehicleFuelType) {
-        // Si pas de motorisation définie, seulement les templates "both"
-        if (template.fuelType !== 'both') return false;
-      } else {
-        const fuelMatch = template.fuelType === 'both' || 
-          template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
-        if (!fuelMatch) return false;
-      }
+    // 🔧 Trouver le profil d'entretien personnalisé associé à ce véhicule (si existant)
+    const assignedProfile = maintenanceProfiles.find(p => p.vehicleIds.includes(vehicle.id));
 
-      // Filtrage par transmission (4x2/4x4)
-      const vehicleDriveType = vehicle.driveType;
-      if (template.driveType && template.driveType !== 'both') {
-        // Si le template a un driveType spécifique (pas "both" ou undefined)
-        if (!vehicleDriveType || vehicleDriveType !== template.driveType) {
-          return false; // Ne pas afficher si incompatible
+    // Filtrer les templates selon le profil d'entretien personnalisé OU selon la motorisation
+    let applicableTemplates: MaintenanceTemplate[];
+
+    if (assignedProfile) {
+      // ✅ Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
+      console.log(`🔧 [Alerts] Véhicule "${vehicle.name}" utilise le profil personnalisé "${assignedProfile.name}"`);
+      applicableTemplates = templates.filter(t => t.profileId === assignedProfile.id);
+    } else {
+      // ✅ Sinon, afficher les templates généraux (sans profileId) selon motorisation et transmission
+      applicableTemplates = templates.filter((template) => {
+        // Exclure les templates appartenant à un profil personnalisé
+        if (template.profileId) return false;
+
+        // Filtrage par motorisation (essence/diesel)
+        const vehicleFuelType = vehicle.engineType || vehicle.fuelType;
+        if (!vehicleFuelType) {
+          // Si pas de motorisation définie, seulement les templates "both"
+          if (template.fuelType !== 'both') return false;
+        } else {
+          const fuelMatch = template.fuelType === 'both' || 
+            template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
+          if (!fuelMatch) return false;
         }
-      }
 
-      return true;
-    });
+        // Filtrage par transmission (4x2/4x4)
+        const vehicleDriveType = vehicle.driveType;
+        if (template.driveType && template.driveType !== 'both') {
+          // Si le template a un driveType spécifique (pas "both" ou undefined)
+          if (!vehicleDriveType || vehicleDriveType !== template.driveType) {
+            return false; // Ne pas afficher si incompatible
+          }
+        }
+
+        return true;
+      });
+    }
     
     // 🔧 DÉDUPLICATION : Filtrer pour garder seulement un template par nom
     const uniqueTemplates = new Map<string, MaintenanceTemplate>();

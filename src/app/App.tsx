@@ -23,7 +23,7 @@ type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
 type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 
 function AppContent() {
-  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates } = useApp();
+  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles } = useApp();
   
   // ⚠️ TOUS LES HOOKS DOIVENT ÊTRE AU DÉBUT (règle de React)
   // Restore session state from localStorage
@@ -50,9 +50,10 @@ function AppContent() {
       vehicles: userVehicles.length,
       maintenances: maintenances.length,
       templates: maintenanceTemplates.length,
+      profiles: maintenanceProfiles.length,
     });
-    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates);
-  }, [userVehicles, maintenances, maintenanceTemplates]);
+    return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
+  }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
   
   // Apply font size globally via CSS variable (seulement si un profil est connecté)
   useEffect(() => {
