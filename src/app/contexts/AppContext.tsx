@@ -165,35 +165,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: maintenanceProfiles } = await supabase.from('maintenance_profiles').select('*').order('name');
 
       // 🔧 Initialiser les templates pour les profils qui n'en ont pas
-      if (profiles && profiles.length > 0) {
-        const profilesWithoutTemplates = profiles.filter(p => 
-          !p.is_admin && !(templates || []).some(t => t.owner_id === p.id)
-        );
-        
-        if (profilesWithoutTemplates.length > 0) {
-          console.log(`🔧 Initialisation des templates pour ${profilesWithoutTemplates.length} profil(s)...`);
-          const newTemplates = profilesWithoutTemplates.flatMap(profile => 
-            defaultMaintenanceTemplates.map(t => ({
-              id: `${t.id}-${profile.id}`,
-              name: t.name,
-              icon: t.icon,
-              category: t.category || null,
-              interval_months: t.intervalMonths || null,
-              interval_km: t.intervalKm || null,
-              fuel_type: t.fuelType || null,
-              drive_type: t.driveType || null,
-              owner_id: profile.id
-            }))
-          );
-          await supabase.from('maintenance_templates').insert(newTemplates);
-          
-          // Recharger les templates
-          const { data: updatedTemplates } = await supabase.from('maintenance_templates').select('*').order('name');
-          if (updatedTemplates) {
-            templates?.push(...updatedTemplates);
-          }
-        }
-      }
+      // ⚠️ FIX: Ne plus créer automatiquement les templates pour éviter les doublons
+      // Les templates seront créés uniquement lors de l'ajout d'un nouveau profil
+      // Cette section est désactivée pour éviter les créations en boucle
 
       // 🔒 SÉCURITÉ : Ne pas restaurer automatiquement la session (bug de partage de lien)
       // Forcer la déconnexion à chaque chargement pour éviter l'accès non autorisé
@@ -522,6 +496,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addMaintenanceTemplate = async (template: MaintenanceTemplate) => {
     if (!state.currentProfile) return;
     const t = { ...template, ownerId: state.currentProfile.id };
+    
+    // 🔧 FIX: Vérifier si le template existe déjà pour éviter les doublons
+    const { data: existing } = await supabase
+      .from('maintenance_templates')
+      .select('id')
+      .eq('id', t.id)
+      .maybeSingle();
+    
+    if (existing) {
+      console.warn(`⚠️ Template ${t.id} existe déjà, insertion ignorée`);
+      return;
+    }
+    
     await supabase.from('maintenance_templates').insert({
       id: t.id, name: t.name, icon: t.icon, category: t.category || null,
       interval_months: t.intervalMonths || null, interval_km: t.intervalKm || null,

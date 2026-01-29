@@ -78,9 +78,10 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           
           // Créer un Set pour éviter les doublons de templates
           const addedTemplates = new Set<string>();
+          const templatesToAdd: any[] = [];
           
           // Parcourir tous les templates par défaut
-          for (const template of defaultMaintenanceTemplates) {
+          defaultMaintenanceTemplates.forEach((template, index) => {
             // Vérifier si ce template correspond à au moins un véhicule
             const isApplicable = shouldIncludeAll || selectedVehicles.some(vehicle => {
               const vehicleFuelType = vehicle.fuelType;
@@ -101,15 +102,20 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
             
             // Ajouter le template s'il est applicable et pas déjà ajouté
             if (isApplicable && !addedTemplates.has(template.name)) {
-              await addMaintenanceTemplate({
+              templatesToAdd.push({
                 ...template,
-                id: `${template.id}-${newProfile.id}-${Date.now()}`,
+                id: `${template.id}-${newProfile.id}-${index}`, // Utiliser l'index au lieu de Date.now()
                 ownerId: currentProfile!.id,
                 profileId: newProfile.id,
               });
               
               addedTemplates.add(template.name);
             }
+          });
+          
+          // Ajouter tous les templates en séquence
+          for (const template of templatesToAdd) {
+            await addMaintenanceTemplate(template);
           }
           
           console.log(`✅ Profil pré-rempli créé avec ${addedTemplates.size} templates`);
