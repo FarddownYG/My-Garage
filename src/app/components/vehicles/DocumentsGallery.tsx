@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Camera, FileText, Upload, X, ExternalLink, File, Image as ImageIcon } from 'lucide-react';
+import { Camera, FileText, Upload, X, ExternalLink, File, Image as ImageIcon, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import type { Vehicle, VehicleDocument } from '../../types';
@@ -118,6 +118,40 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
     }
   };
 
+  const handleDownloadDocument = async (doc: VehicleDocument, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      // Convertir base64 en Blob pour éviter les problèmes de CORS
+      const response = await fetch(doc.url);
+      const blob = await response.blob();
+      
+      // Créer une URL temporaire pour le blob
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Créer un lien de téléchargement
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = doc.name;
+      link.style.display = 'none';
+      
+      // Déclencher le téléchargement
+      document.body.appendChild(link);
+      link.click();
+      
+      // Nettoyer après un court délai
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      console.log(`✅ Téléchargement de ${doc.name}`);
+    } catch (error) {
+      console.error('❌ Erreur téléchargement:', error);
+      alert('Erreur lors du téléchargement. Essayez d\'ouvrir le document et de le sauvegarder manuellement.');
+    }
+  };
+
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return 'Taille inconnue';
     if (bytes < 1024) return `${bytes} B`;
@@ -233,8 +267,16 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
                       handleOpenDocument(doc);
                     }}
                     className="w-10 h-10 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-500 transition-colors"
+                    title="Ouvrir"
                   >
                     <ExternalLink className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleDownloadDocument(doc, e)}
+                    className="w-10 h-10 bg-green-500/10 hover:bg-green-500/20 rounded-lg flex items-center justify-center text-green-500 transition-colors"
+                    title="Télécharger"
+                  >
+                    <Download className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => {
@@ -242,6 +284,7 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
                       handleDeleteDocument(doc.id);
                     }}
                     className="w-10 h-10 bg-red-500/10 hover:bg-red-500/20 rounded-lg flex items-center justify-center text-red-500 transition-colors"
+                    title="Supprimer"
                   >
                     <X className="w-4 h-4" />
                   </button>
