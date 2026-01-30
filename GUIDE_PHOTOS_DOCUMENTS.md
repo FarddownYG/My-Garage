@@ -67,23 +67,19 @@
 
 **Méthode 1 : Scanner une Facture (Appareil Photo)**
 ```
-1. Cliquez sur "Appareil" (📷)
+1. Cliquez sur "Appareil photo" (📷)
 2. Prenez la photo de la facture
 3. ✅ Document ajouté avec type "photo"
 ```
 
-**Méthode 2 : Photo depuis Bibliothèque**
-```
-1. Cliquez sur "Photos" (🖼️)
-2. Sélectionnez une image
-3. ✅ Document ajouté avec type "photo"
-```
-
-**Méthode 3 : Fichier PDF/DOC**
+**Méthode 2 : Fichiers (Photos + PDF + Documents)**
 ```
 1. Cliquez sur "Fichiers" (📄)
-2. Sélectionnez un fichier (.pdf, .doc, .txt, etc.)
-3. ✅ Document ajouté avec type "pdf" ou "document"
+2. Sélectionnez :
+   - Une ou plusieurs photos (.jpg, .png)
+   - Des fichiers PDF (.pdf)
+   - Des documents (.doc, .docx, .txt)
+3. ✅ Documents ajoutés avec le bon type
 ```
 
 **Consulter**
@@ -161,7 +157,7 @@ Supprimer :
 ### Onglet Documents
 ```
 ┌─────────────────────────────────┐
-│ 📷 Appareil│ 🖼️ Photos│📄 Fichiers│
+│  📷 Appareil   │    📄 Fichiers   │
 ├─────────────────────────────────┤
 │ ┌─────────────────────────────┐ │
 │ │ 📄  facture-vidange.pdf      │ │
@@ -174,6 +170,7 @@ Supprimer :
 │ │                    🔗 Ouvrir ❌│
 │ └─────────────────────────────┘ │
 └─────────────────────────────────┘
+Note: Le bouton "Fichiers" accepte photos ET documents
 ```
 
 ---
@@ -264,13 +261,13 @@ WHERE table_name = 'vehicles'
 ### Test 2 : Ajouter un Document PDF
 1. Véhicule → Onglet **Documents**
 2. Cliquez sur **"Fichiers"**
-3. Sélectionnez un PDF
-4. ✅ Vérifiez qu'il apparaît avec icône 📄
-5. Cliquez dessus → ✅ Nouvelle page avec le PDF
+3. Sélectionnez un PDF (ou une photo)
+4. ✅ Vérifiez qu'il apparaît avec icône appropriée
+5. Cliquez dessus → ✅ Nouvelle page avec le fichier (ou modal pour photo)
 
 ### Test 3 : Scanner une Facture
 1. Véhicule → Onglet **Documents**
-2. Cliquez sur **"Appareil"**
+2. Cliquez sur **"Appareil photo"**
 3. Prenez photo d'une facture papier
 4. ✅ Document ajouté comme "photo"
 5. Cliquez dessus → ✅ Affichage plein écran

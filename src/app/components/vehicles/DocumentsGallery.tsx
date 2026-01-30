@@ -15,14 +15,13 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<VehicleDocument | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const documents = vehicle.documents || [];
 
   const handleDocumentUpload = async (
     files: FileList | null, 
-    source: 'camera' | 'photo' | 'file'
+    source: 'camera' | 'file'
   ) => {
     if (!files || files.length === 0) return;
 
@@ -140,35 +139,23 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
   return (
     <div className="space-y-4">
       {/* Boutons d'ajout */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <Button
           onClick={() => cameraInputRef.current?.click()}
           disabled={isUploading}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-14 text-xs sm:text-sm"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-14"
         >
-          <Camera className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Appareil</span>
-          <span className="sm:hidden">📷</span>
-        </Button>
-        <Button
-          onClick={() => photoInputRef.current?.click()}
-          disabled={isUploading}
-          variant="outline"
-          className="bg-transparent border-zinc-700 text-white hover:bg-zinc-800 h-14 text-xs sm:text-sm"
-        >
-          <ImageIcon className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Photos</span>
-          <span className="sm:hidden">🖼️</span>
+          <Camera className="w-5 h-5 mr-2" />
+          Appareil photo
         </Button>
         <Button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           variant="outline"
-          className="bg-transparent border-zinc-700 text-white hover:bg-zinc-800 h-14 text-xs sm:text-sm"
+          className="bg-transparent border-zinc-700 text-white hover:bg-zinc-800 h-14"
         >
-          <Upload className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Fichiers</span>
-          <span className="sm:hidden">📄</span>
+          <Upload className="w-5 h-5 mr-2" />
+          Fichiers
         </Button>
       </div>
 
@@ -181,14 +168,6 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
         multiple
         className="hidden"
         onChange={(e) => handleDocumentUpload(e.target.files, 'camera')}
-      />
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => handleDocumentUpload(e.target.files, 'photo')}
       />
       <input
         ref={fileInputRef}
