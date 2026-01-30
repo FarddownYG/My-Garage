@@ -24,6 +24,17 @@ export interface Vehicle {
   fuelType?: 'essence' | 'diesel'; // Type de motorisation
   driveType?: '4x2' | '4x4'; // Type de transmission (nouveau)
   engineType?: 'gasoline' | 'diesel'; // Alias pour compatibilité (à migrer vers fuelType)
+  photos?: string[]; // Galerie de photos du véhicule
+  documents?: VehicleDocument[]; // Documents (factures, papiers, etc.)
+}
+
+export interface VehicleDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: 'photo' | 'pdf' | 'document'; // Type de fichier
+  uploadedAt: string;
+  size?: number; // Taille en bytes
 }
 
 export interface MaintenanceEntry {

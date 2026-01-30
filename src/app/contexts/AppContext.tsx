@@ -190,7 +190,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         vehicles: (vehicles || []).map(v => ({ id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
           brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
           licensePlate: v.license_plate || undefined, vin: v.vin || undefined, ownerId: v.owner_id, 
-          fuelType: v.fuel_type || undefined, driveType: v.drive_type || undefined })),
+          fuelType: v.fuel_type || undefined, driveType: v.drive_type || undefined,
+          photos: v.photos || undefined, // Galerie photos
+          documents: v.documents ? (typeof v.documents === 'string' ? JSON.parse(v.documents) : v.documents) : undefined })),
         maintenanceEntries: (maintenanceEntries || []).map(e => ({ id: e.id, vehicleId: e.vehicle_id, type: e.type as any,
           customType: e.custom_type || undefined, customIcon: e.custom_icon || undefined, date: e.date,
           mileage: e.mileage, cost: e.cost || undefined, notes: e.notes || undefined, photos: e.photos || undefined })),
@@ -350,6 +352,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (s.vin) db.vin = s.vin;
     if (s.fuelType) db.fuel_type = s.fuelType;
     if (s.driveType) db.drive_type = s.driveType;
+    if (s.photos !== undefined) db.photos = s.photos; // Galerie photos
+    if (s.documents !== undefined) db.documents = JSON.stringify(s.documents); // Documents (stockés en JSON)
     await supabase.from('vehicles').update(db).eq('id', id);
     setState(prev => ({ ...prev, vehicles: prev.vehicles.map(v => v.id === id ? { ...v, ...s } : v) }));
   };

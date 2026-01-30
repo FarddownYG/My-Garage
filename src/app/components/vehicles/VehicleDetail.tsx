@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2, FileText } from 'lucide-react';
 import type { Vehicle } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
@@ -8,6 +8,8 @@ import { MaintenanceLog } from '../maintenance/MaintenanceLog';
 import { MaintenanceSettings } from '../settings/MaintenanceSettings';
 import { EditVehicleModal } from './EditVehicleModal';
 import { EditMileageModal } from './EditMileageModal';
+import { PhotosGallery } from './PhotosGallery';
+import { DocumentsGallery } from './DocumentsGallery';
 
 interface VehicleDetailProps {
   vehicle: Vehicle;
@@ -17,7 +19,7 @@ interface VehicleDetailProps {
 
 export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: VehicleDetailProps) {
   const { maintenanceEntries, deleteVehicle } = useApp();
-  const [activeTab, setActiveTab] = useState<'info' | 'maintenance' | 'gallery'>(() => {
+  const [activeTab, setActiveTab] = useState<'info' | 'maintenance' | 'gallery' | 'documents'>(() => {
     // Si on a un type pré-rempli, ouvrir directement l'onglet entretien
     return prefilledMaintenanceType ? 'maintenance' : 'info';
   });
@@ -124,7 +126,7 @@ export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: Veh
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto">
           <Button
             onClick={() => setActiveTab('info')}
             variant={activeTab === 'info' ? 'default' : 'outline'}
@@ -149,6 +151,14 @@ export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: Veh
             <ImageIcon className="w-4 h-4 mr-2" />
             Photos
           </Button>
+          <Button
+            onClick={() => setActiveTab('documents')}
+            variant={activeTab === 'documents' ? 'default' : 'outline'}
+            className={activeTab === 'documents' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Documents
+          </Button>
         </div>
 
         {/* Tab Content */}
@@ -160,13 +170,11 @@ export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: Veh
         )}
 
         {activeTab === 'gallery' && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ImageIcon className="w-10 h-10 text-zinc-600" />
-            </div>
-            <h3 className="text-white mb-2">Aucune photo</h3>
-            <p className="text-zinc-500 text-sm">Ajoutez des photos de votre véhicule</p>
-          </div>
+          <PhotosGallery vehicle={vehicle} />
+        )}
+
+        {activeTab === 'documents' && (
+          <DocumentsGallery vehicle={vehicle} />
         )}
       </div>
 
