@@ -5,7 +5,7 @@ import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
 import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
-import { getCurrentUser, onAuthStateChange, signOut as authSignOut, clearSupabaseSessions } from '../utils/auth';
+import { getCurrentUser, onAuthStateChange, signOut as authSignOut } from '../utils/auth';
 import { checkMigrationPending, getProfilesByUser } from '../utils/migration';
 
 // v1.2.0 - Supabase Auth integration
@@ -287,9 +287,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       console.log('🚀 INITIALISATION APP...');
-      
-      // 0. SÉCURITÉ : Nettoyer les sessions anciennes (quand persistSession était activé)
-      clearSupabaseSessions();
       
       // 1. Vérifier l'authentification
       const user = await getCurrentUser();
