@@ -55,38 +55,53 @@ export function AdminPanel() {
   };
 
   const loadUsers = async () => {
-    // Charger les profils pour obtenir les user_id
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .not('user_id', 'is', null);
-
-    if (error) {
-      console.error('❌ Erreur chargement profils:', error);
-      setUsers([]);
-      return;
-    }
-
-    // Extraire les user_id uniques
-    const uniqueUserIds = [...new Set(profiles?.map(p => p.user_id).filter(Boolean))] as string[];
-    
-    // Créer une structure d'utilisateurs basée sur les profils
-    const usersData: SupabaseAuthUser[] = uniqueUserIds.map(userId => {
-      const userProfiles = profiles?.filter(p => p.user_id === userId) || [];
-      const firstProfile = userProfiles[0];
+    try {
+      console.log('🔍 Chargement des utilisateurs...');
       
-      return {
-        id: userId,
-        email: `user-${userId.slice(0, 8)}`, // On ne peut pas récupérer l'email sans Service Role
-        created_at: firstProfile?.created_at || new Date().toISOString(),
-        last_sign_in_at: firstProfile?.created_at || new Date().toISOString(),
-        user_metadata: {
-          full_name: firstProfile?.first_name || 'Utilisateur',
-        },
-      };
-    });
+      // Charger les profils pour obtenir les user_id
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .not('user_id', 'is', null)
+        .eq('is_admin', false);
 
-    setUsers(usersData);
+      if (profilesError) {
+        console.error('❌ Erreur chargement profils:', profilesError);
+        setUsers([]);
+        return;
+      }
+
+      console.log(`✅ ${profiles?.length || 0} profils trouvés`);
+
+      // Extraire les user_id uniques
+      const uniqueUserIds = [...new Set(profiles?.map(p => p.user_id).filter(Boolean))] as string[];
+      
+      console.log(`👥 ${uniqueUserIds.length} utilisateurs uniques`);
+      
+      // Créer une structure d'utilisateurs basée sur les profils
+      const usersData: SupabaseAuthUser[] = uniqueUserIds.map(userId => {
+        const userProfiles = profiles?.filter(p => p.user_id === userId) || [];
+        const firstProfile = userProfiles[0];
+        
+        console.log(`👤 User ${userId.slice(0, 8)}: ${userProfiles.length} profils`);
+        
+        return {
+          id: userId,
+          email: `ID: ${userId.slice(0, 8)}...`, // On ne peut pas récupérer l'email sans Service Role
+          created_at: firstProfile?.created_at || new Date().toISOString(),
+          last_sign_in_at: firstProfile?.updated_at || firstProfile?.created_at || new Date().toISOString(),
+          user_metadata: {
+            full_name: firstProfile?.name || firstProfile?.first_name || 'Utilisateur',
+          },
+        };
+      });
+
+      console.log(`✅ ${usersData.length} utilisateurs chargés`);
+      setUsers(usersData);
+    } catch (err) {
+      console.error('❌ Exception chargement utilisateurs:', err);
+      setUsers([]);
+    }
   };
 
   const loadBannedEmails = async () => {
