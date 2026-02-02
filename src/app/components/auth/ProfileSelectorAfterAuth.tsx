@@ -61,15 +61,37 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
           </p>
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 text-left">
             <p className="text-sm text-blue-400 mb-2">
-              💡 <strong>Astuce :</strong>
+              💡 <strong>Comment récupérer vos données :</strong>
             </p>
-            <p className="text-sm text-zinc-400">
-              Si vous aviez des profils (Sarah, Marc, etc.) avant de passer à l'authentification Supabase, 
-              vous devez les lier manuellement dans <strong>Paramètres → Lier un profil</strong>.
-            </p>
+            <ol className="text-sm text-zinc-400 space-y-2 list-decimal list-inside">
+              <li>Cliquez sur le bouton ci-dessous</li>
+              <li>Allez dans <strong>Paramètres → Lier un profil</strong></li>
+              <li>Sélectionnez votre profil (Sarah, Marc, etc.)</li>
+              <li>Entrez le PIN si demandé</li>
+              <li>✅ Toutes vos données seront récupérées !</li>
+            </ol>
           </div>
-          <p className="text-sm text-zinc-500">
-            Créez un nouveau profil ou liez un profil existant depuis l'app.
+          <Button
+            onClick={() => {
+              // Créer un profil temporaire pour accéder à l'app
+              const tempProfile: Profile = {
+                id: 'temp-' + Date.now(),
+                name: 'Utilisateur',
+                firstName: 'Utilisateur',
+                avatar: '👤',
+                isPinProtected: false,
+                isAdmin: false,
+                fontSize: 50,
+                user_id: supabaseUser?.id || null,
+              };
+              onProfileSelected(tempProfile);
+            }}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            Accéder aux Paramètres
+          </Button>
+          <p className="text-xs text-zinc-500 mt-4">
+            Un profil temporaire sera créé pour vous permettre d'accéder à l'application.
           </p>
         </Card>
       </div>

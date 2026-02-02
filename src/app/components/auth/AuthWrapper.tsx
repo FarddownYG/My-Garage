@@ -44,32 +44,28 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       return;
     }
 
-    // Cas 2: User connecté et migration nécessaire
-    // ⚠️ DÉSACTIVÉ : L'écran de migration automatique cause une boucle
-    // On force l'utilisateur à passer par Paramètres → Lier un profil
-    // TODO: Réactiver quand la boucle sera fixée
-    /*
-    if (isAuthenticated && isMigrationPending && !hasSkippedMigration) {
-      console.log('📋 Affichage écran migration (BLOQUÉ)');
-      setShowMigration(true);
-      setShowAuth(false);
-      setShowProfileSelector(false);
-      return;
-    }
-    */
-
-    // Cas 3: User connecté, pas de migration, mais pas de profil sélectionné
-    if (isAuthenticated && !isMigrationPending && !currentProfile && profiles.length > 0) {
-      console.log('👤 Affichage sélection de profil');
+    // Cas 2: User connecté, pas de profil sélectionné
+    // Afficher le sélecteur de profil dans TOUS les cas où currentProfile est null
+    if (isAuthenticated && !currentProfile) {
+      console.log('👤 Affichage sélection de profil (profils:', profiles.length, ')');
       setShowProfileSelector(true);
       setShowAuth(false);
       setShowMigration(false);
       return;
     }
 
-    // Cas 4: User connecté → app normale
-    console.log('✅ Affichage app normale');
-    setShowAuth(false);
+    // Cas 3: User connecté avec profil → app normale
+    if (isAuthenticated && currentProfile) {
+      console.log('✅ Affichage app normale');
+      setShowAuth(false);
+      setShowMigration(false);
+      setShowProfileSelector(false);
+      return;
+    }
+
+    // Cas 4: Fallback - forcer auth
+    console.log('⚠️ État non géré, retour à l\'auth');
+    setShowAuth(true);
     setShowMigration(false);
     setShowProfileSelector(false);
   }, [isAuthenticated, isMigrationPending, currentProfile, profiles.length, isLoading, hasSkippedMigration]);
