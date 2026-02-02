@@ -192,32 +192,19 @@ export const updatePassword = async (newPassword: string) => {
 
 /**
  * Écouter les changements d'authentification
- * ⚠️ ULTRA-FILTRÉ : Traite UNIQUEMENT SIGNED_IN et SIGNED_OUT
- * ⚠️ DEBOUNCED : Ignore les événements duplicatas qui arrivent en rafale
+ * ⚠️ TRAITE : SIGNED_IN, SIGNED_OUT, et INITIAL_SESSION
  */
-let lastEventTime = 0;
-let lastEventType: string | null = null;
-
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
   return supabase.auth.onAuthStateChange((event, session) => {
     console.log('🔐 onAuthStateChange EVENT:', event, session?.user?.email || 'null');
     
-    // ⚠️ WHITELIST : UNIQUEMENT SIGNED_IN et SIGNED_OUT
-    // Tous les autres événements sont ignorés (INITIAL_SESSION, TOKEN_REFRESHED, USER_UPDATED, etc.)
-    if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') {
+    // ⚠️ WHITELIST : SIGNED_IN, SIGNED_OUT, et INITIAL_SESSION
+    // INITIAL_SESSION est envoyé au chargement de la page si une session existe
+    // TOKEN_REFRESHED et USER_UPDATED sont ignorés
+    if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') {
       console.log('🔇 Événement ignoré:', event);
       return;
     }
-    
-    // ⚠️ DEBOUNCE : Ignorer les duplicatas en moins de 1 seconde
-    const now = Date.now();
-    if (lastEventType === event && now - lastEventTime < 1000) {
-      console.log('🔇 Événement duplicata ignoré (debounce):', event);
-      return;
-    }
-    
-    lastEventTime = now;
-    lastEventType = event;
     
     console.log('✅ Événement traité:', event);
     

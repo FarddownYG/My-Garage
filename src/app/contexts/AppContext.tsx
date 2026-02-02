@@ -371,6 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           supabaseUser: user,
           isAuthenticated: true,
+          isLoading: true, // ⚠️ Afficher le loader pendant le chargement
         }));
         
         // Charger les données depuis Supabase
@@ -383,6 +384,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setState(prev => ({
           ...prev,
           isMigrationPending: migrationPending,
+          isLoading: false, // ✅ Masquer le loader
         }));
       }
     });
