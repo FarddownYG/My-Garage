@@ -364,12 +364,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           isMigrationPending: false,
         }));
       } else {
-        // Connexion (SIGNED_IN) → NE RIEN FAIRE
-        // ⚠️ CRITIQUE : Ne PAS appeler loadFromSupabase() ici !
-        // init() l'a déjà appelé au montage initial
-        // Si on le rappelle ici, la session peut ne pas être encore dans sessionStorage
-        // et loadFromSupabase() va effacer tous les profils (ligne 183)
-        console.log('🔐 Connexion (SIGNED_IN) - événement ignoré (init() gère déjà le chargement)');
+        // Connexion (SIGNED_IN) → Charger les données
+        console.log('🔐 Connexion (SIGNED_IN) - chargement des données...');
+        
+        setState(prev => ({
+          ...prev,
+          supabaseUser: user,
+          isAuthenticated: true,
+        }));
+        
+        // Charger les données depuis Supabase
+        await loadFromSupabase();
+        
+        // Vérifier si migration nécessaire
+        const migrationPending = await checkMigrationPending();
+        console.log('🔍 Migration pending après SIGNED_IN:', migrationPending);
+        
+        setState(prev => ({
+          ...prev,
+          isMigrationPending: migrationPending,
+        }));
       }
     });
 
@@ -827,16 +841,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAuth = useCallback(async () => {
     try {
-      console.log('🔄 Refresh auth...');
+      console.log('🔄 Refresh auth (simple reload)...');
+      
+      // ⚠️ NE PAS appeler getUser() car ça déclenche un nouvel événement SIGNED_IN
+      // On recharge juste les données depuis Supabase
       const user = await getCurrentUser();
       
-      setState(prev => ({
-        ...prev,
-        supabaseUser: user,
-        isAuthenticated: !!user,
-      }));
-
       if (user) {
+        console.log('✅ User trouvé, rechargement des données...');
         await loadFromSupabase();
         
         const migrationPending = await checkMigrationPending();
@@ -846,6 +858,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           isMigrationPending: migrationPending,
         }));
+      } else {
+        console.log('⚠️ Aucun user trouvé après refreshAuth()');
       }
       
       console.log('✅ Auth rafraîchie');

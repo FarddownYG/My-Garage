@@ -193,7 +193,11 @@ export const updatePassword = async (newPassword: string) => {
 /**
  * Écouter les changements d'authentification
  * ⚠️ ULTRA-FILTRÉ : Traite UNIQUEMENT SIGNED_IN et SIGNED_OUT
+ * ⚠️ DEBOUNCED : Ignore les événements duplicatas qui arrivent en rafale
  */
+let lastEventTime = 0;
+let lastEventType: string | null = null;
+
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
   return supabase.auth.onAuthStateChange((event, session) => {
     console.log('🔐 onAuthStateChange EVENT:', event, session?.user?.email || 'null');
@@ -204,6 +208,16 @@ export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void)
       console.log('🔇 Événement ignoré:', event);
       return;
     }
+    
+    // ⚠️ DEBOUNCE : Ignorer les duplicatas en moins de 1 seconde
+    const now = Date.now();
+    if (lastEventType === event && now - lastEventTime < 1000) {
+      console.log('🔇 Événement duplicata ignoré (debounce):', event);
+      return;
+    }
+    
+    lastEventTime = now;
+    lastEventType = event;
     
     console.log('✅ Événement traité:', event);
     
