@@ -4,6 +4,7 @@ import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProfileModal } from './AddProfileModal';
+import { copyToClipboardWithFeedback } from '../../utils/clipboard';
 
 interface ProfileManagementProps {
   onBack: () => void;
@@ -23,10 +24,13 @@ export function ProfileManagement({ onBack }: ProfileManagementProps) {
     }
   };
 
-  const copyPinToClipboard = (pin: string | undefined, name: string) => {
+  const copyPinToClipboard = async (pin: string | undefined, name: string) => {
     if (pin) {
-      navigator.clipboard.writeText(pin);
-      alert(`Code PIN de ${name} copié : ${pin}`);
+      await copyToClipboardWithFeedback(
+        pin,
+        `Code PIN de ${name} copié : ${pin}`,
+        `Code PIN de ${name} : ${pin}\n\n(Veuillez copier manuellement ce code)`
+      );
     }
   };
 

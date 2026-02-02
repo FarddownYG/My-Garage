@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord, MaintenanceProfile } from '../types';
+import type { AppState, Profile, Vehicle, MaintenanceEntry, Reminder, Task, MaintenanceTemplate, MaintenanceRecord, MaintenanceProfile, SupabaseUser } from '../types';
 import { loadEncryptedFromStorage, exportEncryptedJSON, importEncryptedJSON } from '../utils/encryption';
 import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
 import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
+import { getCurrentUser, onAuthStateChange, signOut as authSignOut } from '../utils/auth';
+import { checkMigrationPending, getProfilesByUser } from '../utils/migration';
 
-// v1.1.0 - Security fix: No auto-login on shared links
+// v1.2.0 - Supabase Auth integration
 interface AppContextType extends AppState {
   maintenances: MaintenanceRecord[];
   setCurrentProfile: (profile: Profile | null) => void;
@@ -38,6 +40,9 @@ interface AppContextType extends AppState {
   exportData: () => Promise<void>;
   importData: (file: File) => Promise<void>;
   isLoading: boolean;
+  // Auth functions
+  signOut: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const defaultState: AppState = {
@@ -50,6 +55,10 @@ const defaultState: AppState = {
   tasks: [],
   maintenanceTemplates: [],
   maintenanceProfiles: [],
+  // Auth state
+  supabaseUser: null,
+  isAuthenticated: false,
+  isMigrationPending: false,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,8 +85,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const localData = await loadEncryptedFromStorage('valcar-app-state-encrypted-v4');
       if (!localData?.profiles?.length) return;
 
-      const { data: existing } = await supabase.from('profiles').select('id').limit(1);
-      if (existing?.length) return;
+      // Vérifier session avant de faire des requêtes
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('ℹ️ Migration Supabase ignorée (pas de session)');
+        return;
+      }
+
+      const { data: existing, error } = await supabase.from('profiles').select('id').limit(1);
+      if (error || existing?.length) return;
 
       console.log('🚀 Migration localStorage → Supabase...');
       
@@ -145,16 +161,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         id: 'global', admin_pin: localData.adminPin || '1234', current_profile_id: localData.currentProfile?.id || null
       }, { onConflict: 'id' });
       
-      console.log('✅ Migration terminée !');
+      console.log('✅ Migration localStorage → Supabase terminée !');
       localStorage.removeItem('valcar-app-state-encrypted-v4');
     } catch (error) {
-      console.error('Erreur migration:', error);
+      // Échec silencieux - migration pas critique
+      console.log('ℹ️ Migration localStorage ignorée (pas de session ou déjà migrée)');
     }
   };
 
   // 📥 CHARGEMENT depuis Supabase
   const loadFromSupabase = async () => {
     try {
+      // Vérifier session avant de charger
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('ℹ️ Chargement Supabase ignoré (pas de session)');
+        // Charger valeurs par défaut
+        setState(prev => ({
+          ...prev,
+          adminPin: '1234',
+          profiles: [],
+          vehicles: [],
+          maintenanceEntries: [],
+          tasks: [],
+          reminders: [],
+          maintenanceTemplates: [],
+          maintenanceProfiles: [],
+        }));
+        return;
+      }
+
       const { data: config } = await supabase.from('app_config').select('*').eq('id', 'global').single();
       const { data: profiles } = await supabase.from('profiles').select('*').order('name');
       const { data: vehicles } = await supabase.from('vehicles').select('*').order('name');
@@ -207,27 +243,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
       });
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      // Échec silencieux - pas de session est normal
+      console.log('ℹ️ Impossible de charger depuis Supabase (pas de session)');
     }
   };
 
   useEffect(() => {
     const init = async () => {
+      // 1. Vérifier l'authentification
+      const user = await getCurrentUser();
+      console.log('🔐 User actuel:', user?.email || 'Non connecté');
+      
+      setState(prev => ({
+        ...prev,
+        supabaseUser: user,
+        isAuthenticated: !!user,
+      }));
+
+      // 2. Migration localStorage → Supabase (si nécessaire)
       await migrateToSupabase();
+      
+      // 3. Charger les données
       await loadFromSupabase();
       
-      // 🔧 Migration automatique des profile_id manquants
+      // 4. Vérifier si migration de profils nécessaire
+      const migrationPending = await checkMigrationPending();
+      console.log('🔄 Migration profils nécessaire:', migrationPending);
+      
+      setState(prev => ({
+        ...prev,
+        isMigrationPending: migrationPending,
+      }));
+      
+      // 5. Migration automatique des profile_id manquants
       const needsMigration = await checkMigrationNeeded();
       if (needsMigration) {
         console.log('🔧 Migration des profile_id en cours...');
         await migrateProfileIds();
-        // Recharger les données après migration
         await loadFromSupabase();
       }
       
       setIsLoading(false);
     };
+    
     init();
+
+    // 6. Écouter les changements d'authentification
+    const { data: authListener } = onAuthStateChange(async (user) => {
+      console.log('🔐 Auth changed:', user?.email || 'Déconnecté');
+      
+      setState(prev => ({
+        ...prev,
+        supabaseUser: user,
+        isAuthenticated: !!user,
+      }));
+
+      // Recharger les données quand l'utilisateur change
+      if (user) {
+        await loadFromSupabase();
+        
+        // Vérifier migration
+        const migrationPending = await checkMigrationPending();
+        setState(prev => ({
+          ...prev,
+          isMigrationPending: migrationPending,
+        }));
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   const setCurrentProfile = async (profile: Profile | null) => {
@@ -653,6 +739,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return state.maintenanceTemplates.filter(t => t.ownerId === state.currentProfile!.id);
   }, [state.maintenanceTemplates, state.currentProfile]);
 
+  // ======================================
+  // 🔐 AUTH FUNCTIONS
+  // ======================================
+
+  const signOut = async () => {
+    try {
+      await authSignOut();
+      
+      // Reset local state
+      setState({
+        ...defaultState,
+        supabaseUser: null,
+        isAuthenticated: false,
+        isMigrationPending: false,
+      });
+      
+      console.log('✅ Déconnexion réussie');
+    } catch (error) {
+      console.error('❌ Erreur déconnexion:', error);
+      throw error;
+    }
+  };
+
+  const refreshAuth = async () => {
+    try {
+      const user = await getCurrentUser();
+      
+      setState(prev => ({
+        ...prev,
+        supabaseUser: user,
+        isAuthenticated: !!user,
+      }));
+
+      if (user) {
+        await loadFromSupabase();
+        
+        const migrationPending = await checkMigrationPending();
+        setState(prev => ({
+          ...prev,
+          isMigrationPending: migrationPending,
+        }));
+      }
+      
+      console.log('✅ Auth rafraîchie');
+    } catch (error) {
+      console.error('❌ Erreur refresh auth:', error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{ 
       ...state, 
@@ -662,7 +798,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
       addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,
       addMaintenanceTemplate, updateMaintenanceTemplate, deleteMaintenanceTemplate, addMaintenanceProfile, updateMaintenanceProfile, deleteMaintenanceProfile, updateAdminPin, updateFontSize,
-      resetData, exportData, importData, isLoading }}>
+      resetData, exportData, importData, isLoading,
+      // Auth functions
+      signOut, refreshAuth }}>
       {children}
     </AppContext.Provider>
   );

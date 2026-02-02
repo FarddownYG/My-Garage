@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { AuthWrapper } from './components/auth/AuthWrapper';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { ProfileSelector } from './components/auth/ProfileSelector';
 import { PinEntry } from './components/auth/PinEntry';
@@ -266,7 +267,9 @@ export default function App() {
   return (
     <AppProvider>
       <ErrorBoundary>
-        <AppContent />
+        <AuthWrapper>
+          <AppContent />
+        </AuthWrapper>
       </ErrorBoundary>
     </AppProvider>
   );

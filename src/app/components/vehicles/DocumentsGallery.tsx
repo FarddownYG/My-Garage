@@ -122,12 +122,33 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
     e.stopPropagation();
     
     try {
-      // Convertir base64 en Blob pour éviter les problèmes de CORS
-      const response = await fetch(doc.url);
-      const blob = await response.blob();
+      let blobUrl: string;
       
-      // Créer une URL temporaire pour le blob
-      const blobUrl = URL.createObjectURL(blob);
+      // Si c'est une URL base64, la convertir en Blob
+      if (doc.url.startsWith('data:')) {
+        // Extraire le type MIME et les données base64
+        const matches = doc.url.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) {
+          throw new Error('Format base64 invalide');
+        }
+        
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        
+        // Convertir base64 en Uint8Array
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Créer un Blob
+        const blob = new Blob([bytes], { type: mimeType });
+        blobUrl = URL.createObjectURL(blob);
+      } else {
+        // Si c'est une URL normale (Supabase Storage), utiliser directement
+        blobUrl = doc.url;
+      }
       
       // Créer un lien de téléchargement
       const link = document.createElement('a');
@@ -142,7 +163,9 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
       // Nettoyer après un court délai
       setTimeout(() => {
         document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
+        if (doc.url.startsWith('data:')) {
+          URL.revokeObjectURL(blobUrl);
+        }
       }, 100);
       
       console.log(`✅ Téléchargement de ${doc.name}`);

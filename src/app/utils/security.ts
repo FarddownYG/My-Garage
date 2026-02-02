@@ -103,8 +103,15 @@ export function disableDevToolsShortcuts() {
  */
 export function clearClipboardOnExit() {
   window.addEventListener('beforeunload', () => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText('');
+    // Wrap in try-catch to prevent errors when document is not focused
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText('').catch(() => {
+          // Silently fail if clipboard access is denied
+        });
+      }
+    } catch (error) {
+      // Silently fail - clipboard clearing is a security enhancement, not critical
     }
   });
 }

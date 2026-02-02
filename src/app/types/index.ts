@@ -8,6 +8,9 @@ export interface Profile {
   pin?: string;
   isAdmin?: boolean;
   fontSize?: number; // Taille de police personnalisée (0-100%, défaut: 50)
+  userId?: string; // Lien vers auth.users (Supabase Auth)
+  isMigrated?: boolean; // Profil migré vers Supabase Auth
+  migratedAt?: string; // Date de migration
 }
 
 export interface Vehicle {
@@ -105,6 +108,15 @@ export interface MaintenanceRecord {
   notes?: string;
 }
 
+export interface SupabaseUser {
+  id: string;
+  email: string;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+}
+
 export interface AppState {
   adminPin: string;
   profiles: Profile[];
@@ -115,6 +127,10 @@ export interface AppState {
   tasks: Task[];
   maintenanceTemplates: MaintenanceTemplate[];
   maintenanceProfiles: MaintenanceProfile[];
+  // Supabase Auth
+  supabaseUser: SupabaseUser | null;
+  isAuthenticated: boolean;
+  isMigrationPending: boolean; // Profils non migrés présents
 }
 
 // Re-export from alerts.ts for convenience
