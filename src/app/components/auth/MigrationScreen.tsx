@@ -311,13 +311,21 @@ export function MigrationScreen({ userId, userEmail, onComplete, onSkip }: Migra
           </Button>
         </div>
 
-        {/* Skip */}
-        <div className="mt-4 text-center">
+        {/* Actions secondaires */}
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <button
             type="button"
             onClick={onSkip}
             disabled={isMigrating}
-            className="text-sm text-zinc-500 hover:text-zinc-400 disabled:opacity-50"
+            className="flex-1 px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors disabled:opacity-50"
+          >
+            ❌ Pas d'ancien profil
+          </button>
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={isMigrating}
+            className="flex-1 px-4 py-2 text-sm text-zinc-500 hover:text-zinc-400 disabled:opacity-50"
           >
             ⏭️ Plus tard
           </button>

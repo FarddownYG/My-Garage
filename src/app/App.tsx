@@ -2,9 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { AuthWrapper } from './components/auth/AuthWrapper';
-import { WelcomeScreen } from './components/auth/WelcomeScreen';
-import { ProfileSelector } from './components/auth/ProfileSelector';
-import { PinEntry } from './components/auth/PinEntry';
 import { Dashboard } from './components/home/Dashboard';
 import { VehicleList } from './components/vehicles/VehicleList';
 import { VehicleDetail } from './components/vehicles/VehicleDetail';
@@ -13,23 +10,18 @@ import { UpcomingMaintenance } from './components/maintenance/UpcomingMaintenanc
 import { TaskList } from './components/tasks/TaskList';
 import { Settings } from './components/settings/Settings';
 import { BottomNav } from './components/shared/BottomNav';
-import type { Profile, UpcomingAlert } from './types';
+import type { UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
 import { calculateUpcomingAlerts } from './utils/alerts';
 import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
 
-// v1.1.0 - Security & Features Update
-type AppStage = 'welcome' | 'profile-selector' | 'pin-entry' | 'app';
+// v1.2.0 - Supabase Auth Only (plus de sélection de profils)
 type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
 type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 
 function AppContent() {
-  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles } = useApp();
+  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut } = useApp();
   
-  // ⚠️ TOUS LES HOOKS DOIVENT ÊTRE AU DÉBUT (règle de React)
-  // Restore session state from localStorage
-  const [stage, setStage] = useState<AppStage>('welcome');
-  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     const savedTab = localStorage.getItem('valcar-active-tab');
     return (savedTab as AppTab) || 'home';
@@ -85,106 +77,16 @@ function AppContent() {
   // Save activeTab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('valcar-active-tab', activeTab);
-    console.log('💾 Onglet sauvegardé:', activeTab);
   }, [activeTab]);
 
-  // Auto-login if there's a currentProfile
-  useEffect(() => {
-    if (!isLoading && currentProfile) {
-      console.log('🔄 Session restaurée:', currentProfile.name);
-      setStage('app');
-    } else if (!isLoading && !currentProfile) {
-      console.log('👋 Aucune session active');
-      setStage('welcome');
-    }
-  }, [currentProfile, isLoading]);
-
-  const handleProfileSelect = (profile: Profile) => {
-    setSelectedProfile(profile);
-    if (profile.isPinProtected) {
-      setStage('pin-entry');
-    } else {
-      setCurrentProfile(profile);
-      setStage('app');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setActiveTab('home');
+    } catch (error) {
+      console.error('Erreur déconnexion:', error);
     }
   };
-
-  const handlePinSuccess = () => {
-    if (selectedProfile) {
-      setCurrentProfile(selectedProfile);
-      setStage('app');
-    }
-  };
-
-  const handlePinBack = () => {
-    setSelectedProfile(null);
-    setStage('welcome');
-  };
-
-  const handleAdminAccess = () => {
-    // Admin profile has no vehicles, goes directly to settings
-    setCurrentProfile({ 
-      id: 'admin', 
-      firstName: 'Admin',
-      lastName: 'System',
-      name: 'Admin System', 
-      avatar: '⚙️', 
-      isPinProtected: false, 
-      isAdmin: true 
-    });
-    setStage('app');
-    setActiveTab('settings');
-  };
-
-  const handleLogout = () => {
-    console.log('🚪 Déconnexion...');
-    setCurrentProfile(null);
-    setSelectedProfile(null);
-    setStage('welcome');
-    setActiveTab('home');
-  };
-
-  // Auth stages
-  // Show loading screen while decrypting data
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white text-lg">🔓 Décryptage des données...</p>
-          <p className="text-zinc-500 text-sm mt-2">Chargement sécurisé</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (stage === 'welcome') {
-    return (
-      <WelcomeScreen
-        onProfileSelect={handleProfileSelect}
-        onAdminAccess={handleAdminAccess}
-      />
-    );
-  }
-
-  if (stage === 'profile-selector') {
-    return (
-      <ProfileSelector
-        onProfileSelect={handleProfileSelect}
-        onAdminAccess={handleAdminAccess}
-      />
-    );
-  }
-
-  if (stage === 'pin-entry' && selectedProfile) {
-    return (
-      <PinEntry
-        profile={selectedProfile}
-        onSuccess={handlePinSuccess}
-        onBack={handlePinBack}
-      />
-    );
-  }
 
   // Main app
   // Handle upcoming alerts view
