@@ -20,7 +20,21 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
   const [error, setError] = useState('');
 
   // Filtrer les profils non-admin liés à ce user
-  const userProfiles = profiles.filter(p => !p.isAdmin);
+  // 🔒 SÉCURITÉ : Ne montrer QUE les profils de l'utilisateur actuel
+  const userProfiles = profiles.filter(p => 
+    !p.isAdmin && 
+    p.userId === supabaseUser?.id // UNIQUEMENT les profils liés à l'utilisateur actuel
+  );
+
+  console.log('🔍 ProfileSelector - Filtrage profils:', {
+    totalProfiles: profiles.length,
+    currentUserId: supabaseUser?.id,
+    userProfiles: userProfiles.map(p => ({
+      name: p.name,
+      userId: p.userId,
+      match: p.userId === supabaseUser?.id ? '✅' : '❌'
+    }))
+  });
 
   const handleSelectProfile = (profile: Profile) => {
     setSelectedProfile(profile);

@@ -234,7 +234,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? (profiles || []).find(p => p.id === currentProfileId) 
         : null;
 
-      setState({
+      setState(prev => ({
+        ...prev, // ✅ CRITIQUE : Préserver isAuthenticated et autres états
         adminPin: config?.admin_pin || '1234',
         currentProfile: savedProfile ? {
           id: savedProfile.id,
@@ -246,7 +247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           pin: savedProfile.pin || undefined,
           isAdmin: savedProfile.is_admin,
           fontSize: 50,
-          user_id: savedProfile.user_id || null,
+          userId: savedProfile.user_id || undefined, // ✅ camelCase
         } : null,
         profiles: (profiles || []).map(p => ({ 
           id: p.id, 
@@ -257,7 +258,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           isPinProtected: p.is_pin_protected, 
           pin: p.pin || undefined, 
           isAdmin: p.is_admin,
-          fontSize: 50 // Taille par défaut (pas stockée dans Supabase pour l'instant)
+          fontSize: 50, // Taille par défaut (pas stockée dans Supabase pour l'instant)
+          userId: p.user_id || undefined, // ✅ camelCase
         })),
         vehicles: (vehicles || []).map(v => ({ id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
           brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
@@ -277,7 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined })),
         maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
           vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
-      });
+      }));
     } catch (error) {
       // Échec silencieux - pas de session est normal
       console.log('ℹ️ Impossible de charger depuis Supabase (pas de session)');
