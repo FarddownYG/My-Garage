@@ -66,7 +66,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         if (result && result.needsEmailConfirmation) {
           console.log('📧 Confirmation email requise - pas de session');
           setIsLoading(false);
-          setError('✅ Compte créé ! Vérifiez votre boîte mail pour confirmer votre compte, puis connectez-vous.');
+          setError('✅ Compte créé ! Connectez-vous maintenant avec vos identifiants.');
           setTimeout(() => {
             setMode('signin');
             setPassword('');

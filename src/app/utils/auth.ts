@@ -67,7 +67,18 @@ export const signIn = async (email: string, password: string) => {
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      // Détecter si c'est un problème d'email non confirmé
+      if (error.message === 'Invalid login credentials') {
+        console.error('❌ Identifiants invalides OU email non confirmé');
+        const customError: any = new Error(
+          'Identifiants incorrects. Si vous venez de créer votre compte, vérifiez d\'abord votre email de confirmation ou demandez à un administrateur de confirmer votre compte.'
+        );
+        customError.code = 'EMAIL_NOT_CONFIRMED_OR_INVALID';
+        throw customError;
+      }
+      throw error;
+    }
     
     console.log('✅ Connexion réussie:', data.user?.email);
     return data.user;
