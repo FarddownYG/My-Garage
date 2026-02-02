@@ -19,18 +19,38 @@ export const signUp = async (email: string, password: string, fullName?: string)
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}`,
       },
     });
 
-    console.log('📡 Réponse Supabase:', { data, error });
+    console.log('📡 Réponse Supabase signUp:', { 
+      user: data.user?.email, 
+      session: data.session ? 'Oui' : 'Non',
+      error: error 
+    });
 
     if (error) {
       console.error('❌ Erreur Supabase:', error);
       throw error;
     }
     
-    console.log('✅ Inscription réussie:', data.user?.email);
-    return data.user;
+    if (!data.user) {
+      throw new Error('Aucun utilisateur créé');
+    }
+
+    // Vérifier si une session a été créée (= utilisateur connecté automatiquement)
+    if (data.session) {
+      console.log('✅ Inscription réussie avec session (connecté automatiquement)');
+    } else {
+      console.log('⚠️ Inscription réussie mais SANS session (confirmation email requise)');
+      console.log('📧 Vérifiez votre boîte mail pour confirmer votre compte');
+    }
+    
+    return { 
+      user: data.user, 
+      session: data.session,
+      needsEmailConfirmation: !data.session 
+    };
   } catch (error) {
     console.error('❌ Erreur inscription:', error);
     throw error;

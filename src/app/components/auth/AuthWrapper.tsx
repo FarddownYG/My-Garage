@@ -12,6 +12,8 @@ interface AuthWrapperProps {
  * Affiche les écrans appropriés selon l'état de l'utilisateur
  */
 export function AuthWrapper({ children }: AuthWrapperProps) {
+  // ⚠️ IMPORTANT: Tous les hooks DOIVENT être appelés dans le même ordre à chaque render
+  // Ne JAMAIS mettre de return conditionnel AVANT les hooks
   const { supabaseUser, isAuthenticated, isMigrationPending, isLoading, refreshAuth, profiles } = useApp();
   const [showAuth, setShowAuth] = useState(false);
   const [showMigration, setShowMigration] = useState(false);

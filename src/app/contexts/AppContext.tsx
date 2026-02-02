@@ -814,13 +814,7 @@ export function useApp() {
     // During hot-reload, the context might temporarily be undefined
     // Only throw error in production or if context is truly missing
     if (process.env.NODE_ENV === 'development') {
-      // Silently try to recover from global instance first
-      const globalContext = (window as any).__APP_CONTEXT_INSTANCE__;
-      if (globalContext) {
-        return useContext(globalContext);
-      }
-      
-      // Log warning only if recovery failed
+      // Log warning only - ne PAS utiliser useContext ici (viole les règles des hooks)
       console.warn('⚠️ AppContext non disponible - Hot-reload détecté. Rechargez la page (Ctrl+Shift+R) si l\'erreur persiste.');
     }
     

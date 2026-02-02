@@ -26,15 +26,11 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
     setError('');
     setRateLimitSeconds(null);
 
-    console.log('🔍 Début soumission formulaire', { mode, email, emailConfirm, password: '***', passwordConfirm: '***' });
+    console.log('🔍 Début soumission formulaire', { mode, email });
 
     // Validations pour inscription
     if (mode === 'signup') {
       console.log('🔍 Validation inscription...');
-      console.log('Email 1:', email);
-      console.log('Email 2:', emailConfirm);
-      console.log('Password 1:', password ? '***' : 'vide');
-      console.log('Password 2:', passwordConfirm ? '***' : 'vide');
       
       if (email !== emailConfirm) {
         console.log('❌ Emails ne correspondent pas');
@@ -59,18 +55,33 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         console.log('🔐 Tentative de connexion...');
         await signIn(email, password);
         console.log('✅ Connexion réussie');
+        console.log('🎉 Succès, appel onSuccess()');
+        onSuccess();
       } else {
         console.log('📝 Tentative d\'inscription...', { email, fullName });
-        await signUp(email, password, fullName);
-        console.log('✅ Inscription réussie');
+        const result: any = await signUp(email, password, fullName);
+        console.log('✅ Inscription réussie', result);
+        
+        // Vérifier si une confirmation email est nécessaire
+        if (result && result.needsEmailConfirmation) {
+          console.log('📧 Confirmation email requise - pas de session');
+          setIsLoading(false);
+          setError('✅ Compte créé ! Vérifiez votre boîte mail pour confirmer votre compte, puis connectez-vous.');
+          setTimeout(() => {
+            setMode('signin');
+            setPassword('');
+            setEmailConfirm('');
+            setPasswordConfirm('');
+          }, 2000);
+          return; // Ne pas appeler onSuccess() car pas encore connecté
+        } else {
+          console.log('🎉 Inscription avec session - connecté automatiquement');
+          onSuccess();
+        }
       }
-      
-      console.log('🎉 Succès, appel onSuccess()');
-      onSuccess();
     } catch (err: any) {
       console.error('❌ Erreur auth:', err);
       console.error('❌ Message:', err.message);
-      console.error('❌ Stack:', err.stack);
       
       // Extraire le temps d'attente du message d'erreur
       const rateLimitMatch = err.message?.match(/after (\d+) seconds/);
@@ -99,7 +110,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
       } else if (err.message?.includes('Password should be at least')) {
         setError('Le mot de passe doit contenir au moins 6 caractères');
       } else if (err.message?.includes('Load failed') || err.message?.includes('Failed to fetch')) {
-        setError('Erreur de connexion. Vérifiez votre connexion internet ou réessayez plus tard.');
+        setError('❌ Impossible de joindre Supabase. Vérifiez : 1) Votre connexion internet, 2) Que les scripts SQL sont exécutés (voir /TODO_SUPABASE.md)');
       } else if (err.message?.includes('confirm')) {
         setError('Veuillez vérifier votre boîte mail pour confirmer votre compte.');
       } else {
@@ -264,7 +275,9 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
 
           {error && (
             <div className={`border rounded-lg p-3 text-sm ${
-              rateLimitSeconds !== null 
+              error.startsWith('✅')
+                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                : rateLimitSeconds !== null 
                 ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' 
                 : 'bg-red-500/10 border-red-500/20 text-red-400'
             }`}>
