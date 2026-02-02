@@ -215,6 +215,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-12 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 required
                 minLength={6}
               />

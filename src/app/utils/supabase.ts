@@ -4,8 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://uffmwykdfrxwnslhrftw.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmZm13eWtkZnJ4d25zbGhyZnR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNjU4NzgsImV4cCI6MjA4MzY0MTg3OH0.eNd7sZOLk_MGtoQGrd6uHNSQXq_TImftE7qC6AnGRuE';
 
-// Créer le client Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Créer le client Supabase avec persistance de session DÉSACTIVÉE
+// ⚠️ SÉCURITÉ : La session ne sera PAS sauvegardée dans localStorage
+// L'utilisateur devra se connecter à chaque visite
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false, // ✅ Désactiver la sauvegarde automatique de session
+    autoRefreshToken: false, // ✅ Désactiver le refresh automatique
+    detectSessionInUrl: false, // ✅ Désactiver la détection de session dans l'URL
+  },
+});
 
 // Types de base de données pour TypeScript
 export interface Database {

@@ -5,7 +5,7 @@ import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
 import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
-import { getCurrentUser, onAuthStateChange, signOut as authSignOut } from '../utils/auth';
+import { getCurrentUser, onAuthStateChange, signOut as authSignOut, clearSupabaseSessions } from '../utils/auth';
 import { checkMigrationPending, getProfilesByUser } from '../utils/migration';
 
 // v1.2.0 - Supabase Auth integration
@@ -228,13 +228,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Les templates seront créés uniquement lors de l'ajout d'un nouveau profil
       // Cette section est désactivée pour éviter les créations en boucle
 
-      // 🔒 SÉCURITÉ : Ne pas restaurer automatiquement la session (bug de partage de lien)
-      // Forcer la déconnexion à chaque chargement pour éviter l'accès non autorisé
-      let currentProfile = null;
+      // 🔄 Préserver le profil actuel s'il existe déjà
+      const currentProfileId = config?.current_profile_id;
+      const savedProfile = currentProfileId 
+        ? (profiles || []).find(p => p.id === currentProfileId) 
+        : null;
 
       setState({
         adminPin: config?.admin_pin || '1234',
-        currentProfile,
+        currentProfile: savedProfile ? {
+          id: savedProfile.id,
+          firstName: savedProfile.first_name,
+          lastName: savedProfile.last_name || '',
+          name: savedProfile.last_name ? `${savedProfile.first_name} ${savedProfile.last_name}` : savedProfile.first_name,
+          avatar: savedProfile.avatar,
+          isPinProtected: savedProfile.is_pin_protected,
+          pin: savedProfile.pin || undefined,
+          isAdmin: savedProfile.is_admin,
+          fontSize: 50,
+          user_id: savedProfile.user_id || null,
+        } : null,
         profiles: (profiles || []).map(p => ({ 
           id: p.id, 
           firstName: p.first_name, 
@@ -274,6 +287,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       console.log('🚀 INITIALISATION APP...');
+      
+      // 0. SÉCURITÉ : Nettoyer les sessions anciennes (quand persistSession était activé)
+      clearSupabaseSessions();
       
       // 1. Vérifier l'authentification
       const user = await getCurrentUser();
@@ -327,17 +343,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = onAuthStateChange(async (user) => {
       console.log('🔐 Auth changed:', user?.email || 'Déconnecté');
       
+      // Mise à jour de l'état auth SANS recharger les données
+      // (évite la boucle de redirection)
       setState(prev => ({
         ...prev,
         supabaseUser: user,
         isAuthenticated: !!user,
+        // ⚠️ Effacer le profil uniquement si l'utilisateur se déconnecte
+        currentProfile: user ? prev.currentProfile : null,
       }));
 
-      // Recharger les données quand l'utilisateur change
+      // Vérifier migration uniquement si user change
       if (user) {
-        await loadFromSupabase();
-        
-        // Vérifier migration
         const migrationPending = await checkMigrationPending();
         setState(prev => ({
           ...prev,
@@ -847,16 +864,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export function useApp() {
   const context = useContext(AppContext);
   
-  // 🔥 Hot-reload protection: Better error handling
+  // 🔥 Hot-reload protection: Return default context during development hot-reload
   if (!context) {
-    // During hot-reload, the context might temporarily be undefined
-    // Only throw error in production or if context is truly missing
     if (process.env.NODE_ENV === 'development') {
-      // Log warning only - ne PAS utiliser useContext ici (viole les règles des hooks)
-      console.warn('⚠️ AppContext non disponible - Hot-reload détecté. Rechargez la page (Ctrl+Shift+R) si l\'erreur persiste.');
+      console.warn('⚠️ AppContext non disponible - Hot-reload détecté');
+      
+      // Retourner un contexte temporaire pour éviter le crash pendant le hot-reload
+      return {
+        ...defaultState,
+        maintenances: [],
+        setCurrentProfile: () => Promise.resolve(),
+        addProfile: () => Promise.resolve(),
+        updateProfile: () => Promise.resolve(),
+        deleteProfile: () => Promise.resolve(),
+        addVehicle: () => Promise.resolve(),
+        updateVehicle: () => Promise.resolve(),
+        deleteVehicle: () => Promise.resolve(),
+        addMaintenanceEntry: () => Promise.resolve(),
+        updateMaintenanceEntry: () => Promise.resolve(),
+        deleteMaintenanceEntry: () => Promise.resolve(),
+        addReminder: () => Promise.resolve(),
+        updateReminder: () => Promise.resolve(),
+        deleteReminder: () => Promise.resolve(),
+        addTask: () => Promise.resolve(),
+        updateTask: () => Promise.resolve(),
+        deleteTask: () => Promise.resolve(),
+        toggleTaskComplete: () => {},
+        addMaintenanceTemplate: () => Promise.resolve(),
+        updateMaintenanceTemplate: () => Promise.resolve(),
+        deleteMaintenanceTemplate: () => Promise.resolve(),
+        addMaintenanceProfile: () => Promise.resolve(),
+        updateMaintenanceProfile: () => Promise.resolve(),
+        deleteMaintenanceProfile: () => Promise.resolve(),
+        updateAdminPin: () => Promise.resolve(),
+        updateFontSize: () => Promise.resolve(),
+        resetData: () => {},
+        exportData: () => Promise.resolve(),
+        importData: () => Promise.resolve(),
+        isLoading: true, // Force loading state pendant hot-reload
+        signOut: () => Promise.resolve(),
+        refreshAuth: () => Promise.resolve(),
+      } as AppContextType;
     }
     
-    throw new Error('useApp must be used within AppProvider. Si vous voyez cette erreur après un hot-reload, faites un hard refresh (Ctrl+Shift+R).');
+    throw new Error('useApp must be used within AppProvider');
   }
   
   return context;

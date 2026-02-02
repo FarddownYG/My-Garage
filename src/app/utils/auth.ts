@@ -126,6 +126,26 @@ export const signOut = async () => {
 };
 
 /**
+ * Nettoyer toutes les sessions Supabase du localStorage
+ * ⚠️ SÉCURITÉ : Efface toutes les données d'authentification stockées
+ */
+export const clearSupabaseSessions = () => {
+  try {
+    // Supabase stocke les sessions avec des clés comme "sb-{project-ref}-auth-token"
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('sb-') && key.includes('-auth-token')) {
+        console.log('🧹 Suppression session Supabase:', key);
+        localStorage.removeItem(key);
+      }
+    });
+    console.log('✅ Sessions Supabase nettoyées');
+  } catch (error) {
+    console.error('❌ Erreur nettoyage sessions:', error);
+  }
+};
+
+/**
  * Obtenir l'utilisateur connecté
  * Utilise getSession() au lieu de getUser() pour éviter les erreurs réseau
  */
