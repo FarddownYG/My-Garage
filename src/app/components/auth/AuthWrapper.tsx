@@ -44,15 +44,19 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       return;
     }
 
-    // Cas 2: User connecté et migration nécessaire (une seule fois)
-    if (isAuthenticated && isMigrationPending && !hasSkippedMigration && !hasCheckedMigration) {
-      console.log('📋 Affichage écran migration');
+    // Cas 2: User connecté et migration nécessaire
+    // ⚠️ DÉSACTIVÉ : L'écran de migration automatique cause une boucle
+    // On force l'utilisateur à passer par Paramètres → Lier un profil
+    // TODO: Réactiver quand la boucle sera fixée
+    /*
+    if (isAuthenticated && isMigrationPending && !hasSkippedMigration) {
+      console.log('📋 Affichage écran migration (BLOQUÉ)');
       setShowMigration(true);
       setShowAuth(false);
       setShowProfileSelector(false);
-      setHasCheckedMigration(true);
       return;
     }
+    */
 
     // Cas 3: User connecté, pas de migration, mais pas de profil sélectionné
     if (isAuthenticated && !isMigrationPending && !currentProfile && profiles.length > 0) {
@@ -68,7 +72,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     setShowAuth(false);
     setShowMigration(false);
     setShowProfileSelector(false);
-  }, [isAuthenticated, isMigrationPending, currentProfile, profiles.length, isLoading, hasSkippedMigration, hasCheckedMigration]);
+  }, [isAuthenticated, isMigrationPending, currentProfile, profiles.length, isLoading, hasSkippedMigration]);
 
   // Loading state
   if (isLoading) {

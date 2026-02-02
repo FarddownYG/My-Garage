@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Lock, LockOpen } from 'lucide-react';
+import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Lock, LockOpen, Link as LinkIcon } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
@@ -10,6 +10,7 @@ import { MaintenanceProfileDetail } from './MaintenanceProfileDetail';
 import { EditProfileModal } from './EditProfileModal';
 import { UserPinModal } from './UserPinModal';
 import { PinSetupModal } from './PinSetupModal';
+import { LinkProfileModal } from './LinkProfileModal';
 import { Footer } from '../shared/Footer';
 import { Switch } from '../ui/switch';
 
@@ -27,6 +28,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showPinSetupModal, setShowPinSetupModal] = useState(false);
+  const [showLinkProfileModal, setShowLinkProfileModal] = useState(false);
   
   // Utiliser le fontSize du profil courant
   const fontSize = currentProfile?.fontSize || 50;
@@ -138,6 +140,24 @@ export function Settings({ onLogout }: SettingsProps) {
                     <div>
                       <p className="text-white">Modifier le PIN admin</p>
                       <p className="text-sm text-zinc-500">Sécurité</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                </div>
+              </Card>
+
+              <Card
+                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                onClick={() => setShowLinkProfileModal(true)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-500/10 rounded-lg">
+                      <LinkIcon className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <p className="text-white">Lier un profil ancien</p>
+                      <p className="text-sm text-zinc-500">Récupérer mes données</p>
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-zinc-600" />
@@ -321,6 +341,25 @@ export function Settings({ onLogout }: SettingsProps) {
         <div>
           <h2 className="text-sm text-zinc-500 mb-3">DONNÉES</h2>
           <div className="space-y-2">
+            {/* Lier un profil - disponible pour tous */}
+            <Card
+              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors relative"
+              onClick={() => setShowLinkProfileModal(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <LinkIcon className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-white">Lier un profil ancien</p>
+                    <p className="text-sm text-zinc-500">Récupérer mes anciennes données</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-600" />
+              </div>
+            </Card>
+
             <Card
               className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
               onClick={handleResetData}
@@ -372,6 +411,12 @@ export function Settings({ onLogout }: SettingsProps) {
       {showPinSetupModal && currentProfile && (
         <PinSetupModal 
           onClose={() => setShowPinSetupModal(false)} 
+        />
+      )}
+      
+      {showLinkProfileModal && (
+        <LinkProfileModal 
+          onClose={() => setShowLinkProfileModal(false)} 
         />
       )}
       

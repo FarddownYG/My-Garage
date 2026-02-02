@@ -54,13 +54,22 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
             <User className="w-10 h-10 text-yellow-500" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-4">
-            Aucun profil trouvé
+            Aucun profil lié
           </h1>
           <p className="text-zinc-400 mb-6">
             Votre compte <span className="text-blue-400">{supabaseUser?.email}</span> n'a pas encore de profil lié.
           </p>
-          <p className="text-sm text-zinc-500 mb-6">
-            Les profils doivent être créés et liés depuis l'application.
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-blue-400 mb-2">
+              💡 <strong>Astuce :</strong>
+            </p>
+            <p className="text-sm text-zinc-400">
+              Si vous aviez des profils (Sarah, Marc, etc.) avant de passer à l'authentification Supabase, 
+              vous devez les lier manuellement dans <strong>Paramètres → Lier un profil</strong>.
+            </p>
+          </div>
+          <p className="text-sm text-zinc-500">
+            Créez un nouveau profil ou liez un profil existant depuis l'app.
           </p>
         </Card>
       </div>
