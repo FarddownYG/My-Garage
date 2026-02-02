@@ -68,7 +68,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     setShowAuth(true);
     setShowMigration(false);
     setShowProfileSelector(false);
-  }, [isAuthenticated, isMigrationPending, currentProfile, profiles.length, isLoading, hasSkippedMigration]);
+  }, [isAuthenticated, isMigrationPending, currentProfile, isLoading, hasSkippedMigration]);
 
   // Loading state
   if (isLoading) {

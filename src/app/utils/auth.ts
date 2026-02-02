@@ -192,9 +192,21 @@ export const updatePassword = async (newPassword: string) => {
 
 /**
  * Écouter les changements d'authentification
+ * ⚠️ ULTRA-FILTRÉ : Traite UNIQUEMENT SIGNED_IN et SIGNED_OUT
  */
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
-  return supabase.auth.onAuthStateChange((_event, session) => {
+  return supabase.auth.onAuthStateChange((event, session) => {
+    console.log('🔐 onAuthStateChange EVENT:', event, session?.user?.email || 'null');
+    
+    // ⚠️ WHITELIST : UNIQUEMENT SIGNED_IN et SIGNED_OUT
+    // Tous les autres événements sont ignorés (INITIAL_SESSION, TOKEN_REFRESHED, USER_UPDATED, etc.)
+    if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') {
+      console.log('🔇 Événement ignoré:', event);
+      return;
+    }
+    
+    console.log('✅ Événement traité:', event);
+    
     if (session?.user) {
       callback({
         id: session.user.id,

@@ -341,27 +341,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('🎧 Installation listener onAuthStateChange');
     
-    let previousUserId: string | null = null;
-    
     const { data: authListener } = onAuthStateChange(async (user) => {
-      const currentUserId = user?.id || null;
-      
-      // ⚠️ FILTRER : Ignorer si le user n'a pas VRAIMENT changé
-      if (currentUserId === previousUserId) {
-        console.log('🔇 Auth state change ignoré (même user)');
-        return;
-      }
-      
-      console.log('🔐 Auth state VRAIMENT changed:', {
-        before: previousUserId?.substring(0, 8) || 'null',
-        after: currentUserId?.substring(0, 8) || 'null',
+      console.log('🔐 Auth state changed (callback):', {
+        user: user?.email || 'null',
       });
-      
-      previousUserId = currentUserId;
       
       if (!user) {
         // Déconnexion → tout effacer
-        console.log('👋 Déconnexion détectée');
+        console.log('👋 Déconnexion (SIGNED_OUT)');
         setState(prev => ({
           ...prev,
           supabaseUser: null,
@@ -377,21 +364,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           isMigrationPending: false,
         }));
       } else {
-        // Nouvelle connexion → Recharger les données
-        console.log('🔐 Nouvelle connexion détectée, rechargement des données...');
-        setState(prev => ({
-          ...prev,
-          supabaseUser: user,
-          isAuthenticated: true,
-        }));
-        
-        // Recharger les données pour le nouveau user
-        await loadFromSupabase();
-        const migrationPending = await checkMigrationPending();
-        setState(prev => ({
-          ...prev,
-          isMigrationPending: migrationPending,
-        }));
+        // Connexion (SIGNED_IN) → NE RIEN FAIRE
+        // ⚠️ CRITIQUE : Ne PAS appeler loadFromSupabase() ici !
+        // init() l'a déjà appelé au montage initial
+        // Si on le rappelle ici, la session peut ne pas être encore dans sessionStorage
+        // et loadFromSupabase() va effacer tous les profils (ligne 183)
+        console.log('🔐 Connexion (SIGNED_IN) - événement ignoré (init() gère déjà le chargement)');
       }
     });
 
@@ -901,6 +879,15 @@ export function useApp() {
   if (!context) {
     if (process.env.NODE_ENV === 'development') {
       console.warn('⚠️ AppContext non disponible - Hot-reload détecté');
+      console.warn('🔄 Rechargement automatique dans 2 secondes...');
+      
+      // Recharger automatiquement après 2 secondes si le contexte n'est toujours pas disponible
+      setTimeout(() => {
+        if (!context) {
+          console.log('🔄 Rechargement forcé...');
+          window.location.reload();
+        }
+      }, 2000);
       
       // Retourner un contexte temporaire pour éviter le crash pendant le hot-reload
       return {
