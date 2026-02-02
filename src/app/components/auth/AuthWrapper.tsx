@@ -18,6 +18,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const [showAuth, setShowAuth] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
   const [hasSkippedMigration, setHasSkippedMigration] = useState(false);
+  const [hasCheckedMigration, setHasCheckedMigration] = useState(false);
 
   useEffect(() => {
     // Déterminer quel écran afficher
@@ -28,12 +29,15 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       isMigrationPending,
       hasProfiles: profiles.length > 0,
       hasSkippedMigration,
+      hasCheckedMigration,
     });
 
-    // Cas 1: User connecté et migration nécessaire
-    if (isAuthenticated && isMigrationPending && !hasSkippedMigration) {
+    // Cas 1: User connecté et migration nécessaire (une seule fois)
+    if (isAuthenticated && isMigrationPending && !hasSkippedMigration && !hasCheckedMigration) {
+      console.log('📋 Affichage écran migration');
       setShowMigration(true);
       setShowAuth(false);
+      setHasCheckedMigration(true);
       return;
     }
 
@@ -41,13 +45,15 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     if (!isAuthenticated) {
       setShowAuth(true);
       setShowMigration(false);
+      setHasCheckedMigration(false);
       return;
     }
 
     // Cas 3: User connecté → app normale
+    console.log('✅ Affichage app normale');
     setShowAuth(false);
     setShowMigration(false);
-  }, [isAuthenticated, isMigrationPending, profiles.length, isLoading, hasSkippedMigration]);
+  }, [isAuthenticated, isMigrationPending, profiles.length, isLoading, hasSkippedMigration, hasCheckedMigration]);
 
   // Loading state
   if (isLoading) {
@@ -79,13 +85,17 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
         userId={supabaseUser.id}
         userEmail={supabaseUser.email}
         onComplete={async () => {
-          await refreshAuth();
+          console.log('✅ Migration complétée');
           setHasSkippedMigration(false);
           setShowMigration(false);
+          setHasCheckedMigration(true);
+          await refreshAuth();
         }}
         onSkip={() => {
+          console.log('⏭️ Migration ignorée');
           setHasSkippedMigration(true);
           setShowMigration(false);
+          setHasCheckedMigration(true);
         }}
       />
     );

@@ -762,8 +762,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     try {
+      console.log('🔄 Refresh auth...');
       const user = await getCurrentUser();
       
       setState(prev => ({
@@ -776,6 +777,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await loadFromSupabase();
         
         const migrationPending = await checkMigrationPending();
+        console.log('🔍 Migration pending après refresh:', migrationPending);
+        
         setState(prev => ({
           ...prev,
           isMigrationPending: migrationPending,
@@ -787,7 +790,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('❌ Erreur refresh auth:', error);
       throw error;
     }
-  };
+  }, []);
 
   return (
     <AppContext.Provider value={{ 
