@@ -4,6 +4,26 @@
 
 ### ⚡ Actions dans Supabase Dashboard
 
+#### 0️⃣ ⚡ DÉSACTIVER CONFIRMATION EMAIL (OBLIGATOIRE)
+
+**PREMIÈRE ÉTAPE - À faire MAINTENANT :**
+
+1. Aller dans **Authentication** → **Providers** → **Email**
+2. **DÉCOCHER** la case **"Confirm email"** (ou "Enable email confirmations")
+3. Cliquer sur **"Save"**
+
+✅ **Résultat :** Création de compte instantanée sans email de confirmation
+
+💡 **Pourquoi c'est OBLIGATOIRE ?**
+- C'est une app **personnelle** de gestion de véhicules
+- Le lien de confirmation pointe vers localhost:3000 (ne marche pas)
+- Connexion immédiate après inscription
+- Plus simple à utiliser
+
+⚠️ **Note :** Si vous voulez garder la confirmation email, configurez d'abord le "Site URL" dans Supabase → Settings → URL Configuration avec votre URL de production (pas localhost)
+
+---
+
 #### 1️⃣ Ouvrir le SQL Editor
 - Aller sur [https://app.supabase.com](https://app.supabase.com)
 - Sélectionner votre projet
@@ -202,18 +222,6 @@ Policies   | 18+
 ```
 
 ✅ **Si vous voyez ces 3 lignes, c'est PARFAIT !**
-
----
-
-#### 6️⃣ Désactiver Confirmation Email (Optionnel - Dev/Test)
-
-**Si vous voulez tester sans confirmer l'email :**
-
-1. Aller dans **Authentication** → **Providers** → **Email**
-2. Désactiver **"Confirm email"**
-3. Cliquer sur **"Save"**
-
-⚠️ **En production, gardez la confirmation activée pour la sécurité !**
 
 ---
 
