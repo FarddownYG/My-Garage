@@ -192,30 +192,27 @@ export const updatePassword = async (newPassword: string) => {
 
 /**
  * Écouter les changements d'authentification
- * ⚠️ TRAITE : SIGNED_IN, SIGNED_OUT, et INITIAL_SESSION
+ * ⚠️ TRAITE UNIQUEMENT : SIGNED_OUT (déconnexion)
+ * ⚠️ IGNORE : SIGNED_IN (géré par refreshAuth), INITIAL_SESSION (géré par init), etc.
  */
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
   return supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔐 onAuthStateChange EVENT:', event, session?.user?.email || 'null');
+    console.log('🔐 onAuthStateChange EVENT:', {
+      event,
+      userEmail: session?.user?.email || 'null',
+      hasSession: !!session,
+    });
     
-    // ⚠️ WHITELIST : SIGNED_IN, SIGNED_OUT, et INITIAL_SESSION
-    // INITIAL_SESSION est envoyé au chargement de la page si une session existe
-    // TOKEN_REFRESHED et USER_UPDATED sont ignorés
-    if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') {
-      console.log('🔇 Événement ignoré:', event);
+    // ⚠️ WHITELIST : SIGNED_OUT uniquement (pour détecter déconnexion)
+    if (event !== 'SIGNED_OUT') {
+      console.log('🔇 Événement ignoré:', event, '(géré manuellement)');
       return;
     }
     
-    console.log('✅ Événement traité:', event);
+    console.log('🚨 ATTENTION: Événement SIGNED_OUT détecté - déconnexion de l\'utilisateur');
+    console.trace('Stack trace de la déconnexion:');
     
-    if (session?.user) {
-      callback({
-        id: session.user.id,
-        email: session.user.email || '',
-        user_metadata: session.user.user_metadata,
-      });
-    } else {
-      callback(null);
-    }
+    // Pour SIGNED_OUT, on passe null au callback
+    callback(null);
   });
 };

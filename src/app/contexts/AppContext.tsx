@@ -342,51 +342,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     console.log('🎧 Installation listener onAuthStateChange');
     
     const { data: authListener } = onAuthStateChange(async (user) => {
-      console.log('🔐 Auth state changed (callback):', {
-        user: user?.email || 'null',
-      });
+      // Ce callback ne reçoit QUE des événements SIGNED_OUT (user = null)
+      console.log('👋 Déconnexion détectée (SIGNED_OUT)');
       
-      if (!user) {
-        // Déconnexion → tout effacer
-        console.log('👋 Déconnexion (SIGNED_OUT)');
-        setState(prev => ({
-          ...prev,
-          supabaseUser: null,
-          isAuthenticated: false,
-          currentProfile: null,
-          profiles: [],
-          vehicles: [],
-          maintenanceEntries: [],
-          tasks: [],
-          reminders: [],
-          maintenanceTemplates: [],
-          maintenanceProfiles: [],
-          isMigrationPending: false,
-        }));
-      } else {
-        // Connexion (SIGNED_IN) → Charger les données
-        console.log('🔐 Connexion (SIGNED_IN) - chargement des données...');
-        
-        setState(prev => ({
-          ...prev,
-          supabaseUser: user,
-          isAuthenticated: true,
-          isLoading: true, // ⚠️ Afficher le loader pendant le chargement
-        }));
-        
-        // Charger les données depuis Supabase
-        await loadFromSupabase();
-        
-        // Vérifier si migration nécessaire
-        const migrationPending = await checkMigrationPending();
-        console.log('🔍 Migration pending après SIGNED_IN:', migrationPending);
-        
-        setState(prev => ({
-          ...prev,
-          isMigrationPending: migrationPending,
-          isLoading: false, // ✅ Masquer le loader
-        }));
-      }
+      setState(prev => ({
+        ...prev,
+        supabaseUser: null,
+        isAuthenticated: false,
+        currentProfile: null,
+        profiles: [],
+        vehicles: [],
+        maintenanceEntries: [],
+        tasks: [],
+        reminders: [],
+        maintenanceTemplates: [],
+        maintenanceProfiles: [],
+        isMigrationPending: false,
+      }));
     });
 
     return () => {
@@ -843,30 +815,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAuth = useCallback(async () => {
     try {
-      console.log('🔄 Refresh auth (simple reload)...');
+      console.log('🔄 Refresh auth après connexion...');
       
-      // ⚠️ NE PAS appeler getUser() car ça déclenche un nouvel événement SIGNED_IN
-      // On recharge juste les données depuis Supabase
-      const user = await getCurrentUser();
+      // Vérifier la session avec getUser() (appel API)
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('❌ Erreur getUser():', error);
+        return;
+      }
+      
+      const user = authUser ? {
+        id: authUser.id,
+        email: authUser.email || '',
+        user_metadata: authUser.user_metadata,
+      } : null;
+      
+      console.log('🔍 User après getUser():', user?.email || 'null');
       
       if (user) {
-        console.log('✅ User trouvé, rechargement des données...');
+        console.log('✅ User connecté, mise à jour de l\'état...');
+        
+        setState(prev => ({
+          ...prev,
+          supabaseUser: user,
+          isAuthenticated: true,
+        }));
+        
+        console.log('📥 Chargement des données...');
         await loadFromSupabase();
         
         const migrationPending = await checkMigrationPending();
-        console.log('🔍 Migration pending après refresh:', migrationPending);
+        console.log('🔍 Migration pending:', migrationPending);
         
         setState(prev => ({
           ...prev,
           isMigrationPending: migrationPending,
         }));
+        
+        console.log('✅ Auth et données rechargées');
+        setIsLoading(false); // ✅ CRITIQUE : Masquer le loader
       } else {
-        console.log('⚠️ Aucun user trouvé après refreshAuth()');
+        console.warn('⚠️ Aucun user trouvé après refreshAuth()');
+        setIsLoading(false);
       }
-      
-      console.log('✅ Auth rafraîchie');
     } catch (error) {
       console.error('❌ Erreur refresh auth:', error);
+      setIsLoading(false);
       throw error;
     }
   }, []);

@@ -54,11 +54,8 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
       if (mode === 'signin') {
         console.log('🔐 Tentative de connexion...');
         await signIn(email, password);
-        console.log('✅ Connexion réussie');
-        console.log('⏳ Attente de onAuthStateChange pour mettre à jour l\'état...');
-        // ⚠️ NE PAS appeler onSuccess() car il ne fait rien
-        // onAuthStateChange va automatiquement mettre à jour isAuthenticated
-        // et AuthWrapper va automatiquement masquer AuthScreen
+        console.log('✅ Connexion réussie, appel onSuccess() pour recharger l\'état');
+        onSuccess();
       } else {
         console.log('📝 Tentative d\'inscription...', { email, fullName });
         const result: any = await signUp(email, password, fullName);
@@ -78,9 +75,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
           return; // Ne pas appeler onSuccess() car pas encore connecté
         } else {
           console.log('🎉 Inscription avec session - connecté automatiquement');
-          console.log('⏳ Attente de onAuthStateChange pour mettre à jour l\'état...');
-          // ⚠️ NE PAS appeler onSuccess() car il ne fait rien
-          // onAuthStateChange va automatiquement mettre à jour isAuthenticated
+          onSuccess();
         }
       }
     } catch (err: any) {

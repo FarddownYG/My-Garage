@@ -87,10 +87,9 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return (
       <AuthScreen
         onSuccess={async () => {
-          // ⚠️ NE PAS appeler refreshAuth() ici !
-          // onAuthStateChange dans auth.ts va automatiquement déclencher SIGNED_IN
-          // et init() dans AppContext va charger les données
-          console.log('✅ Connexion réussie, attente de onAuthStateChange...');
+          console.log('✅ Connexion réussie, rechargement de l\'état...');
+          // ⚠️ Forcer le rechargement complet de l'état
+          await refreshAuth();
         }}
       />
     );
