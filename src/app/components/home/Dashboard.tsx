@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
-import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight, ExternalLink, BookOpen, Video, Star } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight, ExternalLink, BookOpen, Video, Star, Shield } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { calculateUpcomingAlerts } from '../../utils/alerts';
 import { Footer } from '../shared/Footer';
+import { AdminPanel } from '../admin/AdminPanel';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -13,7 +14,12 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles }: DashboardProps) {
-  const { vehicles, tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles } = useApp();
+  const { vehicles, tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles, supabaseUser } = useApp();
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  // Email admin
+  const ADMIN_EMAIL = 'admin2647595726151748@gmail.com';
+  const isAdmin = supabaseUser?.email === ADMIN_EMAIL;
 
   // Filtrer par profil actuel
   const userVehicles = useMemo(
@@ -63,6 +69,29 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
     });
   }, [alerts]);
 
+  // Afficher le nom complet depuis user_metadata ou le nom du profil
+  const displayName = supabaseUser?.user_metadata?.full_name || currentProfile?.name;
+
+  // Si panneau admin affiché, le rendre
+  if (showAdminPanel && isAdmin) {
+    return (
+      <div className="min-h-screen bg-black">
+        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white p-4">
+          <button
+            onClick={() => setShowAdminPanel(false)}
+            className="flex items-center gap-2 text-white/80 hover:text-white mb-2"
+          >
+            ← Retour
+          </button>
+          <h1 className="text-2xl font-bold">Panneau Admin</h1>
+        </div>
+        <div className="p-4">
+          <AdminPanel />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen overflow-auto bg-black pb-24">
       {/* Header */}
@@ -73,18 +102,29 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
               {currentProfile?.avatar}
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-2xl text-white truncate">Bonjour, {currentProfile?.name}</h1>
+              <h1 className="text-lg sm:text-2xl text-white truncate">Bonjour, {displayName}</h1>
               <p className="text-xs sm:text-sm text-zinc-500 truncate">
                 {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
           </div>
-          <button
-            onClick={onLogout}
-            className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminPanel(true)}
+                className="p-2 text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
+                title="Panneau Admin"
+              >
+                <Shield className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onLogout}
+              className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
