@@ -10,6 +10,8 @@ import type { SupabaseUser } from '../types';
  */
 export const signUp = async (email: string, password: string, fullName?: string) => {
   try {
+    console.log('📡 Envoi requête signUp à Supabase...', { email, fullName });
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -20,7 +22,12 @@ export const signUp = async (email: string, password: string, fullName?: string)
       },
     });
 
-    if (error) throw error;
+    console.log('📡 Réponse Supabase:', { data, error });
+
+    if (error) {
+      console.error('❌ Erreur Supabase:', error);
+      throw error;
+    }
     
     console.log('✅ Inscription réussie:', data.user?.email);
     return data.user;

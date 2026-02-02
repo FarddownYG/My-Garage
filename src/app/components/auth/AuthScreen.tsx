@@ -26,33 +26,51 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
     setError('');
     setRateLimitSeconds(null);
 
+    console.log('🔍 Début soumission formulaire', { mode, email, emailConfirm, password: '***', passwordConfirm: '***' });
+
     // Validations pour inscription
     if (mode === 'signup') {
+      console.log('🔍 Validation inscription...');
+      console.log('Email 1:', email);
+      console.log('Email 2:', emailConfirm);
+      console.log('Password 1:', password ? '***' : 'vide');
+      console.log('Password 2:', passwordConfirm ? '***' : 'vide');
+      
       if (email !== emailConfirm) {
+        console.log('❌ Emails ne correspondent pas');
         setError('Les adresses email ne correspondent pas');
         return;
       }
       
       if (password !== passwordConfirm) {
+        console.log('❌ Mots de passe ne correspondent pas');
         setError('Les mots de passe ne correspondent pas');
         return;
       }
+      
+      console.log('✅ Validations OK');
     }
 
     setIsLoading(true);
+    console.log('⏳ Appel API...');
 
     try {
       if (mode === 'signin') {
+        console.log('🔐 Tentative de connexion...');
         await signIn(email, password);
         console.log('✅ Connexion réussie');
       } else {
+        console.log('📝 Tentative d\'inscription...', { email, fullName });
         await signUp(email, password, fullName);
         console.log('✅ Inscription réussie');
       }
       
+      console.log('🎉 Succès, appel onSuccess()');
       onSuccess();
     } catch (err: any) {
       console.error('❌ Erreur auth:', err);
+      console.error('❌ Message:', err.message);
+      console.error('❌ Stack:', err.stack);
       
       // Extraire le temps d'attente du message d'erreur
       const rateLimitMatch = err.message?.match(/after (\d+) seconds/);
@@ -80,10 +98,16 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         setError('Un compte avec cet email existe déjà');
       } else if (err.message?.includes('Password should be at least')) {
         setError('Le mot de passe doit contenir au moins 6 caractères');
+      } else if (err.message?.includes('Load failed') || err.message?.includes('Failed to fetch')) {
+        setError('Erreur de connexion. Vérifiez votre connexion internet ou réessayez plus tard.');
+      } else if (err.message?.includes('confirm')) {
+        setError('Veuillez vérifier votre boîte mail pour confirmer votre compte.');
       } else {
-        setError(err.message || 'Une erreur est survenue');
+        console.log('❌ Erreur non gérée:', err.message);
+        setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
       }
     } finally {
+      console.log('🏁 Fin du processus, setIsLoading(false)');
       setIsLoading(false);
     }
   };
