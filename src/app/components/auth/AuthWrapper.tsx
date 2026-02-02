@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { AuthScreen } from './AuthScreen';
 import { MigrationScreen } from './MigrationScreen';
+import { ProfileSelectorAfterAuth } from './ProfileSelectorAfterAuth';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -14,9 +15,10 @@ interface AuthWrapperProps {
 export function AuthWrapper({ children }: AuthWrapperProps) {
   // ⚠️ IMPORTANT: Tous les hooks DOIVENT être appelés dans le même ordre à chaque render
   // Ne JAMAIS mettre de return conditionnel AVANT les hooks
-  const { supabaseUser, isAuthenticated, isMigrationPending, isLoading, refreshAuth, profiles } = useApp();
+  const { supabaseUser, isAuthenticated, isMigrationPending, isLoading, refreshAuth, profiles, currentProfile, setCurrentProfile } = useApp();
   const [showAuth, setShowAuth] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
+  const [showProfileSelector, setShowProfileSelector] = useState(false);
   const [hasSkippedMigration, setHasSkippedMigration] = useState(false);
   const [hasCheckedMigration, setHasCheckedMigration] = useState(false);
 
@@ -27,33 +29,46 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     console.log('🔐 État Auth:', {
       isAuthenticated,
       isMigrationPending,
+      hasCurrentProfile: !!currentProfile,
       hasProfiles: profiles.length > 0,
       hasSkippedMigration,
       hasCheckedMigration,
     });
 
-    // Cas 1: User connecté et migration nécessaire (une seule fois)
-    if (isAuthenticated && isMigrationPending && !hasSkippedMigration && !hasCheckedMigration) {
-      console.log('📋 Affichage écran migration');
-      setShowMigration(true);
-      setShowAuth(false);
-      setHasCheckedMigration(true);
-      return;
-    }
-
-    // Cas 2: Pas de user → forcer auth (obligatoire)
+    // Cas 1: Pas de user → forcer auth (obligatoire)
     if (!isAuthenticated) {
       setShowAuth(true);
       setShowMigration(false);
+      setShowProfileSelector(false);
       setHasCheckedMigration(false);
       return;
     }
 
-    // Cas 3: User connecté → app normale
+    // Cas 2: User connecté et migration nécessaire (une seule fois)
+    if (isAuthenticated && isMigrationPending && !hasSkippedMigration && !hasCheckedMigration) {
+      console.log('📋 Affichage écran migration');
+      setShowMigration(true);
+      setShowAuth(false);
+      setShowProfileSelector(false);
+      setHasCheckedMigration(true);
+      return;
+    }
+
+    // Cas 3: User connecté, pas de migration, mais pas de profil sélectionné
+    if (isAuthenticated && !isMigrationPending && !currentProfile && profiles.length > 0) {
+      console.log('👤 Affichage sélection de profil');
+      setShowProfileSelector(true);
+      setShowAuth(false);
+      setShowMigration(false);
+      return;
+    }
+
+    // Cas 4: User connecté → app normale
     console.log('✅ Affichage app normale');
     setShowAuth(false);
     setShowMigration(false);
-  }, [isAuthenticated, isMigrationPending, profiles.length, isLoading, hasSkippedMigration, hasCheckedMigration]);
+    setShowProfileSelector(false);
+  }, [isAuthenticated, isMigrationPending, currentProfile, profiles.length, isLoading, hasSkippedMigration, hasCheckedMigration]);
 
   // Loading state
   if (isLoading) {
@@ -96,6 +111,19 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
           setHasSkippedMigration(true);
           setShowMigration(false);
           setHasCheckedMigration(true);
+        }}
+      />
+    );
+  }
+
+  // Écran de sélection de profil (après connexion)
+  if (showProfileSelector) {
+    return (
+      <ProfileSelectorAfterAuth
+        onProfileSelected={(profile) => {
+          console.log('✅ Profil sélectionné:', profile.name);
+          setCurrentProfile(profile);
+          setShowProfileSelector(false);
         }}
       />
     );

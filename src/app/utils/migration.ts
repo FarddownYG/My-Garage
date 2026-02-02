@@ -98,9 +98,12 @@ export const checkMigrationPending = async (): Promise<boolean> => {
     
     // Si pas de session, pas besoin de vérifier la migration
     if (!session) {
+      console.log('🔍 checkMigrationPending: Pas de session');
       return false;
     }
 
+    console.log('🔍 Vérification profils non migrés...');
+    
     const { count, error } = await supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
@@ -110,12 +113,15 @@ export const checkMigrationPending = async (): Promise<boolean> => {
 
     // Si erreur (ex: RLS), retourner false silencieusement
     if (error) {
+      console.error('❌ Erreur checkMigrationPending (RLS?):', error);
       return false;
     }
 
+    console.log(`📊 Profils non migrés trouvés: ${count || 0}`);
     return (count || 0) > 0;
   } catch (error) {
     // Échec silencieux - erreur de session est normale
+    console.error('❌ Exception checkMigrationPending:', error);
     return false;
   }
 };

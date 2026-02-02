@@ -192,13 +192,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data: config } = await supabase.from('app_config').select('*').eq('id', 'global').single();
-      const { data: profiles } = await supabase.from('profiles').select('*').order('name');
+      const { data: profiles, error: profilesError } = await supabase.from('profiles').select('*').order('name');
       const { data: vehicles } = await supabase.from('vehicles').select('*').order('name');
       const { data: maintenanceEntries } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
       const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
       const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
       const { data: templates } = await supabase.from('maintenance_templates').select('*').order('name');
       const { data: maintenanceProfiles } = await supabase.from('maintenance_profiles').select('*').order('name');
+
+      // 🔍 DIAGNOSTIC : Afficher ce qui a été chargé
+      console.log('📊 Données chargées:', {
+        profiles: profiles?.length || 0,
+        vehicles: vehicles?.length || 0,
+        maintenanceEntries: maintenanceEntries?.length || 0,
+        tasks: tasks?.length || 0,
+        reminders: reminders?.length || 0,
+        templates: templates?.length || 0,
+        maintenanceProfiles: maintenanceProfiles?.length || 0,
+      });
+      
+      if (profilesError) {
+        console.error('❌ Erreur chargement profils:', profilesError);
+      }
+      
+      if (profiles) {
+        console.log('👥 Profils chargés:', profiles.map(p => ({ 
+          name: p.first_name, 
+          user_id: p.user_id ? '✅' : '❌',
+          is_admin: p.is_admin 
+        })));
+      }
 
       // 🔧 Initialiser les templates pour les profils qui n'en ont pas
       // ⚠️ FIX: Ne plus créer automatiquement les templates pour éviter les doublons
@@ -250,6 +273,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
+      console.log('🚀 INITIALISATION APP...');
+      
       // 1. Vérifier l'authentification
       const user = await getCurrentUser();
       console.log('🔐 User actuel:', user?.email || 'Non connecté');
@@ -260,15 +285,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
       }));
 
+      // Si pas de user, arrêter ici
+      if (!user) {
+        console.log('⏸️ Pas de user, arrêt de l\'initialisation');
+        setIsLoading(false);
+        return;
+      }
+
       // 2. Migration localStorage → Supabase (si nécessaire)
       await migrateToSupabase();
       
       // 3. Charger les données
+      console.log('📥 Chargement des données depuis Supabase...');
       await loadFromSupabase();
       
       // 4. Vérifier si migration de profils nécessaire
+      console.log('🔍 Vérification migration profils...');
       const migrationPending = await checkMigrationPending();
-      console.log('🔄 Migration profils nécessaire:', migrationPending);
+      console.log('📊 Migration profils nécessaire:', migrationPending);
       
       setState(prev => ({
         ...prev,
@@ -283,6 +317,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await loadFromSupabase();
       }
       
+      console.log('✅ Initialisation terminée');
       setIsLoading(false);
     };
     
