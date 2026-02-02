@@ -335,23 +335,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     
     init();
+  }, []);
 
-    // 6. Écouter les changements d'authentification
+  // 🎧 Écouter les changements d'authentification (useEffect séparé pour éviter les boucles)
+  useEffect(() => {
+    console.log('🎧 Installation listener onAuthStateChange');
+    
+    let previousUserId: string | null = null;
+    
     const { data: authListener } = onAuthStateChange(async (user) => {
-      console.log('🔐 Auth changed:', user?.email || 'Déconnecté');
+      const currentUserId = user?.id || null;
       
-      // Mise à jour de l'état auth SANS recharger les données
-      // (évite la boucle de redirection)
-      setState(prev => ({
-        ...prev,
-        supabaseUser: user,
-        isAuthenticated: !!user,
-        // ⚠️ Effacer le profil uniquement si l'utilisateur se déconnecte
-        currentProfile: user ? prev.currentProfile : null,
-      }));
-
-      // Vérifier migration uniquement si user change
-      if (user) {
+      // ⚠️ FILTRER : Ignorer si le user n'a pas VRAIMENT changé
+      if (currentUserId === previousUserId) {
+        console.log('🔇 Auth state change ignoré (même user)');
+        return;
+      }
+      
+      console.log('🔐 Auth state VRAIMENT changed:', {
+        before: previousUserId?.substring(0, 8) || 'null',
+        after: currentUserId?.substring(0, 8) || 'null',
+      });
+      
+      previousUserId = currentUserId;
+      
+      if (!user) {
+        // Déconnexion → tout effacer
+        console.log('👋 Déconnexion détectée');
+        setState(prev => ({
+          ...prev,
+          supabaseUser: null,
+          isAuthenticated: false,
+          currentProfile: null,
+          profiles: [],
+          vehicles: [],
+          maintenanceEntries: [],
+          tasks: [],
+          reminders: [],
+          maintenanceTemplates: [],
+          maintenanceProfiles: [],
+          isMigrationPending: false,
+        }));
+      } else {
+        // Nouvelle connexion → Recharger les données
+        console.log('🔐 Nouvelle connexion détectée, rechargement des données...');
+        setState(prev => ({
+          ...prev,
+          supabaseUser: user,
+          isAuthenticated: true,
+        }));
+        
+        // Recharger les données pour le nouveau user
+        await loadFromSupabase();
         const migrationPending = await checkMigrationPending();
         setState(prev => ({
           ...prev,
@@ -361,6 +396,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      console.log('🔇 Désinstallation listener onAuthStateChange');
       authListener?.subscription?.unsubscribe();
     };
   }, []);
