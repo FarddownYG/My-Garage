@@ -759,13 +759,108 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetData = async () => {
-    await supabase.from('tasks').delete().neq('id', '');
-    await supabase.from('reminders').delete().neq('id', '');
-    await supabase.from('maintenance_entries').delete().neq('id', '');
-    await supabase.from('vehicles').delete().neq('id', '');
-    await supabase.from('profiles').delete().neq('id', '');
-    await supabase.from('app_config').delete().eq('id', 'global');
-    setState(defaultState);
+    if (!state.currentProfile) {
+      console.error('❌ Aucun profil actif');
+      return;
+    }
+
+    const profileId = state.currentProfile.id;
+    console.log(`🗑️ Réinitialisation des données du profil: ${state.currentProfile.name}`);
+
+    try {
+      // Récupérer tous les véhicules du profil
+      const { data: vehicles } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('owner_id', profileId);
+
+      const vehicleIds = vehicles?.map(v => v.id) || [];
+
+      // Supprimer les entretiens des véhicules du profil
+      if (vehicleIds.length > 0) {
+        await supabase
+          .from('maintenance_entries')
+          .delete()
+          .in('vehicle_id', vehicleIds);
+        
+        console.log(`✅ Entretiens supprimés pour ${vehicleIds.length} véhicules`);
+      }
+
+      // Supprimer les tâches des véhicules du profil
+      if (vehicleIds.length > 0) {
+        await supabase
+          .from('tasks')
+          .delete()
+          .in('vehicle_id', vehicleIds);
+      }
+
+      // Supprimer les rappels des véhicules du profil
+      if (vehicleIds.length > 0) {
+        await supabase
+          .from('reminders')
+          .delete()
+          .in('vehicle_id', vehicleIds);
+      }
+
+      // Supprimer les véhicules du profil
+      await supabase
+        .from('vehicles')
+        .delete()
+        .eq('owner_id', profileId);
+
+      // Supprimer les templates personnalisés (pas les originaux)
+      await supabase
+        .from('maintenance_templates')
+        .delete()
+        .eq('owner_id', profileId)
+        .eq('is_custom', true);
+
+      console.log(`✅ Toutes les données du profil "${state.currentProfile.name}" ont été supprimées`);
+      console.log('ℹ️ Le profil lui-même est conservé');
+      
+      // Recharger les données depuis Supabase
+      const { data: vehiclesData } = await supabase.from('vehicles').select('*').order('name');
+      const { data: maintenanceEntriesData } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
+      const { data: tasksData } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      const { data: remindersData } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
+      const { data: templatesData } = await supabase.from('maintenance_templates').select('*').order('name');
+
+      // Mettre à jour l'état
+      setState(prev => ({
+        ...prev,
+        vehicles: (vehiclesData || []).map(v => ({ 
+          id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
+          brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
+          licensePlate: v.license_plate || undefined, vin: v.vin || undefined, ownerId: v.owner_id, 
+          fuelType: v.fuel_type || undefined, driveType: v.drive_type || undefined,
+          photos: v.photos || undefined,
+          documents: v.documents ? (typeof v.documents === 'string' ? JSON.parse(v.documents) : v.documents) : undefined 
+        })),
+        maintenanceEntries: (maintenanceEntriesData || []).map(e => ({ 
+          id: e.id, vehicleId: e.vehicle_id, type: e.type as any,
+          customType: e.custom_type || undefined, customIcon: e.custom_icon || undefined, date: e.date,
+          mileage: e.mileage, cost: e.cost || undefined, notes: e.notes || undefined, photos: e.photos || undefined 
+        })),
+        tasks: (tasksData || []).map(t => ({ 
+          id: t.id, vehicleId: t.vehicle_id, title: t.title,
+          description: t.description || undefined, links: t.links || undefined, completed: t.completed, createdAt: t.created_at 
+        })),
+        reminders: (remindersData || []).map(r => ({ 
+          id: r.id, vehicleId: r.vehicle_id, type: r.type,
+          dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description 
+        })),
+        maintenanceTemplates: (templatesData || []).map(t => ({ 
+          id: t.id, name: t.name, icon: t.icon,
+          category: t.category || undefined, intervalMonths: t.interval_months || undefined, intervalKm: t.interval_km || undefined,
+          fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined 
+        })),
+      }));
+
+      console.log('✅ Données rechargées depuis Supabase');
+    } catch (error) {
+      console.error('❌ Erreur lors de la réinitialisation:', error);
+      throw error;
+    }
   };
 
   const exportData = async () => {

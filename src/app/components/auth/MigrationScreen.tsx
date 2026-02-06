@@ -101,7 +101,17 @@ export function MigrationScreen({ userId, userEmail, onComplete, onSkip }: Migra
       }
     } catch (err: any) {
       console.error('❌ Erreur migration:', err);
-      setError(err.message || 'Erreur lors de la migration');
+      
+      // Message d'erreur personnalisé selon le type
+      let errorMessage = err.message || 'Erreur lors de la migration';
+      
+      if (errorMessage.includes('already linked to another user')) {
+        errorMessage = '🔒 Ce profil est déjà lié à un autre compte. Chaque utilisateur doit avoir ses propres profils.';
+      } else if (errorMessage.includes('already has a profile named')) {
+        errorMessage = '⚠️ Tu as déjà un profil avec ce nom. Choisis un autre profil.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsMigrating(false);
     }

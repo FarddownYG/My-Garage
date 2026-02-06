@@ -34,10 +34,22 @@ export function Settings({ onLogout }: SettingsProps) {
   const fontSize = currentProfile?.fontSize || 50;
 
   const handleResetData = () => {
-    if (confirm('⚠️ Cette action supprimera TOUTES les données de l\'application. Êtes-vous sûr ?')) {
-      if (confirm('Dernière confirmation : toutes les données seront perdues définitivement.')) {
+    if (!currentProfile) return;
+    
+    const message = `⚠️ Cette action supprimera TOUTES les données du profil "${currentProfile.name}" :\n\n` +
+      `• Tous les véhicules\n` +
+      `• Tous les entretiens\n` +
+      `• Toutes les tâches\n` +
+      `• Tous les rappels\n` +
+      `• Les templates personnalisés\n\n` +
+      `Le profil lui-même sera conservé.\n\n` +
+      `Êtes-vous sûr ?`;
+    
+    if (confirm(message)) {
+      if (confirm(`Dernière confirmation : toutes les données de "${currentProfile.name}" seront perdues définitivement.`)) {
         resetData();
-        onLogout();
+        // Ne pas se déconnecter, juste recharger
+        alert('✅ Données du profil réinitialisées avec succès !');
       }
     }
   };
@@ -370,8 +382,8 @@ export function Settings({ onLogout }: SettingsProps) {
                     <Database className="w-5 h-5 text-red-500" />
                   </div>
                   <div>
-                    <p className="text-white">Réinitialiser les données</p>
-                    <p className="text-sm text-zinc-500">Supprimer toutes les données</p>
+                    <p className="text-white">Réinitialiser les données du profil</p>
+                    <p className="text-sm text-zinc-500">Supprimer véhicules, entretiens et tâches</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-zinc-600" />
