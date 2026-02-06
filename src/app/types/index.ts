@@ -130,7 +130,6 @@ export interface AppState {
   // Supabase Auth
   supabaseUser: SupabaseUser | null;
   isAuthenticated: boolean;
-  isMigrationPending: boolean; // Profils non migrés présents
 }
 
 // Re-export from alerts.ts for convenience

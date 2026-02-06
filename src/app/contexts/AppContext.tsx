@@ -6,7 +6,7 @@ import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates
 import { supabase } from '../utils/supabase';
 import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
 import { getCurrentUser, onAuthStateChange, signOut as authSignOut } from '../utils/auth';
-import { checkMigrationPending, getProfilesByUser } from '../utils/migration';
+import { getProfilesByUser } from '../utils/migration';
 
 // v1.2.0 - Supabase Auth integration
 interface AppContextType extends AppState {
@@ -58,7 +58,6 @@ const defaultState: AppState = {
   // Auth state
   supabaseUser: null,
   isAuthenticated: false,
-  isMigrationPending: false,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -314,17 +313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.log('📥 Chargement des données depuis Supabase...');
       await loadFromSupabase();
       
-      // 4. Vérifier si migration de profils nécessaire
-      console.log('🔍 Vérification migration profils...');
-      const migrationPending = await checkMigrationPending();
-      console.log('📊 Migration profils nécessaire:', migrationPending);
-      
-      setState(prev => ({
-        ...prev,
-        isMigrationPending: migrationPending,
-      }));
-      
-      // 5. Migration automatique des profile_id manquants
+      // 4. Migration automatique des profile_id manquants
       const needsMigration = await checkMigrationNeeded();
       if (needsMigration) {
         console.log('🔧 Migration des profile_id en cours...');
@@ -359,7 +348,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reminders: [],
         maintenanceTemplates: [],
         maintenanceProfiles: [],
-        isMigrationPending: false,
       }));
     });
 
@@ -900,7 +888,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...defaultState,
         supabaseUser: null,
         isAuthenticated: false,
-        isMigrationPending: false,
       });
       
       console.log('✅ Déconnexion réussie');
@@ -941,14 +928,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         console.log('📥 Chargement des données...');
         await loadFromSupabase();
-        
-        const migrationPending = await checkMigrationPending();
-        console.log('🔍 Migration pending:', migrationPending);
-        
-        setState(prev => ({
-          ...prev,
-          isMigrationPending: migrationPending,
-        }));
         
         console.log('✅ Auth et données rechargées');
         setIsLoading(false); // ✅ CRITIQUE : Masquer le loader

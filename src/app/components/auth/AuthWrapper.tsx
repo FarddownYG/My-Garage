@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { AuthScreen } from './AuthScreen';
-import { MigrationScreen } from './MigrationScreen';
 import { ProfileSelectorAfterAuth } from './ProfileSelectorAfterAuth';
 
 interface AuthWrapperProps {
@@ -9,18 +8,13 @@ interface AuthWrapperProps {
 }
 
 /**
- * AuthWrapper gère l'authentification et la migration des profils
+ * AuthWrapper gère l'authentification
  * Affiche les écrans appropriés selon l'état de l'utilisateur
  */
 export function AuthWrapper({ children }: AuthWrapperProps) {
-  // ⚠️ IMPORTANT: Tous les hooks DOIVENT être appelés dans le même ordre à chaque render
-  // Ne JAMAIS mettre de return conditionnel AVANT les hooks
-  const { supabaseUser, isAuthenticated, isMigrationPending, isLoading, refreshAuth, profiles, currentProfile, setCurrentProfile } = useApp();
+  const { supabaseUser, isAuthenticated, isLoading, refreshAuth, currentProfile } = useApp();
   const [showAuth, setShowAuth] = useState(false);
-  const [showMigration, setShowMigration] = useState(false);
   const [showProfileSelector, setShowProfileSelector] = useState(false);
-  const [hasSkippedMigration, setHasSkippedMigration] = useState(false);
-  const [hasCheckedMigration, setHasCheckedMigration] = useState(false);
 
   useEffect(() => {
     // Déterminer quel écran afficher
@@ -28,29 +22,21 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
     console.log('🔐 État Auth:', {
       isAuthenticated,
-      isMigrationPending,
       hasCurrentProfile: !!currentProfile,
-      hasProfiles: profiles.length > 0,
-      hasSkippedMigration,
-      hasCheckedMigration,
     });
 
     // Cas 1: Pas de user → forcer auth (obligatoire)
     if (!isAuthenticated) {
       setShowAuth(true);
-      setShowMigration(false);
       setShowProfileSelector(false);
-      setHasCheckedMigration(false);
       return;
     }
 
-    // Cas 2: User connecté, pas de profil sélectionné
-    // Afficher le sélecteur de profil dans TOUS les cas où currentProfile est null
+    // Cas 2: User connecté, pas de profil sélectionné → sélecteur
     if (isAuthenticated && !currentProfile) {
-      console.log('👤 Affichage sélection de profil (profils:', profiles.length, ')');
+      console.log('👤 Affichage sélection de profil');
       setShowProfileSelector(true);
       setShowAuth(false);
-      setShowMigration(false);
       return;
     }
 
@@ -58,7 +44,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     if (isAuthenticated && currentProfile) {
       console.log('✅ Affichage app normale');
       setShowAuth(false);
-      setShowMigration(false);
       setShowProfileSelector(false);
       return;
     }
@@ -66,9 +51,8 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     // Cas 4: Fallback - forcer auth
     console.log('⚠️ État non géré, retour à l\'auth');
     setShowAuth(true);
-    setShowMigration(false);
     setShowProfileSelector(false);
-  }, [isAuthenticated, isMigrationPending, currentProfile, isLoading, hasSkippedMigration]);
+  }, [isAuthenticated, currentProfile, isLoading]);
 
   // Loading state
   if (isLoading) {
@@ -88,31 +72,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       <AuthScreen
         onSuccess={async () => {
           console.log('✅ Connexion réussie, rechargement de l\'état...');
-          // ⚠️ Forcer le rechargement complet de l'état
           await refreshAuth();
-        }}
-      />
-    );
-  }
-
-  // Écran de migration
-  if (showMigration && supabaseUser) {
-    return (
-      <MigrationScreen
-        userId={supabaseUser.id}
-        userEmail={supabaseUser.email}
-        onComplete={async () => {
-          console.log('✅ Migration complétée');
-          setHasSkippedMigration(false);
-          setShowMigration(false);
-          setHasCheckedMigration(true);
-          await refreshAuth();
-        }}
-        onSkip={() => {
-          console.log('⏭️ Migration ignorée');
-          setHasSkippedMigration(true);
-          setShowMigration(false);
-          setHasCheckedMigration(true);
         }}
       />
     );
@@ -124,7 +84,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       <ProfileSelectorAfterAuth
         onProfileSelected={(profile) => {
           console.log('✅ Profil sélectionné:', profile.name);
-          setCurrentProfile(profile);
           setShowProfileSelector(false);
         }}
       />

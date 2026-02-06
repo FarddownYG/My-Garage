@@ -38,9 +38,38 @@ export const signUp = async (email: string, password: string, fullName?: string)
       throw new Error('Aucun utilisateur créé');
     }
 
-    // Vérifier si une session a été créée (= utilisateur connecté automatiquement)
+    // Si une session existe (connexion automatique), créer le profil
     if (data.session) {
-      console.log('✅ Inscription réussie avec session (connecté automatiquement)');
+      console.log('✅ Inscription réussie avec session, création du profil...');
+      
+      // Créer automatiquement un profil pour ce nouvel utilisateur
+      const firstName = fullName?.split(' ')[0] || 'Utilisateur';
+      const lastName = fullName?.split(' ').slice(1).join(' ') || '';
+      
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            name: fullName || 'Utilisateur',
+            avatar: '👤',
+            is_pin_protected: false,
+            is_admin: false,
+            user_id: data.user.id,
+            is_migrated: true,
+            migrated_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('❌ Erreur création profil automatique:', profileError);
+          // Ne pas bloquer l'inscription si la création du profil échoue
+        } else {
+          console.log('✅ Profil créé automatiquement pour:', firstName);
+        }
+      } catch (profileErr) {
+        console.error('❌ Exception création profil:', profileErr);
+      }
     } else {
       console.log('⚠️ Inscription réussie mais SANS session (confirmation email requise)');
       console.log('📧 Vérifiez votre boîte mail pour confirmer votre compte');
