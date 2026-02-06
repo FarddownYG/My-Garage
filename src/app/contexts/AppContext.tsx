@@ -190,14 +190,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { data: config } = await supabase.from('app_config').select('*').eq('id', 'global').single();
+      console.log('📥 Chargement des données depuis Supabase...');
+
+      // 🔧 CHARGEMENT AVEC GESTION D'ERREUR DÉTAILLÉE
+      const { data: config, error: configError } = await supabase.from('app_config').select('*').eq('id', 'global').maybeSingle();
       const { data: profiles, error: profilesError } = await supabase.from('profiles').select('*').order('name');
-      const { data: vehicles } = await supabase.from('vehicles').select('*').order('name');
-      const { data: maintenanceEntries } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
-      const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
-      const { data: reminders } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
-      const { data: templates } = await supabase.from('maintenance_templates').select('*').order('name');
-      const { data: maintenanceProfiles } = await supabase.from('maintenance_profiles').select('*').order('name');
+      const { data: vehicles, error: vehiclesError } = await supabase.from('vehicles').select('*').order('name');
+      const { data: maintenanceEntries, error: entriesError } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
+      const { data: tasks, error: tasksError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      const { data: reminders, error: remindersError } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
+      const { data: templates, error: templatesError } = await supabase.from('maintenance_templates').select('*').order('name');
+      const { data: maintenanceProfiles, error: maintenanceProfilesError } = await supabase.from('maintenance_profiles').select('*').order('name');
+
+      // 🔍 DIAGNOSTIC : Afficher les erreurs
+      if (configError) console.log('⚠️ Erreur config:', configError.message);
+      if (profilesError) console.error('❌ Erreur profils:', profilesError.message);
+      if (vehiclesError) console.log('⚠️ Erreur véhicules:', vehiclesError.message);
+      if (entriesError) console.log('⚠️ Erreur entretiens:', entriesError.message);
+      if (tasksError) console.log('⚠️ Erreur tâches:', tasksError.message);
+      if (remindersError) console.log('⚠️ Erreur rappels:', remindersError.message);
+      if (templatesError) console.log('⚠️ Erreur templates:', templatesError.message);
+      if (maintenanceProfilesError) console.log('⚠️ Erreur profils maintenance:', maintenanceProfilesError.message);
 
       // 🔍 DIAGNOSTIC : Afficher ce qui a été chargé
       console.log('📊 Données chargées:', {
@@ -209,10 +222,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         templates: templates?.length || 0,
         maintenanceProfiles: maintenanceProfiles?.length || 0,
       });
-      
-      if (profilesError) {
-        console.error('❌ Erreur chargement profils:', profilesError);
-      }
       
       if (profiles) {
         console.log('👥 Profils chargés:', profiles.map(p => ({ 
@@ -279,9 +288,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
           vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
       }));
+      
+      console.log('✅ Chargement terminé avec succès');
     } catch (error) {
-      // Échec silencieux - pas de session est normal
-      console.log('ℹ️ Impossible de charger depuis Supabase (pas de session)');
+      console.error('❌ Erreur critique lors du chargement:', error);
+      // En cas d'erreur, charger valeurs par défaut
+      setState(prev => ({
+        ...prev,
+        adminPin: '1234',
+        profiles: [],
+        vehicles: [],
+        maintenanceEntries: [],
+        tasks: [],
+        reminders: [],
+        maintenanceTemplates: [],
+        maintenanceProfiles: [],
+      }));
     }
   };
 
@@ -906,6 +928,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('❌ Erreur getUser():', error);
+        setIsLoading(false);
         return;
       }
       
@@ -927,9 +950,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         
         console.log('📥 Chargement des données...');
-        await loadFromSupabase();
         
-        console.log('✅ Auth et données rechargées');
+        try {
+          await loadFromSupabase();
+          console.log('✅ Auth et données rechargées');
+        } catch (loadError) {
+          console.error('❌ Erreur chargement données:', loadError);
+          // Continuer quand même, l'utilisateur est connecté
+        }
+        
         setIsLoading(false); // ✅ CRITIQUE : Masquer le loader
       } else {
         console.warn('⚠️ Aucun user trouvé après refreshAuth()');

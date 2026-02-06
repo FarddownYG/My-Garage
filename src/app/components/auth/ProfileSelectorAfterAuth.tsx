@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Lock, User } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { useApp } from '../../contexts/AppContext';
 import type { Profile } from '../../types';
+import { generateId } from '../../utils/generateId';
 
 interface ProfileSelectorAfterAuthProps {
   onProfileSelected: (profile: Profile) => void;
@@ -14,10 +15,12 @@ interface ProfileSelectorAfterAuthProps {
  * Affiche uniquement les profils liés au user actuel
  */
 export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorAfterAuthProps) {
-  const { profiles, supabaseUser, setCurrentProfile } = useApp();
+  const { profiles, supabaseUser, setCurrentProfile, addProfile } = useApp();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [autoCreateAttempted, setAutoCreateAttempted] = useState(false);
 
   // Filtrer les profils non-admin liés à ce user
   // 🔒 SÉCURITÉ : Ne montrer QUE les profils de l'utilisateur actuel
@@ -35,6 +38,52 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
       match: p.userId === supabaseUser?.id ? '✅' : '❌'
     }))
   });
+
+  // 🔧 CRÉATION AUTOMATIQUE DU PROFIL SI AUCUN N'EXISTE
+  const handleCreateProfile = useCallback(async () => {
+    if (!supabaseUser?.email) return;
+    
+    setIsCreatingProfile(true);
+    try {
+      // Extraire le prénom depuis l'email (partie avant le @)
+      const emailUsername = supabaseUser.email.split('@')[0];
+      const firstName = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
+      
+      // Créer le profil automatiquement
+      const newProfile: Profile = {
+        id: generateId(),
+        firstName,
+        lastName: '',
+        name: firstName,
+        avatar: '👤',
+        isPinProtected: false,
+        isAdmin: false,
+        fontSize: 50,
+        userId: supabaseUser.id,
+      };
+      
+      console.log('🆕 Création automatique du profil:', newProfile);
+      await addProfile(newProfile);
+      
+      // Sélectionner automatiquement le nouveau profil
+      await setCurrentProfile(newProfile);
+      onProfileSelected(newProfile);
+    } catch (error) {
+      console.error('❌ Erreur création profil:', error);
+      setError('Impossible de créer le profil');
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  }, [supabaseUser, addProfile, setCurrentProfile, onProfileSelected]);
+
+  // 🔧 CRÉATION AUTOMATIQUE AU CHARGEMENT si aucun profil
+  useEffect(() => {
+    if (userProfiles.length === 0 && !isCreatingProfile && !autoCreateAttempted && supabaseUser) {
+      console.log('🆕 Aucun profil trouvé, création automatique...');
+      setAutoCreateAttempted(true);
+      handleCreateProfile();
+    }
+  }, [userProfiles.length, supabaseUser, isCreatingProfile, autoCreateAttempted, handleCreateProfile]);
 
   const handleSelectProfile = (profile: Profile) => {
     setSelectedProfile(profile);
@@ -61,26 +110,40 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
     onProfileSelected(selectedProfile);
   };
 
-  // Si aucun profil, on ne devrait jamais arriver ici (créé automatiquement à l'inscription)
+  // Si aucun profil, créer automatiquement
   if (userProfiles.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border-zinc-800 p-8 text-center">
-          <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-10 h-10 text-yellow-500" />
+          <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-10 h-10 text-blue-500" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-4">
-            Erreur de synchronisation
+            Bienvenue !
           </h1>
           <p className="text-zinc-400 mb-6">
-            Aucun profil trouvé pour votre compte. Veuillez réessayer ou contacter le support.
+            Création de votre profil utilisateur...
           </p>
-          <Button
-            onClick={() => window.location.reload()}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            Recharger l'application
-          </Button>
+          {!isCreatingProfile && (
+            <Button
+              onClick={handleCreateProfile}
+              disabled={isCreatingProfile}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              Créer mon profil
+            </Button>
+          )}
+          {isCreatingProfile && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-zinc-400">Création en cours...</span>
+            </div>
+          )}
+          {error && (
+            <div className="mt-4 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
         </Card>
       </div>
     );
