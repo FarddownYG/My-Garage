@@ -133,26 +133,27 @@ export const migrateProfileToUser = async (
   profileId: string,
   userId: string
 ): Promise<boolean> => {
-  try {
-    console.log(`🔄 Migration profil ${profileId} → user ${userId}...`);
+  console.log(`🔄 Migration profil ${profileId} → user ${userId}...`);
 
-    // Appeler la fonction SQL de migration
-    const { error } = await supabase.rpc('migrate_profile_to_user', {
-      profile_id_param: profileId,
-      user_id_param: userId,
+  // Appeler la fonction SQL de migration
+  const { data, error } = await supabase.rpc('migrate_profile_to_user', {
+    profile_id_param: profileId,
+    user_id_param: userId,
+  });
+
+  if (error) {
+    console.error('❌ Erreur fonction SQL migration:', error);
+    console.error('📋 Détails:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
     });
-
-    if (error) {
-      console.error('❌ Erreur fonction SQL migration:', error);
-      throw error;
-    }
-
-    console.log(`✅ Profil ${profileId} migré avec succès !`);
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur migration profil:', error);
-    return false;
+    throw new Error(error.message || 'Erreur lors de la liaison du profil');
   }
+
+  console.log(`✅ Profil ${profileId} migré avec succès !`);
+  return true;
 };
 
 /**
