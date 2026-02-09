@@ -14,8 +14,9 @@ interface EditTaskModalProps {
 }
 
 export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
-  const { updateTask, vehicles, currentProfile } = useApp();
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+  const { updateTask, getUserVehicles } = useApp();
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
 
   const [formData, setFormData] = useState({
     title: task.title,

@@ -20,7 +20,7 @@ type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
 type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 
 function AppContent() {
-  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut } = useApp();
+  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut, getUserVehicles } = useApp();
   
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     const savedTab = localStorage.getItem('valcar-active-tab');
@@ -32,11 +32,8 @@ function AppContent() {
   const [selectedVehicleIdForAlert, setSelectedVehicleIdForAlert] = useState<string | null>(null);
   const [prefilledMaintenanceType, setPrefilledMaintenanceType] = useState<string | null>(null);
 
-  // Calculate alerts
-  const userVehicles = useMemo(() => 
-    vehicles.filter(v => v.ownerId === currentProfile?.id),
-    [vehicles, currentProfile?.id]
-  );
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() qui filtre par user_id
+  const userVehicles = useMemo(() => getUserVehicles(), [getUserVehicles]);
   
   const alerts = useMemo(() => {
     console.log('🔄 Recalcul des alertes...', {

@@ -8,15 +8,16 @@ import { EditTaskModal } from './EditTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 
 export function TaskList() {
-  const { tasks, vehicles, currentProfile, updateTask, deleteTask } = useApp();
+  const { tasks, updateTask, deleteTask, getUserVehicles } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [viewingTask, setViewingTask] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
 
-  // Filtrer les véhicules de l'utilisateur actuel
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
+  const userVehicleIds = userVehicles.map(v => v.id);
 
   const filteredTasks = tasks
     .filter(task => {
@@ -24,8 +25,7 @@ export function TaskList() {
       if (selectedVehicleId !== 'all' && task.vehicleId !== selectedVehicleId) return false;
       
       // Filtre par véhicule de l'utilisateur actuel
-      const vehicle = vehicles.find(v => v.id === task.vehicleId);
-      if (!vehicle || vehicle.ownerId !== currentProfile?.id) return false;
+      if (!userVehicleIds.includes(task.vehicleId)) return false;
       
       // Filtre par statut
       if (filter === 'pending') return !task.completed;

@@ -12,19 +12,19 @@ interface UpcomingMaintenanceProps {
 }
 
 export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMaintenanceProps) {
-  const { vehicles, currentProfile, addMaintenanceEntry } = useApp();
+  const { addMaintenanceEntry, getUserVehicles } = useApp();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // Filtrer les véhicules de l'utilisateur actuel
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
 
   // Fonction pour marquer comme vérifié
   const handleMarkAsChecked = (alert: UpcomingAlert, e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher le clic sur la carte
     
-    const vehicle = vehicles.find(v => v.id === alert.vehicleId);
+    const vehicle = userVehicles.find(v => v.id === alert.vehicleId);
     if (!vehicle) return;
 
     // Ajouter une entrée d'entretien avec la description "vérifié"

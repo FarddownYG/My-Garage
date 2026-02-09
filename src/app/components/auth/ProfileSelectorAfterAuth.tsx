@@ -15,7 +15,7 @@ interface ProfileSelectorAfterAuthProps {
  * Affiche uniquement les profils liés au user actuel
  */
 export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorAfterAuthProps) {
-  const { profiles, supabaseUser, setCurrentProfile, addProfile } = useApp();
+  const { profiles, supabaseUser, setCurrentProfile, addProfile, isLoading } = useApp();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -77,13 +77,14 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
   }, [supabaseUser, addProfile, setCurrentProfile, onProfileSelected]);
 
   // 🔧 CRÉATION AUTOMATIQUE AU CHARGEMENT si aucun profil
+  // IMPORTANT : Attendre que isLoading soit false pour éviter de créer des profils en double
   useEffect(() => {
-    if (userProfiles.length === 0 && !isCreatingProfile && !autoCreateAttempted && supabaseUser) {
-      console.log('🆕 Aucun profil trouvé, création automatique...');
+    if (!isLoading && userProfiles.length === 0 && !isCreatingProfile && !autoCreateAttempted && supabaseUser) {
+      console.log('🆕 Aucun profil trouvé (après chargement), création automatique...');
       setAutoCreateAttempted(true);
       handleCreateProfile();
     }
-  }, [userProfiles.length, supabaseUser, isCreatingProfile, autoCreateAttempted, handleCreateProfile]);
+  }, [isLoading, userProfiles.length, supabaseUser, isCreatingProfile, autoCreateAttempted, handleCreateProfile]);
 
   const handleSelectProfile = (profile: Profile) => {
     setSelectedProfile(profile);
@@ -110,7 +111,27 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
     onProfileSelected(selectedProfile);
   };
 
-  // Si aucun profil, créer automatiquement
+  // Si en cours de chargement, afficher le loader
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border-zinc-800 p-8 text-center">
+          <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <User className="w-10 h-10 text-blue-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Chargement...
+          </h1>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-zinc-400">Chargement de vos données...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Si aucun profil (après chargement), créer automatiquement
   if (userProfiles.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">

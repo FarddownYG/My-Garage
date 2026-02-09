@@ -9,14 +9,15 @@ import { EditVehicleModal } from './EditVehicleModal';
 import { EditMileageModal } from './EditMileageModal';
 
 export function VehicleList() {
-  const { vehicles, currentProfile, deleteVehicle } = useApp();
+  const { currentProfile, deleteVehicle, getUserVehicles } = useApp();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<any>(null);
   const [editingMileageVehicle, setEditingMileageVehicle] = useState<any>(null);
 
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
-  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
+  const selectedVehicle = userVehicles.find(v => v.id === selectedVehicleId);
 
   if (selectedVehicle) {
     return <VehicleDetail vehicle={selectedVehicle} onBack={() => setSelectedVehicleId(null)} />;

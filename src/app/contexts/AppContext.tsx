@@ -11,6 +11,7 @@ import { getProfilesByUser } from '../utils/migration';
 // v1.2.0 - Supabase Auth integration
 interface AppContextType extends AppState {
   maintenances: MaintenanceRecord[];
+  getUserVehicles: () => Vehicle[]; // 🔧 Nouvelle fonction pour filtrer par user_id
   setCurrentProfile: (profile: Profile | null) => void;
   addProfile: (profile: Profile) => void;
   updateProfile: (id: string, profile: Partial<Profile>) => void;
@@ -959,6 +960,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return state.maintenanceTemplates.filter(t => t.ownerId === state.currentProfile!.id);
   }, [state.maintenanceTemplates, state.currentProfile]);
 
+  // 🔧 CORRECTION CRITIQUE : Filtrer les véhicules par user_id, pas par profile_id
+  // Retourner TOUS les véhicules de l'utilisateur actuel (tous ses profils)
+  const getUserVehicles = useCallback(() => {
+    if (!state.supabaseUser?.id) return [];
+    
+    // Récupérer tous les IDs de profils appartenant à l'utilisateur actuel
+    const userProfileIds = state.profiles
+      .filter(p => p.userId === state.supabaseUser!.id)
+      .map(p => p.id);
+    
+    // Filtrer les véhicules appartenant à n'importe quel profil de cet utilisateur
+    return state.vehicles.filter(v => userProfileIds.includes(v.ownerId));
+  }, [state.vehicles, state.profiles, state.supabaseUser?.id]);
+
   // ======================================
   // 🔐 AUTH FUNCTIONS
   // ======================================
@@ -1065,6 +1080,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...state, 
       maintenanceTemplates: userMaintenanceTemplates, // Remplacer par la version filtrée
       maintenances, 
+      getUserVehicles, // 🔧 Nouvelle fonction pour récupérer les véhicules par user_id
       setCurrentProfile, addProfile, updateProfile, deleteProfile,
       addVehicle, updateVehicle, deleteVehicle, addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
       addReminder, updateReminder, deleteReminder, addTask, updateTask, deleteTask, toggleTaskComplete,

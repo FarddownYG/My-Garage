@@ -10,7 +10,7 @@ interface AddMaintenanceProfileModalProps {
 }
 
 export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceProfileModalProps) {
-  const { vehicles, addMaintenanceProfile, updateMaintenanceProfile, currentProfile, addMaintenanceTemplate, maintenanceTemplates } = useApp();
+  const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, addMaintenanceTemplate, maintenanceTemplates, getUserVehicles } = useApp();
   
   const [name, setName] = useState(profile?.name || '');
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(profile?.vehicleIds || []);
@@ -19,8 +19,8 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
   );
   const [error, setError] = useState('');
 
-  // Filtrer les véhicules de l'utilisateur courant
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
 
   const handleToggleVehicle = (vehicleId: string) => {
     setSelectedVehicleIds(prev => 

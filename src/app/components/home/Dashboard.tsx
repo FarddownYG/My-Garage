@@ -14,18 +14,15 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles }: DashboardProps) {
-  const { vehicles, tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles, supabaseUser } = useApp();
+  const { tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles, supabaseUser, getUserVehicles } = useApp();
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Email admin
   const ADMIN_EMAIL = 'admin2647595726151748@gmail.com';
   const isAdmin = supabaseUser?.email === ADMIN_EMAIL;
 
-  // Filtrer par profil actuel
-  const userVehicles = useMemo(
-    () => vehicles.filter(v => v.ownerId === currentProfile?.id),
-    [vehicles, currentProfile?.id]
-  );
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = useMemo(() => getUserVehicles(), [getUserVehicles]);
   const userTasks = useMemo(
     () => tasks.filter(t => userVehicles.some(v => v.id === t.vehicleId)),
     [tasks, userVehicles]

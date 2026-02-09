@@ -12,8 +12,9 @@ interface AddTaskModalProps {
 }
 
 export function AddTaskModal({ onClose }: AddTaskModalProps) {
-  const { addTask, vehicles, currentProfile } = useApp();
-  const userVehicles = vehicles.filter(v => v.ownerId === currentProfile?.id);
+  const { addTask, getUserVehicles } = useApp();
+  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
+  const userVehicles = getUserVehicles();
 
   const [formData, setFormData] = useState({
     title: '',
