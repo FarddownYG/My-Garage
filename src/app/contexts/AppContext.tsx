@@ -191,17 +191,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log('📥 Chargement des données depuis Supabase...');
+      const userId = session.user.id;
+      console.log('📥 Chargement des données depuis Supabase...', { userId });
 
-      // 🔧 CHARGEMENT AVEC GESTION D'ERREUR DÉTAILLÉE
+      // 🔧 OPTIMISATION MULTI-USERS : Charger UNIQUEMENT les données de l'utilisateur connecté
       const { data: config, error: configError } = await supabase.from('app_config').select('*').eq('id', 'global').maybeSingle();
-      const { data: profiles, error: profilesError } = await supabase.from('profiles').select('*').order('name');
-      const { data: vehicles, error: vehiclesError } = await supabase.from('vehicles').select('*').order('name');
-      const { data: maintenanceEntries, error: entriesError } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
-      const { data: tasks, error: tasksError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
-      const { data: reminders, error: remindersError } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
-      const { data: templates, error: templatesError } = await supabase.from('maintenance_templates').select('*').order('name');
-      const { data: maintenanceProfiles, error: maintenanceProfilesError } = await supabase.from('maintenance_profiles').select('*').order('name');
+      
+      // ✅ Charger UNIQUEMENT les profils de cet utilisateur
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name');
+      
+      // ✅ Charger les véhicules UNIQUEMENT pour les profils de cet utilisateur
+      // Récupérer d'abord les profile_ids de l'utilisateur
+      const userProfileIds = (profiles || []).map(p => p.id);
+      
+      const { data: vehicles, error: vehiclesError } = userProfileIds.length > 0
+        ? await supabase.from('vehicles').select('*').in('owner_id', userProfileIds).order('name')
+        : { data: [], error: null };
+      
+      // Récupérer les vehicle_ids de l'utilisateur pour filtrer les autres tables
+      const userVehicleIds = (vehicles || []).map(v => v.id);
+      
+      // ✅ Charger UNIQUEMENT les données liées aux véhicules de l'utilisateur
+      const { data: maintenanceEntries, error: entriesError } = userVehicleIds.length > 0
+        ? await supabase.from('maintenance_entries').select('*').in('vehicle_id', userVehicleIds).order('date', { ascending: false })
+        : { data: [], error: null };
+        
+      const { data: tasks, error: tasksError } = userVehicleIds.length > 0
+        ? await supabase.from('tasks').select('*').in('vehicle_id', userVehicleIds).order('created_at', { ascending: false })
+        : { data: [], error: null };
+        
+      const { data: reminders, error: remindersError } = userVehicleIds.length > 0
+        ? await supabase.from('reminders').select('*').in('vehicle_id', userVehicleIds).order('created_at', { ascending: false })
+        : { data: [], error: null };
+      
+      // ✅ Charger UNIQUEMENT les templates et profils d'entretien de l'utilisateur
+      const { data: templates, error: templatesError } = userProfileIds.length > 0
+        ? await supabase.from('maintenance_templates').select('*').in('owner_id', userProfileIds).order('name')
+        : { data: [], error: null };
+        
+      const { data: maintenanceProfiles, error: maintenanceProfilesError } = userProfileIds.length > 0
+        ? await supabase.from('maintenance_profiles').select('*').in('owner_id', userProfileIds).order('name')
+        : { data: [], error: null };
 
       // 🔍 DIAGNOSTIC : Afficher les erreurs
       if (configError) console.log('⚠️ Erreur config:', configError.message);
@@ -960,19 +994,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return state.maintenanceTemplates.filter(t => t.ownerId === state.currentProfile!.id);
   }, [state.maintenanceTemplates, state.currentProfile]);
 
-  // 🔧 CORRECTION CRITIQUE : Filtrer les véhicules par user_id, pas par profile_id
-  // Retourner TOUS les véhicules de l'utilisateur actuel (tous ses profils)
+  // ✅ OPTIMISATION : Plus besoin de filtrer, Supabase charge déjà uniquement les données de l'utilisateur
+  // Retourner TOUS les véhicules (déjà filtrés au chargement)
   const getUserVehicles = useCallback(() => {
-    if (!state.supabaseUser?.id) return [];
-    
-    // Récupérer tous les IDs de profils appartenant à l'utilisateur actuel
-    const userProfileIds = state.profiles
-      .filter(p => p.userId === state.supabaseUser!.id)
-      .map(p => p.id);
-    
-    // Filtrer les véhicules appartenant à n'importe quel profil de cet utilisateur
-    return state.vehicles.filter(v => userProfileIds.includes(v.ownerId));
-  }, [state.vehicles, state.profiles, state.supabaseUser?.id]);
+    // Tous les véhicules dans state.vehicles appartiennent déjà à l'utilisateur connecté
+    // grâce au filtrage au niveau SQL dans loadFromSupabase()
+    return state.vehicles;
+  }, [state.vehicles]);
 
   // ======================================
   // 🔐 AUTH FUNCTIONS

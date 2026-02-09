@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { AuthScreen } from './AuthScreen';
 import { ProfileSelectorAfterAuth } from './ProfileSelectorAfterAuth';
+import { LoadingScreen } from '../shared/LoadingScreen';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -54,16 +55,9 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     setShowProfileSelector(false);
   }, [isAuthenticated, currentProfile, isLoading]);
 
-  // Loading state
+  // ✅ Loading state avec écran élégant
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-zinc-400">Chargement...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Chargement de vos données..." />;
   }
 
   // Écran d'authentification
