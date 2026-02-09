@@ -466,6 +466,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     console.log('🆕 Création profil:', { profile: s });
     
+    // ✅ VÉRIFIER SI UN PROFIL EXISTE DÉJÀ POUR CET UTILISATEUR
+    if (s.userId) {
+      const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', s.userId)
+        .eq('is_admin', false);
+      
+      if (existingProfiles && existingProfiles.length > 0) {
+        console.warn('⚠️ Un profil existe déjà pour cet utilisateur, création annulée');
+        // Recharger les données pour mettre à jour l'état
+        await loadFromSupabase();
+        return;
+      }
+    }
+    
     const { error } = await supabase.from('profiles').insert({ 
       id: s.id, 
       first_name: s.firstName, 
