@@ -163,8 +163,17 @@ export const getCurrentUser = async (): Promise<SupabaseUser | null> => {
     // Utiliser getSession() qui lit le localStorage, pas de requête réseau
     const { data: { session }, error } = await supabase.auth.getSession();
     
-    // Si erreur ou pas de session, retourner null silencieusement
-    if (error || !session) {
+    // Si erreur de refresh token, nettoyer et retourner null
+    if (error) {
+      if (error.message?.includes('refresh') || error.message?.includes('token')) {
+        console.warn('⚠️ Token invalide détecté, nettoyage de la session...');
+        await cleanInvalidSession();
+      }
+      return null;
+    }
+    
+    // Si pas de session, retourner null silencieusement
+    if (!session) {
       return null;
     }
     
@@ -179,7 +188,32 @@ export const getCurrentUser = async (): Promise<SupabaseUser | null> => {
     return null;
   } catch (error) {
     // Échec silencieux - pas de session est normal
+    console.log('ℹ️ Pas de session active');
     return null;
+  }
+};
+
+/**
+ * Nettoyer une session invalide
+ */
+export const cleanInvalidSession = async () => {
+  try {
+    console.log('🧹 Nettoyage de la session invalide...');
+    
+    // Déconnexion forcée (ignore les erreurs)
+    await supabase.auth.signOut().catch(() => {});
+    
+    // Nettoyer manuellement le localStorage Supabase
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    console.log('✅ Session nettoyée');
+  } catch (error) {
+    console.error('❌ Erreur nettoyage session:', error);
   }
 };
 

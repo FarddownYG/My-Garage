@@ -290,9 +290,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
       
       console.log('✅ Chargement terminé avec succès');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur critique lors du chargement:', error);
-      // En cas d'erreur, charger valeurs par défaut
+      
+      // Si c'est une erreur de refresh token, nettoyer la session
+      if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
+        console.warn('⚠️ Token invalide détecté, nettoyage de la session...');
+        const { cleanInvalidSession } = await import('../utils/auth');
+        await cleanInvalidSession();
+        
+        // Réinitialiser l'état complet
+        setState({
+          ...defaultState,
+          supabaseUser: null,
+          isAuthenticated: false,
+        });
+        return;
+      }
+      
+      // En cas d'autre erreur, charger valeurs par défaut
       setState(prev => ({
         ...prev,
         adminPin: '1234',
@@ -311,40 +327,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       console.log('🚀 INITIALISATION APP...');
       
-      // 1. Vérifier l'authentification
-      const user = await getCurrentUser();
-      console.log('🔐 User actuel:', user?.email || 'Non connecté');
-      
-      setState(prev => ({
-        ...prev,
-        supabaseUser: user,
-        isAuthenticated: !!user,
-      }));
+      try {
+        // 1. Vérifier l'authentification
+        const user = await getCurrentUser();
+        console.log('🔐 User actuel:', user?.email || 'Non connecté');
+        
+        setState(prev => ({
+          ...prev,
+          supabaseUser: user,
+          isAuthenticated: !!user,
+        }));
 
-      // Si pas de user, arrêter ici
-      if (!user) {
-        console.log('⏸️ Pas de user, arrêt de l\'initialisation');
-        setIsLoading(false);
-        return;
-      }
+        // Si pas de user, arrêter ici
+        if (!user) {
+          console.log('⏸️ Pas de user, arrêt de l\'initialisation');
+          setIsLoading(false);
+          return;
+        }
 
-      // 2. Migration localStorage → Supabase (si nécessaire)
-      await migrateToSupabase();
+        // 2. Migration localStorage → Supabase (si nécessaire)
+        await migrateToSupabase();
       
-      // 3. Charger les données
-      console.log('📥 Chargement des données depuis Supabase...');
-      await loadFromSupabase();
-      
-      // 4. Migration automatique des profile_id manquants
-      const needsMigration = await checkMigrationNeeded();
-      if (needsMigration) {
-        console.log('🔧 Migration des profile_id en cours...');
-        await migrateProfileIds();
+        // 3. Charger les données
+        console.log('📥 Chargement des données depuis Supabase...');
         await loadFromSupabase();
+        
+        // 4. Migration automatique des profile_id manquants
+        const needsMigration = await checkMigrationNeeded();
+        if (needsMigration) {
+          console.log('🔧 Migration des profile_id en cours...');
+          await migrateProfileIds();
+          await loadFromSupabase();
+        }
+        
+        console.log('✅ Initialisation terminée');
+        setIsLoading(false);
+      } catch (error: any) {
+        console.error('❌ Erreur initialisation:', error);
+        
+        // Si c'est une erreur de refresh token, nettoyer la session
+        if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
+          console.warn('⚠️ Token invalide détecté lors de l\'init, nettoyage...');
+          
+          // Importer dynamiquement cleanInvalidSession
+          import('../utils/auth').then(({ cleanInvalidSession }) => {
+            cleanInvalidSession().then(() => {
+              // Réinitialiser l'état
+              setState({
+                ...defaultState,
+                supabaseUser: null,
+                isAuthenticated: false,
+              });
+              setIsLoading(false);
+            });
+          });
+        } else {
+          setIsLoading(false);
+        }
       }
-      
-      console.log('✅ Initialisation terminée');
-      setIsLoading(false);
     };
     
     init();
@@ -388,7 +428,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addProfile = async (profile: Profile) => {
     const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
-    await supabase.from('profiles').insert({ 
+    
+    console.log('🆕 Création profil:', { profile: s });
+    
+    const { error } = await supabase.from('profiles').insert({ 
       id: s.id, 
       first_name: s.firstName, 
       last_name: s.lastName || '', // ✅ Chaîne vide au lieu de null
@@ -396,8 +439,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       avatar: s.avatar, 
       is_pin_protected: s.isPinProtected, 
       pin: s.pin || null, 
-      is_admin: s.isAdmin || false
+      is_admin: s.isAdmin || false,
+      user_id: s.userId || null // ✅ CRITIQUE : Ajouter le user_id
     });
+    
+    if (error) {
+      console.error('❌ Erreur création profil:', error);
+      throw error;
+    }
+    
+    console.log('✅ Profil créé dans Supabase avec user_id:', s.userId);
     
     // Initialiser les templates par défaut pour ce profil
     if (!s.isAdmin) {
@@ -441,7 +492,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.name) s.name = sanitizeInput(updates.name);
     
     // Préparer les données pour Supabase (sans font_size)
-    const db: any = {}!;
+    const db: any = {};
     if (s.firstName !== undefined) db.first_name = s.firstName;
     if ('lastName' in s) db.last_name = s.lastName || ''; // ✅ Chaîne vide au lieu de null
     if (s.name !== undefined) db.name = s.name;
@@ -449,26 +500,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (s.isPinProtected !== undefined) db.is_pin_protected = s.isPinProtected;
     if ('pin' in s) db.pin = s.pin || null; // ✅ Convertir undefined en null pour Supabase
     if (s.isAdmin !== undefined) db.is_admin = s.isAdmin;
+    // ✅ IMPORTANT : Ne JAMAIS modifier user_id après création
     // fontSize est géré en local uniquement (pas de colonne font_size dans Supabase)
     
     console.log('💾 Mise à jour profil Supabase:', { id, updates: s, db });
     
     // Sauvegarder dans Supabase
-    const { error } = await supabase.from('profiles').update(db).eq('id', id);
+    const { data, error } = await supabase.from('profiles').update(db).eq('id', id).select();
     
     if (error) {
       console.error('❌ Erreur mise à jour profil:', error);
       throw error;
     }
     
-    console.log('✅ Profil sauvegardé dans Supabase');
+    console.log('✅ Profil sauvegardé dans Supabase:', data);
     
-    // Mettre à jour le state local
-    setState(prev => ({ 
-      ...prev, 
-      profiles: prev.profiles.map(p => p.id === id ? { ...p, ...s } : p),
-      currentProfile: prev.currentProfile?.id === id ? { ...prev.currentProfile, ...s } : prev.currentProfile
-    }));
+    // ✅ CRITIQUE : Recharger les données depuis Supabase pour avoir la dernière version
+    await loadFromSupabase();
+    
+    console.log('✅ Données rechargées depuis Supabase');
   };
 
   const deleteProfile = async (id: string) => {
@@ -503,8 +553,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (s.driveType) db.drive_type = s.driveType;
     if (s.photos !== undefined) db.photos = s.photos; // Galerie photos
     if (s.documents !== undefined) db.documents = JSON.stringify(s.documents); // Documents (stockés en JSON)
-    await supabase.from('vehicles').update(db).eq('id', id);
-    setState(prev => ({ ...prev, vehicles: prev.vehicles.map(v => v.id === id ? { ...v, ...s } : v) }));
+    
+    console.log('💾 Mise à jour véhicule:', { id, updates: db });
+    
+    const { error } = await supabase.from('vehicles').update(db).eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur mise à jour véhicule:', error);
+      throw error;
+    }
+    
+    console.log('✅ Véhicule sauvegardé');
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const deleteVehicle = async (id: string) => {
@@ -928,6 +990,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('❌ Erreur getUser():', error);
+        
+        // Si c'est une erreur de token, nettoyer
+        if (error.message?.includes('refresh') || error.message?.includes('token')) {
+          console.warn('⚠️ Token invalide, nettoyage...');
+          const { cleanInvalidSession } = await import('../utils/auth');
+          await cleanInvalidSession();
+          
+          setState({
+            ...defaultState,
+            supabaseUser: null,
+            isAuthenticated: false,
+          });
+        }
+        
         setIsLoading(false);
         return;
       }
@@ -964,10 +1040,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.warn('⚠️ Aucun user trouvé après refreshAuth()');
         setIsLoading(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur refresh auth:', error);
+      
+      // Si c'est une erreur de token, nettoyer
+      if (error?.message?.includes('refresh') || error?.message?.includes('token')) {
+        console.warn('⚠️ Token invalide dans catch, nettoyage...');
+        const { cleanInvalidSession } = await import('../utils/auth');
+        await cleanInvalidSession();
+        
+        setState({
+          ...defaultState,
+          supabaseUser: null,
+          isAuthenticated: false,
+        });
+      }
+      
       setIsLoading(false);
-      throw error;
     }
   }, []);
 
