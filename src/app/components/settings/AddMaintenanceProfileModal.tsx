@@ -67,7 +67,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
 
         // Si c'est un profil pré-rempli, créer les templates par défaut
         if (profileType !== 'custom') {
-          const selectedVehicles = vehicles.filter(v => selectedVehicleIds.includes(v.id));
+          const selectedVehicles = userVehicles.filter(v => selectedVehicleIds.includes(v.id));
           
           // Détecter les types de carburant et transmission des véhicules sélectionnés
           const fuelTypes = new Set(selectedVehicles.map(v => v.fuelType).filter(Boolean));
@@ -117,8 +117,6 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           for (const template of templatesToAdd) {
             await addMaintenanceTemplate(template);
           }
-          
-          console.log(`✅ Profil pré-rempli créé avec ${addedTemplates.size} templates`);
         }
       }
 
@@ -284,7 +282,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                   ) : (
                     <p className="text-blue-300">
                       Profil pré-rempli : Les templates d'entretien seront automatiquement créés selon la motorisation ({
-                        vehicles
+                        userVehicles
                           .filter(v => selectedVehicleIds.includes(v.id))
                           .map(v => v.fuelType)
                           .filter((v, i, a) => v && a.indexOf(v) === i)

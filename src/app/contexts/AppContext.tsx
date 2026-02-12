@@ -192,7 +192,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userId = session.user.id;
-      console.log('📥 Chargement des données depuis Supabase...', { userId });
 
       // 🔧 OPTIMISATION MULTI-USERS : Charger UNIQUEMENT les données de l'utilisateur connecté
       const { data: config, error: configError } = await supabase.from('app_config').select('*').eq('id', 'global').maybeSingle();
@@ -247,29 +246,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (templatesError) console.log('⚠️ Erreur templates:', templatesError.message);
       if (maintenanceProfilesError) console.log('⚠️ Erreur profils maintenance:', maintenanceProfilesError.message);
 
-      // 🔍 DIAGNOSTIC : Afficher ce qui a été chargé
-      console.log('📊 Données chargées:', {
-        profiles: profiles?.length || 0,
-        vehicles: vehicles?.length || 0,
-        maintenanceEntries: maintenanceEntries?.length || 0,
-        tasks: tasks?.length || 0,
-        reminders: reminders?.length || 0,
-        templates: templates?.length || 0,
-        maintenanceProfiles: maintenanceProfiles?.length || 0,
-      });
-      
-      if (profiles) {
-        console.log('👥 Profils chargés:', profiles.map(p => ({ 
-          name: p.first_name, 
-          user_id: p.user_id ? '✅' : '❌',
-          is_admin: p.is_admin 
-        })));
-      }
-
-      // 🔧 Initialiser les templates pour les profils qui n'en ont pas
-      // ⚠️ FIX: Ne plus créer automatiquement les templates pour éviter les doublons
-      // Les templates seront créés uniquement lors de l'ajout d'un nouveau profil
-      // Cette section est désactivée pour éviter les créations en boucle
 
       // 🔄 Préserver le profil actuel s'il existe déjà
       const currentProfileId = config?.current_profile_id;
@@ -323,14 +299,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
           vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
       }));
-      
-      console.log('✅ Chargement terminé avec succès');
     } catch (error: any) {
-      console.error('❌ Erreur critique lors du chargement:', error);
+      console.error('❌ Erreur lors du chargement:', error);
       
       // Si c'est une erreur de refresh token, nettoyer la session
       if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
-        console.warn('⚠️ Token invalide détecté, nettoyage de la session...');
         const { cleanInvalidSession } = await import('../utils/auth');
         await cleanInvalidSession();
         
@@ -360,12 +333,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
-      console.log('🚀 INITIALISATION APP...');
-      
       try {
         // 1. Vérifier l'authentification
         const user = await getCurrentUser();
-        console.log('🔐 User actuel:', user?.email || 'Non connecté');
         
         setState(prev => ({
           ...prev,
@@ -375,7 +345,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // Si pas de user, arrêter ici
         if (!user) {
-          console.log('⏸️ Pas de user, arrêt de l\'initialisation');
           setIsLoading(false);
           return;
         }
@@ -384,26 +353,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await migrateToSupabase();
       
         // 3. Charger les données
-        console.log('📥 Chargement des données depuis Supabase...');
         await loadFromSupabase();
         
         // 4. Migration automatique des profile_id manquants
         const needsMigration = await checkMigrationNeeded();
         if (needsMigration) {
-          console.log('🔧 Migration des profile_id en cours...');
           await migrateProfileIds();
           await loadFromSupabase();
         }
         
-        console.log('✅ Initialisation terminée');
         setIsLoading(false);
       } catch (error: any) {
         console.error('❌ Erreur initialisation:', error);
         
         // Si c'est une erreur de refresh token, nettoyer la session
         if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
-          console.warn('⚠️ Token invalide détecté lors de l\'init, nettoyage...');
-          
           // Importer dynamiquement cleanInvalidSession
           import('../utils/auth').then(({ cleanInvalidSession }) => {
             cleanInvalidSession().then(() => {
@@ -427,11 +391,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // 🎧 Écouter les changements d'authentification (useEffect séparé pour éviter les boucles)
   useEffect(() => {
-    console.log('🎧 Installation listener onAuthStateChange');
-    
     const { data: authListener } = onAuthStateChange(async (user) => {
       // Ce callback ne reçoit QUE des événements SIGNED_OUT (user = null)
-      console.log('👋 Déconnexion détectée (SIGNED_OUT)');
       
       setState(prev => ({
         ...prev,

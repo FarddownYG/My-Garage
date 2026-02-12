@@ -5,7 +5,10 @@ import { AddMaintenanceProfileModal } from './AddMaintenanceProfileModal';
 import type { MaintenanceProfile } from '../../types';
 
 export function MaintenanceProfilesSettings() {
-  const { maintenanceProfiles, vehicles, deleteMaintenanceProfile, currentProfile } = useApp();
+  const { maintenanceProfiles, deleteMaintenanceProfile, currentProfile, getUserVehicles } = useApp();
+  
+  // 🔧 Utiliser getUserVehicles() pour filtrer par user_id
+  const vehicles = getUserVehicles();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProfile, setEditingProfile] = useState<MaintenanceProfile | null>(null);
 

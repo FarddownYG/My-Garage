@@ -34,12 +34,6 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
 
   // Calculer les alertes d'échéances
   const alerts = useMemo(() => {
-    console.log('🔄 [Dashboard] Recalcul des alertes...', {
-      vehicles: userVehicles.length,
-      maintenances: maintenances.length,
-      templates: maintenanceTemplates.length,
-      profiles: maintenanceProfiles.length,
-    });
     return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
   }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
 

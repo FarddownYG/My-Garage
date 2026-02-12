@@ -27,10 +27,6 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
   // ⚠️ EMOJIS UNIVERLS uniquement (compatibles toutes plateformes)
   const availableIcons = ['🔧', '⚙️', '🔩', '⚡', '💡', '🔥', '❄️', '💧', '⛔', '✅', '❌', '⭐'];
 
-  // Debug : afficher le nombre de templates chargés
-  console.log('🔧 MaintenanceSettings - Templates chargés:', maintenanceTemplates.length);
-  console.log('🔧 Templates:', maintenanceTemplates);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;

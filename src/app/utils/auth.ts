@@ -232,20 +232,12 @@ export const updatePassword = async (newPassword: string) => {
  */
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
   return supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔐 onAuthStateChange EVENT:', {
-      event,
-      userEmail: session?.user?.email || 'null',
-      hasSession: !!session,
-    });
-    
     // ⚠️ WHITELIST : SIGNED_OUT uniquement (pour détecter déconnexion)
     if (event !== 'SIGNED_OUT') {
-      console.log('🔇 Événement ignoré:', event, '(géré manuellement)');
       return;
     }
     
-    console.log('🚨 ATTENTION: Événement SIGNED_OUT détecté - déconnexion de l\'utilisateur');
-    console.trace('Stack trace de la déconnexion:');
+    console.log('🚨 Déconnexion détectée');
     
     // Pour SIGNED_OUT, on passe null au callback
     callback(null);

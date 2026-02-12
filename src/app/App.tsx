@@ -1,19 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { AuthWrapper } from './components/auth/AuthWrapper';
 import { Dashboard } from './components/home/Dashboard';
-import { VehicleList } from './components/vehicles/VehicleList';
-import { VehicleDetail } from './components/vehicles/VehicleDetail';
-import { MaintenanceLog } from './components/maintenance/MaintenanceLog';
-import { UpcomingMaintenance } from './components/maintenance/UpcomingMaintenance';
-import { TaskList } from './components/tasks/TaskList';
-import { Settings } from './components/settings/Settings';
 import { BottomNav } from './components/shared/BottomNav';
+import { LoadingSpinner } from './components/shared/FeedbackComponents';
 import type { UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
 import { calculateUpcomingAlerts } from './utils/alerts';
+import { pageTransitions } from './utils/animations';
 import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
+
+// 🚀 Lazy load heavy components for better performance
+const VehicleList = lazy(() => import('./components/vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
+const VehicleDetail = lazy(() => import('./components/vehicles/VehicleDetail').then(m => ({ default: m.VehicleDetail })));
+const MaintenanceLog = lazy(() => import('./components/maintenance/MaintenanceLog').then(m => ({ default: m.MaintenanceLog })));
+const UpcomingMaintenance = lazy(() => import('./components/maintenance/UpcomingMaintenance').then(m => ({ default: m.UpcomingMaintenance })));
+const TaskList = lazy(() => import('./components/tasks/TaskList').then(m => ({ default: m.TaskList })));
+const Settings = lazy(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })));
 
 // v1.2.0 - Supabase Auth Only (plus de sélection de profils)
 type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
@@ -36,12 +41,6 @@ function AppContent() {
   const userVehicles = useMemo(() => getUserVehicles(), [getUserVehicles]);
   
   const alerts = useMemo(() => {
-    console.log('🔄 Recalcul des alertes...', {
-      vehicles: userVehicles.length,
-      maintenances: maintenances.length,
-      templates: maintenanceTemplates.length,
-      profiles: maintenanceProfiles.length,
-    });
     return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
   }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
   
@@ -50,7 +49,6 @@ function AppContent() {
     if (currentProfile) {
       const fontSize = currentProfile.fontSize || 50;
       document.documentElement.style.setProperty('--font-size-scale', `${fontSize}%`);
-      console.log('🔤 Taille de police appliquée:', `${fontSize}%`);
     } else {
       // Réinitialiser à 50% (normal) quand déconnecté (page de connexion)
       document.documentElement.style.setProperty('--font-size-scale', '50%');
@@ -95,13 +93,25 @@ function AppContent() {
     };
 
     return (
-      <div className="min-h-screen bg-black">
-        <UpcomingMaintenance
-          alerts={alerts}
-          onAlertClick={handleAlertClick}
-          onBack={() => setCurrentView('main')}
-        />
-      </div>
+      <motion.div 
+        className="min-h-screen bg-black"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageTransitions}
+      >
+        <Suspense fallback={
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <LoadingSpinner size="lg" message="Chargement..." />
+          </div>
+        }>
+          <UpcomingMaintenance
+            alerts={alerts}
+            onAlertClick={handleAlertClick}
+            onBack={() => setCurrentView('main')}
+          />
+        </Suspense>
+      </motion.div>
     );
   }
 
@@ -110,35 +120,103 @@ function AppContent() {
     const vehicle = vehicles.find(v => v.id === selectedVehicleIdForAlert);
     if (vehicle) {
       return (
-        <div className="min-h-screen bg-black">
-          <VehicleDetail
-            vehicle={vehicle}
-            onBack={() => {
-              setCurrentView('main');
-              setSelectedVehicleIdForAlert(null);
-              setPrefilledMaintenanceType(null);
-            }}
-            prefilledMaintenanceType={prefilledMaintenanceType}
-          />
-        </div>
+        <motion.div 
+          className="min-h-screen bg-black"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          variants={pageTransitions}
+        >
+          <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+              <LoadingSpinner size="lg" message="Chargement..." />
+            </div>
+          }>
+            <VehicleDetail
+              vehicle={vehicle}
+              onBack={() => {
+                setCurrentView('main');
+                setSelectedVehicleIdForAlert(null);
+                setPrefilledMaintenanceType(null);
+              }}
+              prefilledMaintenanceType={prefilledMaintenanceType}
+            />
+          </Suspense>
+        </motion.div>
       );
     }
   }
 
   return (
     <div className="min-h-screen bg-black">
-      {activeTab === 'home' && (
-        <Dashboard
-          onLogout={handleLogout}
-          onViewAlerts={() => setCurrentView('upcoming-alerts')}
-          onViewTasks={() => setActiveTab('tasks')}
-          onViewVehicles={() => setActiveTab('vehicles')}
-        />
-      )}
-      {activeTab === 'vehicles' && <VehicleList />}
-      {activeTab === 'maintenance' && <MaintenanceLog />}
-      {activeTab === 'tasks' && <TaskList />}
-      {activeTab === 'settings' && <Settings onLogout={handleLogout} />}
+      <AnimatePresence mode="wait">
+        <Suspense fallback={
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <LoadingSpinner size="lg" message="Chargement..." />
+          </div>
+        }>
+          {activeTab === 'home' && (
+            <motion.div
+              key="home"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageTransitions}
+            >
+              <Dashboard
+                onLogout={handleLogout}
+                onViewAlerts={() => setCurrentView('upcoming-alerts')}
+                onViewTasks={() => setActiveTab('tasks')}
+                onViewVehicles={() => setActiveTab('vehicles')}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'vehicles' && (
+            <motion.div
+              key="vehicles"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageTransitions}
+            >
+              <VehicleList />
+            </motion.div>
+          )}
+          {activeTab === 'maintenance' && (
+            <motion.div
+              key="maintenance"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageTransitions}
+            >
+              <MaintenanceLog />
+            </motion.div>
+          )}
+          {activeTab === 'tasks' && (
+            <motion.div
+              key="tasks"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageTransitions}
+            >
+              <TaskList />
+            </motion.div>
+          )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageTransitions}
+            >
+              <Settings onLogout={handleLogout} />
+            </motion.div>
+          )}
+        </Suspense>
+      </AnimatePresence>
       
       {/* Hide bottom nav for admin */}
       {!currentProfile?.isAdmin && (

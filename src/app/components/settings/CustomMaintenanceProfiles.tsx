@@ -10,7 +10,10 @@ interface CustomMaintenanceProfilesProps {
 }
 
 export function CustomMaintenanceProfiles({ onBack, onOpenProfileDetail }: CustomMaintenanceProfilesProps) {
-  const { maintenanceProfiles, vehicles, deleteMaintenanceProfile, currentProfile } = useApp();
+  const { maintenanceProfiles, deleteMaintenanceProfile, currentProfile, getUserVehicles } = useApp();
+  
+  // 🔧 Utiliser getUserVehicles() pour filtrer par user_id
+  const vehicles = getUserVehicles();
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Filtrer les profils par utilisateur courant
