@@ -580,10 +580,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addVehicle = async (vehicle: Vehicle) => {
     const s = { ...vehicle, name: sanitizeInput(vehicle.name), brand: vehicle.brand ? sanitizeInput(vehicle.brand) : vehicle.brand,
       model: vehicle.model ? sanitizeInput(vehicle.model) : vehicle.model };
-    await supabase.from('vehicles').insert({ id: s.id, name: s.name, photo: s.photo, mileage: s.mileage,
-      brand: s.brand || null, model: s.model || null, year: s.year || null, license_plate: s.licensePlate || null,
-      vin: s.vin || null, owner_id: s.ownerId, fuel_type: s.fuelType || null, drive_type: s.driveType || null });
-    setState(prev => ({ ...prev, vehicles: [...prev.vehicles, s] }));
+    
+    console.log('🚗 Création véhicule:', { 
+      id: s.id, 
+      name: s.name, 
+      ownerId: s.ownerId,
+      fuelType: s.fuelType,
+      driveType: s.driveType 
+    });
+    
+    const { data, error } = await supabase.from('vehicles').insert({ 
+      id: s.id, 
+      name: s.name, 
+      photo: s.photo, 
+      mileage: s.mileage,
+      brand: s.brand || null, 
+      model: s.model || null, 
+      year: s.year || null, 
+      license_plate: s.licensePlate || null,
+      vin: s.vin || null, 
+      owner_id: s.ownerId, 
+      fuel_type: s.fuelType || null, 
+      drive_type: s.driveType || null,
+      photos: s.photos || null, // ✅ Galerie photos
+      documents: s.documents ? JSON.stringify(s.documents) : null // ✅ Documents
+    }).select();
+    
+    if (error) {
+      console.error('❌ Erreur création véhicule:', error);
+      throw error;
+    }
+    
+    console.log('✅ Véhicule créé dans Supabase:', data);
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase pour s'assurer que tout est synchronisé
+    await loadFromSupabase();
+    
+    console.log('✅ Données rechargées depuis Supabase');
   };
 
   const updateVehicle = async (id: string, updates: Partial<Vehicle>) => {
@@ -621,19 +654,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteVehicle = async (id: string) => {
-    await supabase.from('vehicles').delete().eq('id', id);
-    setState(prev => ({ ...prev, vehicles: prev.vehicles.filter(v => v.id !== id),
-      maintenanceEntries: prev.maintenanceEntries.filter(e => e.vehicleId !== id),
-      reminders: prev.reminders.filter(r => r.vehicleId !== id),
-      tasks: prev.tasks.filter(t => t.vehicleId !== id) }));
+    console.log('🗑️ Suppression véhicule:', { id });
+    
+    const { error } = await supabase.from('vehicles').delete().eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur suppression véhicule:', error);
+      throw error;
+    }
+    
+    console.log('✅ Véhicule supprimé de Supabase');
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase pour synchroniser
+    await loadFromSupabase();
+    
+    console.log('✅ Données rechargées depuis Supabase');
   };
 
   const addMaintenanceEntry = async (entry: MaintenanceEntry) => {
-    await supabase.from('maintenance_entries').insert({ id: entry.id, vehicle_id: entry.vehicleId,
-      type: typeof entry.type === 'string' ? entry.type : 'other', custom_type: entry.customType || null,
-      custom_icon: entry.customIcon || null, date: entry.date, mileage: entry.mileage,
-      cost: entry.cost || null, notes: entry.notes || null, photos: entry.photos || null });
-    setState(prev => ({ ...prev, maintenanceEntries: [...prev.maintenanceEntries, entry] }));
+    console.log('🔧 Création entretien:', { id: entry.id, vehicleId: entry.vehicleId, type: entry.type });
+    
+    const { data, error } = await supabase.from('maintenance_entries').insert({ 
+      id: entry.id, 
+      vehicle_id: entry.vehicleId,
+      type: typeof entry.type === 'string' ? entry.type : 'other', 
+      custom_type: entry.customType || null,
+      custom_icon: entry.customIcon || null, 
+      date: entry.date, 
+      mileage: entry.mileage,
+      cost: entry.cost || null, 
+      notes: entry.notes || null, 
+      photos: entry.photos || null 
+    }).select();
+    
+    if (error) {
+      console.error('❌ Erreur création entretien:', error);
+      throw error;
+    }
+    
+    console.log('✅ Entretien créé dans Supabase:', data);
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const updateMaintenanceEntry = async (id: string, updates: Partial<MaintenanceEntry>) => {
@@ -651,15 +713,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteMaintenanceEntry = async (id: string) => {
-    await supabase.from('maintenance_entries').delete().eq('id', id);
-    setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.filter(e => e.id !== id) }));
+    console.log('🗑️ Suppression entretien:', { id });
+    
+    const { error } = await supabase.from('maintenance_entries').delete().eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur suppression entretien:', error);
+      throw error;
+    }
+    
+    console.log('✅ Entretien supprimé de Supabase');
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const addReminder = async (reminder: Reminder) => {
-    await supabase.from('reminders').insert({ id: reminder.id, vehicle_id: reminder.vehicleId, type: reminder.type,
-      due_date: reminder.dueDate || null, due_mileage: reminder.dueMileage || null,
-      status: reminder.status, description: reminder.description });
-    setState(prev => ({ ...prev, reminders: [...prev.reminders, reminder] }));
+    console.log('⏰ Création rappel:', { id: reminder.id, vehicleId: reminder.vehicleId, type: reminder.type });
+    
+    const { data, error } = await supabase.from('reminders').insert({ 
+      id: reminder.id, 
+      vehicle_id: reminder.vehicleId, 
+      type: reminder.type,
+      due_date: reminder.dueDate || null, 
+      due_mileage: reminder.dueMileage || null,
+      status: reminder.status, 
+      description: reminder.description 
+    }).select();
+    
+    if (error) {
+      console.error('❌ Erreur création rappel:', error);
+      throw error;
+    }
+    
+    console.log('✅ Rappel créé dans Supabase:', data);
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
@@ -674,8 +764,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteReminder = async (id: string) => {
-    await supabase.from('reminders').delete().eq('id', id);
-    setState(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== id) }));
+    console.log('🗑️ Suppression rappel:', { id });
+    
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur suppression rappel:', error);
+      throw error;
+    }
+    
+    console.log('✅ Rappel supprimé de Supabase');
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const addTask = async (task: Task) => {
@@ -705,16 +806,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     console.log('💾 Ajout tâche dans Supabase:', taskToInsert);
     
-    const { error } = await supabase.from('tasks').insert(taskToInsert);
+    const { data, error } = await supabase.from('tasks').insert(taskToInsert).select();
     
     if (error) {
       console.error('❌ Erreur ajout tâche:', error);
       throw error;
     }
     
-    console.log('✅ Tâche ajoutée avec succès');
+    console.log('✅ Tâche ajoutée avec succès:', data);
     
-    setState(prev => ({ ...prev, tasks: [...prev.tasks, { ...s, links: optimizedLinks || undefined, createdAt: taskToInsert.created_at }] }));
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
@@ -747,8 +849,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTask = async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id);
-    setState(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== id) }));
+    console.log('🗑️ Suppression tâche:', { id });
+    
+    const { error } = await supabase.from('tasks').delete().eq('id', id);
+    
+    if (error) {
+      console.error('❌ Erreur suppression tâche:', error);
+      throw error;
+    }
+    
+    console.log('✅ Tâche supprimée de Supabase');
+    
+    // ✅ CRITIQUE : Recharger depuis Supabase
+    await loadFromSupabase();
   };
 
   const toggleTaskComplete = async (id: string) => {
