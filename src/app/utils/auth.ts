@@ -10,8 +10,6 @@ import type { SupabaseUser } from '../types';
  */
 export const signUp = async (email: string, password: string, fullName?: string) => {
   try {
-    console.log('📡 Envoi requête signUp à Supabase...', { email, fullName });
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -23,14 +21,7 @@ export const signUp = async (email: string, password: string, fullName?: string)
       },
     });
 
-    console.log('📡 Réponse Supabase signUp:', { 
-      user: data.user?.email, 
-      session: data.session ? 'Oui' : 'Non',
-      error: error 
-    });
-
     if (error) {
-      console.error('❌ Erreur Supabase:', error);
       throw error;
     }
     
@@ -40,14 +31,12 @@ export const signUp = async (email: string, password: string, fullName?: string)
 
     // Si une session existe (connexion automatique), créer le profil
     if (data.session) {
-      console.log('✅ Inscription réussie avec session, création du profil...');
-      
       // Créer automatiquement un profil pour ce nouvel utilisateur
       const firstName = fullName?.split(' ')[0] || 'Utilisateur';
       const lastName = fullName?.split(' ').slice(1).join(' ') || '';
       
       try {
-        const { error: profileError } = await supabase
+        await supabase
           .from('profiles')
           .insert({
             first_name: firstName,
@@ -60,19 +49,9 @@ export const signUp = async (email: string, password: string, fullName?: string)
             is_migrated: true,
             migrated_at: new Date().toISOString(),
           });
-
-        if (profileError) {
-          console.error('❌ Erreur création profil automatique:', profileError);
-          // Ne pas bloquer l'inscription si la création du profil échoue
-        } else {
-          console.log('✅ Profil créé automatiquement pour:', firstName);
-        }
       } catch (profileErr) {
-        console.error('❌ Exception création profil:', profileErr);
+        // Ne pas bloquer l'inscription si la création du profil échoue
       }
-    } else {
-      console.log('⚠️ Inscription réussie mais SANS session (confirmation email requise)');
-      console.log('📧 Vérifiez votre boîte mail pour confirmer votre compte');
     }
     
     return { 
@@ -81,7 +60,6 @@ export const signUp = async (email: string, password: string, fullName?: string)
       needsEmailConfirmation: !data.session 
     };
   } catch (error) {
-    console.error('❌ Erreur inscription:', error);
     throw error;
   }
 };
@@ -94,25 +72,19 @@ export const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    });
-
+    });    
     if (error) {
-      // Détecter si c'est un problème d'email non confirmé
+      // Supabase retourne 'Invalid login credentials' pour :
+      // - Email inexistant, mot de passe incorrect, email non confirmé
       if (error.message === 'Invalid login credentials') {
-        console.error('❌ Identifiants invalides OU email non confirmé');
-        const customError: any = new Error(
-          'Identifiants incorrects. Si vous venez de créer votre compte, vérifiez d\'abord votre email de confirmation ou demandez à un administrateur de confirmer votre compte.'
-        );
-        customError.code = 'EMAIL_NOT_CONFIRMED_OR_INVALID';
-        throw customError;
+        throw new Error('Email ou mot de passe incorrect');
       }
       throw error;
     }
     
-    console.log('✅ Connexion réussie:', data.user?.email);
     return data.user;
   } catch (error) {
-    console.error('❌ Erreur connexion:', error);
+    // L'erreur sera loggée dans AuthScreen.tsx
     throw error;
   }
 };

@@ -1,5 +1,18 @@
 # 🚀 APPLICATION MULTI-USERS - PRÊTE POUR PRODUCTION
 
+## ✅ DERNIÈRES CORRECTIONS (13/02/2026)
+
+### 🔧 Logs console nettoyés
+- **Avant ❌** : Logs multiples et redondants dans la console
+- **Après ✅** : Logs supprimés pour une console propre
+- Seules les erreurs critiques sont loggées si nécessaire
+
+### 🔧 Messages d'erreur de connexion corrigés
+- **Avant ❌** : "Veuillez vérifier votre boîte mail..." avec email inexistant
+- **Après ✅** : "Email ou mot de passe incorrect" (message clair)
+
+---
+
 ## ✅ TOUS LES PROBLÈMES CORRIGÉS
 
 ### 1️⃣ Profils en double → **RÉSOLU** ✅
