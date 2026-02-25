@@ -10,7 +10,7 @@ interface AddMaintenanceProfileModalProps {
 }
 
 export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceProfileModalProps) {
-  const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, addMaintenanceTemplate, maintenanceTemplates, getUserVehicles } = useApp();
+  const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, profiles, addMaintenanceTemplate, maintenanceTemplates, getUserVehicles } = useApp();
   
   const [name, setName] = useState(profile?.name || '');
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(profile?.vehicleIds || []);
@@ -44,6 +44,13 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
       return;
     }
 
+    // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
+    const ownerProfile = currentProfile || profiles.find((p: any) => !p.isAdmin);
+    if (!ownerProfile) {
+      setError('Aucun profil utilisateur trouvé');
+      return;
+    }
+
     try {
       if (profile) {
         // Mode édition
@@ -58,7 +65,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           id: `profile-${Date.now()}`,
           name: name.trim(),
           vehicleIds: selectedVehicleIds,
-          ownerId: currentProfile!.id,
+          ownerId: ownerProfile.id,
           isCustom: profileType === 'custom',
           createdAt: new Date().toISOString(),
         };
@@ -104,8 +111,8 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
             if (isApplicable && !addedTemplates.has(template.name)) {
               templatesToAdd.push({
                 ...template,
-                id: `${template.id}-${newProfile.id}-${index}`, // Utiliser l'index au lieu de Date.now()
-                ownerId: currentProfile!.id,
+                id: `${template.id}-${newProfile.id}-${index}`,
+                ownerId: ownerProfile.id,
                 profileId: newProfile.id,
               });
               

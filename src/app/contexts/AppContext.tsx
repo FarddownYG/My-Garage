@@ -835,8 +835,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addMaintenanceProfile = async (profile: MaintenanceProfile) => {
-    if (!state.currentProfile) return;
-    const p = { ...profile, ownerId: state.currentProfile.id };
+    // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
+    const ownerProfile = state.currentProfile || state.profiles.find(p => !p.isAdmin);
+    if (!ownerProfile) return;
+    const p = { ...profile, ownerId: ownerProfile.id };
     await supabase.from('maintenance_profiles').insert({
       id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom, created_at: p.createdAt
     });
