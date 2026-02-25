@@ -789,8 +789,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addMaintenanceTemplate = async (template: MaintenanceTemplate) => {
-    if (!state.currentProfile) return;
-    const t = { ...template, ownerId: state.currentProfile.id };
+    // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
+    const ownerProfile = state.currentProfile || state.profiles.find(p => !p.isAdmin);
+    if (!ownerProfile) return;
+    const t = { ...template, ownerId: ownerProfile.id };
     
     // 🔧 FIX: Vérifier si le template existe déjà pour éviter les doublons
     const { data: existing } = await supabase
@@ -993,10 +995,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [state.maintenanceEntries, state.maintenanceTemplates]);
 
-  // 🔒 Filtrer les templates par profil actif uniquement
+  // 🔒 Filtrer les templates par profil actif — avec fallback robuste
   const userMaintenanceTemplates = useMemo(() => {
-    if (!state.currentProfile) return [];
-    return state.maintenanceTemplates.filter(t => t.ownerId === state.currentProfile!.id);
+    // Si un profil est actif, filtrer par son ID
+    if (state.currentProfile) {
+      const filtered = state.maintenanceTemplates.filter(
+        t => t.ownerId === state.currentProfile!.id
+      );
+      // Si le filtre donne quelque chose, l'utiliser
+      if (filtered.length > 0) return filtered;
+    }
+    // Fallback : retourner tous les templates déjà chargés (déjà scopés à l'utilisateur par Supabase)
+    // Cela couvre le cas où currentProfile est null mais les données sont chargées
+    return state.maintenanceTemplates;
   }, [state.maintenanceTemplates, state.currentProfile]);
 
   // ✅ OPTIMISATION : Plus besoin de filtrer, Supabase charge déjà uniquement les données de l'utilisateur

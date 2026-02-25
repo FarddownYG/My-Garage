@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Button } from '../ui/button';
 import { CustomSelect } from '../ui/CustomSelect';
+import { DateInputFR } from '../shared/DateInputFR';
+import { defaultMaintenanceTemplates } from '../../data/defaultMaintenanceTemplates';
 import type { MaintenanceEntry } from '../../types';
 
 interface EditMaintenanceModalProps {
@@ -11,13 +13,11 @@ interface EditMaintenanceModalProps {
   onOpenSettings?: () => void;
 }
 
-const defaultTemplates = [
+// Templates de base pour la compatibilité (sans Supabase)
+const builtinTemplates = [
   { id: 'oil', name: 'Vidange', icon: '💧', intervalMonths: 12, intervalKm: 15000 },
   { id: 'tires', name: 'Pneus', icon: '🔩', intervalMonths: 48, intervalKm: 40000 },
   { id: 'brakes', name: 'Freins', icon: '⛔', intervalMonths: 24, intervalKm: 30000 },
-  { id: 'filter', name: 'Filtre à air', icon: '🔧', intervalMonths: 12, intervalKm: 20000 },
-  { id: 'battery', name: 'Batterie', icon: '⚡', intervalMonths: 48, intervalKm: 0 },
-  { id: 'inspection', name: 'Contrôle technique', icon: '✅', intervalMonths: 24, intervalKm: 0 },
 ];
 
 export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMaintenanceModalProps) {
@@ -34,7 +34,7 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     updateMaintenanceEntry(entry.id, {
       type: formData.type,
       customType: formData.customType || undefined,
@@ -44,10 +44,14 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
       notes: formData.notes || undefined,
     });
 
-    // Update reminder if applicable
+    // Mettre à jour le rappel si applicable
     const templateId = formData.customType || formData.type;
-    const allTemplates = [...defaultTemplates, ...maintenanceTemplates];
-    const template = allTemplates.find(t => t.id === templateId);
+    const allTemplates = [
+      ...builtinTemplates,
+      ...(defaultMaintenanceTemplates as any[]),
+      ...maintenanceTemplates,
+    ];
+    const template = allTemplates.find(t => t.id === templateId || t.name === templateId);
 
     if (template && (template.intervalMonths || template.intervalKm)) {
       const entryDate = new Date(formData.date);
@@ -94,11 +98,12 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
       onClose();
       onOpenSettings?.();
     } else {
-      const isCustom = !['oil', 'tires', 'brakes', 'filter', 'battery', 'inspection', 'other'].includes(value);
-      setFormData({ 
-        ...formData, 
+      const builtinIds = ['oil', 'tires', 'brakes', 'filter', 'battery', 'inspection', 'other'];
+      const isCustom = !builtinIds.includes(value);
+      setFormData({
+        ...formData,
         type: isCustom ? 'other' : value as any,
-        customType: isCustom ? value : ''
+        customType: isCustom ? value : '',
       });
     }
   };
@@ -140,11 +145,9 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-zinc-400 mb-2 block">Date *</label>
-              <input
-                type="date"
+              <DateInputFR
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2"
+                onChange={(v) => setFormData({ ...formData, date: v })}
                 required
               />
             </div>
@@ -183,26 +186,26 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button
+            <button
               type="button"
               onClick={handleDelete}
               className="px-4 py-2 bg-red-600/10 border border-red-600/20 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors"
             >
               Supprimer
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
               onClick={onClose}
               className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2 rounded-lg transition-colors"
             >
               Annuler
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
             >
               Enregistrer
-            </Button>
+            </button>
           </div>
         </form>
       </div>

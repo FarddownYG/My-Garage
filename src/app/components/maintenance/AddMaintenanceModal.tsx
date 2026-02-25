@@ -6,6 +6,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { defaultMaintenanceTemplates } from '../../data/defaultMaintenanceTemplates';
+import { DateInputFR } from '../shared/DateInputFR';
 
 interface AddMaintenanceModalProps {
   vehicleId: string;
@@ -329,12 +330,10 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date" className="text-zinc-400">Date *</Label>
-                <Input
+                <DateInputFR
                   id="date"
-                  type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  onChange={(v) => setFormData({ ...formData, date: v })}
                   required
                 />
               </div>

@@ -1,4 +1,5 @@
 import type { MaintenanceRecord, Vehicle, MaintenanceTemplate, MaintenanceProfile } from '../types';
+import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 
 export interface UpcomingAlert {
   id: string;
@@ -45,55 +46,54 @@ export function calculateUpcomingAlerts(
 ): UpcomingAlert[] {
   const alerts: UpcomingAlert[] = [];
   const today = new Date();
-  let alertCounter = 0; // Compteur unique pour éviter les doublons de clés
+  let alertCounter = 0;
+
+  // ✅ FIX : Si aucun template chargé depuis Supabase, utiliser les 41 templates par défaut
+  const effectiveTemplates: any[] = templates.length > 0
+    ? templates
+    : (defaultMaintenanceTemplates as any[]);
 
   vehicles.forEach((vehicle) => {
     const vehicleMaintenances = maintenances.filter(
       (m) => m.vehicleId === vehicle.id
     );
 
-    // 🔧 Trouver le profil d'entretien personnalisé associé à ce véhicule (si existant)
     const assignedProfile = maintenanceProfiles.find(p => p.vehicleIds.includes(vehicle.id));
 
-    // Filtrer les templates selon le profil d'entretien personnalisé OU selon la motorisation
-    let applicableTemplates: MaintenanceTemplate[];
+    let applicableTemplates: any[];
 
     if (assignedProfile) {
-      // ✅ Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
-      applicableTemplates = templates.filter(t => t.profileId === assignedProfile.id);
+      applicableTemplates = effectiveTemplates.filter((t: any) => t.profileId === assignedProfile.id);
+      // Si le profil ne donne aucun template, fallback general
+      if (applicableTemplates.length === 0) {
+        applicableTemplates = effectiveTemplates.filter((t: any) => !t.profileId);
+      }
     } else {
-      // ✅ Sinon, afficher les templates généraux (sans profileId) selon motorisation et transmission
-      applicableTemplates = templates.filter((template) => {
-        // Exclure les templates appartenant à un profil personnalisé
+      const vehicleFuelType = vehicle.fuelType || (vehicle.engineType === 'gasoline' ? 'essence' : vehicle.engineType);
+      const vehicleDriveType = vehicle.driveType;
+
+      applicableTemplates = effectiveTemplates.filter((template: any) => {
         if (template.profileId) return false;
 
-        // Filtrage par motorisation (essence/diesel)
-        const vehicleFuelType = vehicle.engineType || vehicle.fuelType;
-        if (!vehicleFuelType) {
-          // Si pas de motorisation définie, seulement les templates "both"
-          if (template.fuelType !== 'both') return false;
-        } else {
-          const fuelMatch = template.fuelType === 'both' || 
-            template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
+        const tFuelType = template.fuelType || template.engineType || 'both';
+        if (vehicleFuelType) {
+          const fuelMatch = tFuelType === 'both' || tFuelType === vehicleFuelType;
           if (!fuelMatch) return false;
+        } else {
+          if (tFuelType !== 'both') return false;
         }
 
-        // Filtrage par transmission (4x2/4x4)
-        const vehicleDriveType = vehicle.driveType;
         if (template.driveType && template.driveType !== 'both') {
-          // Si le template a un driveType spécifique (pas "both" ou undefined)
-          if (!vehicleDriveType || vehicleDriveType !== template.driveType) {
-            return false; // Ne pas afficher si incompatible
-          }
+          if (!vehicleDriveType || vehicleDriveType !== template.driveType) return false;
         }
 
         return true;
       });
     }
-    
-    // 🔧 DÉDUPLICATION : Filtrer pour garder seulement un template par nom
-    const uniqueTemplates = new Map<string, MaintenanceTemplate>();
-    applicableTemplates.forEach(template => {
+
+    // 🔧 DÉDUPLICATION : un template par nom
+    const uniqueTemplates = new Map<string, any>();
+    applicableTemplates.forEach((template: any) => {
       if (!uniqueTemplates.has(template.name)) {
         uniqueTemplates.set(template.name, template);
       }
