@@ -416,16 +416,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setCurrentProfile = async (profile: Profile | null) => {
-    setState(prev => ({ ...prev, currentProfile: profile }));
-    await supabase
-      .from('app_config')
-      .upsert({ id: 'global', admin_pin: state.adminPin, current_profile_id: profile?.id || null }, { onConflict: 'id' });
+    // ✅ FIX stale closure : lire adminPin depuis le state actuel via setState fonctionnel
+    setState(prev => {
+      // Fire and forget la sauvegarde Supabase avec la bonne valeur de adminPin
+      supabase
+        .from('app_config')
+        .upsert({ id: 'global', admin_pin: prev.adminPin, current_profile_id: profile?.id || null }, { onConflict: 'id' })
+        .then(() => {});
+      return { ...prev, currentProfile: profile };
+    });
   };
 
   const addProfile = async (profile: Profile) => {
     const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
-    
-    console.log('🆕 Création profil:', { profile: s });
     
     // ✅ VÉRIFIER SI UN PROFIL EXISTE DÉJÀ POUR CET UTILISATEUR
     if (s.userId) {
@@ -436,7 +439,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .eq('is_admin', false);
       
       if (existingProfiles && existingProfiles.length > 0) {
-        console.warn('⚠️ Un profil existe déjà pour cet utilisateur, création annulée');
         // Recharger les données pour mettre à jour l'état
         await loadFromSupabase();
         return;
@@ -456,11 +458,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (error) {
-      console.error('❌ Erreur création profil:', error);
       throw error;
     }
-    
-    console.log('✅ Profil créé dans Supabase avec user_id:', s.userId);
     
     // Initialiser les templates par défaut pour ce profil
     if (!s.isAdmin) {
@@ -495,6 +494,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (id: string, updates: Partial<Profile>) => {
     const s = { ...updates };
+    // ✅ Optimistic update local immédiat
+    setState(prev => ({ ...prev, profiles: prev.profiles.map(p => p.id === id ? { ...p, ...updates } : p),
+      currentProfile: prev.currentProfile?.id === id ? { ...prev.currentProfile, ...updates } : prev.currentProfile }));
     
     // Sanitize les champs texte
     if (updates.firstName) s.firstName = sanitizeInput(updates.firstName);
@@ -542,242 +544,201 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const s = { ...vehicle, name: sanitizeInput(vehicle.name), brand: vehicle.brand ? sanitizeInput(vehicle.brand) : vehicle.brand,
       model: vehicle.model ? sanitizeInput(vehicle.model) : vehicle.model };
     
-    console.log('🚗 Création véhicule:', { 
-      id: s.id, 
-      name: s.name, 
-      ownerId: s.ownerId,
-      fuelType: s.fuelType,
-      driveType: s.driveType 
+    // ✅ Optimistic update : mettre à jour l'UI immédiatement
+    setState(prev => ({ ...prev, vehicles: [...prev.vehicles, s] }));
+    
+    const { error } = await supabase.from('vehicles').insert({ 
+      id: s.id, name: s.name, photo: s.photo, mileage: s.mileage,
+      brand: s.brand || null, model: s.model || null, year: s.year || null, 
+      license_plate: s.licensePlate || null, vin: s.vin || null, owner_id: s.ownerId, 
+      fuel_type: s.fuelType || null, drive_type: s.driveType || null,
+      photos: s.photos || null, documents: s.documents ? JSON.stringify(s.documents) : null
     });
     
-    const { data, error } = await supabase.from('vehicles').insert({ 
-      id: s.id, 
-      name: s.name, 
-      photo: s.photo, 
-      mileage: s.mileage,
-      brand: s.brand || null, 
-      model: s.model || null, 
-      year: s.year || null, 
-      license_plate: s.licensePlate || null,
-      vin: s.vin || null, 
-      owner_id: s.ownerId, 
-      fuel_type: s.fuelType || null, 
-      drive_type: s.driveType || null,
-      photos: s.photos || null, // ✅ Galerie photos
-      documents: s.documents ? JSON.stringify(s.documents) : null // ✅ Documents
-    }).select();
-    
     if (error) {
-      console.error('❌ Erreur création véhicule:', error);
+      // ✅ Rollback optimistic update
+      setState(prev => ({ ...prev, vehicles: prev.vehicles.filter(v => v.id !== s.id) }));
       throw error;
     }
-    
-    console.log('✅ Véhicule créé dans Supabase:', data);
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase pour s'assurer que tout est synchronisé
-    await loadFromSupabase();
-    
-    console.log('✅ Données rechargées depuis Supabase');
   };
 
   const updateVehicle = async (id: string, updates: Partial<Vehicle>) => {
     const s = { ...updates };
     if (updates.name) s.name = sanitizeInput(updates.name);
-    if (updates.brand) s.brand = sanitizeInput(updates.brand);
-    if (updates.model) s.model = sanitizeInput(updates.model);
+    if (updates.brand !== undefined) s.brand = updates.brand ? sanitizeInput(updates.brand) : updates.brand;
+    if (updates.model !== undefined) s.model = updates.model ? sanitizeInput(updates.model) : updates.model;
+
+    // ✅ FIX : utiliser 'key' in updates pour pouvoir vider des champs (null/empty)
     const db: any = {};
-    if (s.name) db.name = s.name;
-    if (s.photo) db.photo = s.photo;
-    if (s.mileage !== undefined) db.mileage = s.mileage;
-    if (s.brand) db.brand = s.brand;
-    if (s.model) db.model = s.model;
-    if (s.year) db.year = s.year;
-    if (s.licensePlate) db.license_plate = s.licensePlate;
-    if (s.vin) db.vin = s.vin;
-    if (s.fuelType) db.fuel_type = s.fuelType;
-    if (s.driveType) db.drive_type = s.driveType;
-    if (s.photos !== undefined) db.photos = s.photos; // Galerie photos
-    if (s.documents !== undefined) db.documents = JSON.stringify(s.documents); // Documents (stockés en JSON)
+    if ('name' in updates && s.name) db.name = s.name;
+    if ('photo' in updates) db.photo = s.photo || null;
+    if ('mileage' in updates && s.mileage !== undefined) db.mileage = s.mileage;
+    if ('brand' in updates) db.brand = s.brand || null;
+    if ('model' in updates) db.model = s.model || null;
+    if ('year' in updates) db.year = s.year || null;
+    if ('licensePlate' in updates) db.license_plate = s.licensePlate || null;
+    if ('vin' in updates) db.vin = s.vin || null;
+    if ('fuelType' in updates) db.fuel_type = s.fuelType || null;
+    if ('driveType' in updates) db.drive_type = s.driveType || null;
+    if ('photos' in updates) db.photos = s.photos || null;
+    if ('documents' in updates) db.documents = s.documents ? JSON.stringify(s.documents) : null;
     
-    console.log('💾 Mise à jour véhicule:', { id, updates: db });
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, vehicles: prev.vehicles.map(v => v.id === id ? { ...v, ...s } : v) }));
     
     const { error } = await supabase.from('vehicles').update(db).eq('id', id);
     
     if (error) {
-      console.error('❌ Erreur mise à jour véhicule:', error);
+      await loadFromSupabase(); // Recharger en cas d'erreur
       throw error;
     }
-    
-    console.log('✅ Véhicule sauvegardé');
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const deleteVehicle = async (id: string) => {
-    console.log('🗑️ Suppression véhicule:', { id });
+    // ✅ Optimistic update : supprimer aussi les données liées
+    setState(prev => ({
+      ...prev,
+      vehicles: prev.vehicles.filter(v => v.id !== id),
+      maintenanceEntries: prev.maintenanceEntries.filter(e => e.vehicleId !== id),
+      tasks: prev.tasks.filter(t => t.vehicleId !== id),
+      reminders: prev.reminders.filter(r => r.vehicleId !== id),
+    }));
     
     const { error } = await supabase.from('vehicles').delete().eq('id', id);
     
     if (error) {
-      console.error('❌ Erreur suppression véhicule:', error);
+      await loadFromSupabase(); // Recharger en cas d'erreur
       throw error;
     }
-    
-    console.log('✅ Véhicule supprimé de Supabase');
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase pour synchroniser
-    await loadFromSupabase();
-    
-    console.log('✅ Données rechargées depuis Supabase');
   };
 
   const addMaintenanceEntry = async (entry: MaintenanceEntry) => {
-    console.log('🔧 Création entretien:', { id: entry.id, vehicleId: entry.vehicleId, type: entry.type });
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, maintenanceEntries: [entry, ...prev.maintenanceEntries] }));
     
-    const { data, error } = await supabase.from('maintenance_entries').insert({ 
-      id: entry.id, 
-      vehicle_id: entry.vehicleId,
+    const { error } = await supabase.from('maintenance_entries').insert({ 
+      id: entry.id, vehicle_id: entry.vehicleId,
       type: typeof entry.type === 'string' ? entry.type : 'other', 
-      custom_type: entry.customType || null,
-      custom_icon: entry.customIcon || null, 
-      date: entry.date, 
-      mileage: entry.mileage,
-      cost: entry.cost || null, 
-      notes: entry.notes || null, 
-      photos: entry.photos || null 
-    }).select();
+      custom_type: entry.customType || null, custom_icon: entry.customIcon || null, 
+      date: entry.date, mileage: entry.mileage, cost: entry.cost || null, 
+      notes: entry.notes || null, photos: entry.photos || null 
+    });
     
     if (error) {
-      console.error('❌ Erreur création entretien:', error);
+      // Rollback
+      setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.filter(e => e.id !== entry.id) }));
       throw error;
     }
-    
-    console.log('✅ Entretien créé dans Supabase:', data);
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const updateMaintenanceEntry = async (id: string, updates: Partial<MaintenanceEntry>) => {
     const db: any = {};
-    if (updates.type) db.type = typeof updates.type === 'string' ? updates.type : 'other';
-    if (updates.customType !== undefined) db.custom_type = updates.customType;
-    if (updates.customIcon !== undefined) db.custom_icon = updates.customIcon;
-    if (updates.date) db.date = updates.date;
-    if (updates.mileage !== undefined) db.mileage = updates.mileage;
-    if (updates.cost !== undefined) db.cost = updates.cost;
-    if (updates.notes !== undefined) db.notes = updates.notes;
-    if (updates.photos !== undefined) db.photos = updates.photos;
-    await supabase.from('maintenance_entries').update(db).eq('id', id);
-    setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.map(e => e.id === id ? { ...e, ...updates } : e) }));
+    if ('type' in updates) db.type = typeof updates.type === 'string' ? updates.type : 'other';
+    if ('customType' in updates) db.custom_type = updates.customType || null;
+    if ('customIcon' in updates) db.custom_icon = updates.customIcon || null;
+    if ('date' in updates) db.date = updates.date;
+    if ('mileage' in updates) db.mileage = updates.mileage;
+    if ('cost' in updates) db.cost = updates.cost || null;
+    if ('notes' in updates) db.notes = updates.notes || null;
+    if ('photos' in updates) db.photos = updates.photos || null;
+
+    // ✅ Optimistic update avec snapshot pour rollback
+    let snapshot: MaintenanceEntry[] = [];
+    setState(prev => {
+      snapshot = prev.maintenanceEntries;
+      return { ...prev, maintenanceEntries: prev.maintenanceEntries.map(e => e.id === id ? { ...e, ...updates } : e) };
+    });
+    const { error } = await supabase.from('maintenance_entries').update(db).eq('id', id);
+    if (error) {
+      setState(prev => ({ ...prev, maintenanceEntries: snapshot }));
+      throw error;
+    }
   };
 
   const deleteMaintenanceEntry = async (id: string) => {
-    console.log('🗑️ Suppression entretien:', { id });
-    
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, maintenanceEntries: prev.maintenanceEntries.filter(e => e.id !== id) }));
     const { error } = await supabase.from('maintenance_entries').delete().eq('id', id);
-    
     if (error) {
-      console.error('❌ Erreur suppression entretien:', error);
+      await loadFromSupabase();
       throw error;
     }
-    
-    console.log('✅ Entretien supprimé de Supabase');
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const addReminder = async (reminder: Reminder) => {
-    console.log('⏰ Création rappel:', { id: reminder.id, vehicleId: reminder.vehicleId, type: reminder.type });
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, reminders: [reminder, ...prev.reminders] }));
     
-    const { data, error } = await supabase.from('reminders').insert({ 
-      id: reminder.id, 
-      vehicle_id: reminder.vehicleId, 
-      type: reminder.type,
-      due_date: reminder.dueDate || null, 
-      due_mileage: reminder.dueMileage || null,
-      status: reminder.status, 
-      description: reminder.description 
-    }).select();
+    const { error } = await supabase.from('reminders').insert({ 
+      id: reminder.id, vehicle_id: reminder.vehicleId, type: reminder.type,
+      due_date: reminder.dueDate || null, due_mileage: reminder.dueMileage || null,
+      status: reminder.status, description: reminder.description 
+    });
     
     if (error) {
-      console.error('❌ Erreur création rappel:', error);
+      setState(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== reminder.id) }));
       throw error;
     }
+    // ✅ suppression du log et du reload inutile
     
-    console.log('✅ Rappel créé dans Supabase:', data);
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
     const db: any = {};
-    if (updates.type) db.type = updates.type;
-    if (updates.dueDate !== undefined) db.due_date = updates.dueDate;
-    if (updates.dueMileage !== undefined) db.due_mileage = updates.dueMileage;
-    if (updates.status) db.status = updates.status;
-    if (updates.description) db.description = updates.description;
-    await supabase.from('reminders').update(db).eq('id', id);
-    setState(prev => ({ ...prev, reminders: prev.reminders.map(r => r.id === id ? { ...r, ...updates } : r) }));
+    if ('type' in updates) db.type = updates.type;
+    if ('dueDate' in updates) db.due_date = updates.dueDate || null;
+    if ('dueMileage' in updates) db.due_mileage = updates.dueMileage || null;
+    if ('status' in updates) db.status = updates.status;
+    if ('description' in updates) db.description = updates.description;
+
+    // ✅ Optimistic update avec snapshot pour rollback
+    let snapshot: Reminder[] = [];
+    setState(prev => {
+      snapshot = prev.reminders;
+      return { ...prev, reminders: prev.reminders.map(r => r.id === id ? { ...r, ...updates } : r) };
+    });
+    const { error } = await supabase.from('reminders').update(db).eq('id', id);
+    if (error) {
+      setState(prev => ({ ...prev, reminders: snapshot }));
+      throw error;
+    }
   };
 
   const deleteReminder = async (id: string) => {
-    console.log('🗑️ Suppression rappel:', { id });
-    
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== id) }));
     const { error } = await supabase.from('reminders').delete().eq('id', id);
-    
     if (error) {
-      console.error('❌ Erreur suppression rappel:', error);
+      await loadFromSupabase();
       throw error;
     }
-    
-    console.log('✅ Rappel supprimé de Supabase');
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const addTask = async (task: Task) => {
     const s = { ...task, title: sanitizeInput(task.title), description: task.description ? sanitizeInput(task.description) : undefined };
     
-    // 🚀 OPTIMISATION : Nettoyer et minimiser les liens avant sauvegarde
     const optimizedLinks = s.links && s.links.length > 0 
       ? s.links
-          .filter(link => link.url.trim() !== '') // Supprimer les liens vides
-          .map(link => ({
-            url: link.url.trim(),                  // Supprimer les espaces
-            name: link.name.trim() || undefined    // Supprimer les noms vides
-          }))
-          .filter(link => link.url)                // Garde uniquement les liens valides
+          .filter(link => link.url.trim() !== '')
+          .map(link => ({ url: link.url.trim(), name: link.name.trim() || undefined }))
+          .filter(link => link.url)
       : null;
     
-    // ✅ CORRECTION : Ajouter created_at pour éviter les bugs de disparition
-    const taskToInsert = {
-      id: s.id, 
-      vehicle_id: s.vehicleId, 
-      title: s.title,
-      description: s.description || null, 
-      links: optimizedLinks, 
-      completed: s.completed,
-      created_at: s.createdAt || new Date().toISOString() // Utiliser createdAt ou maintenant
-    };
+    const taskWithLinks = { ...s, links: optimizedLinks || undefined };
     
-    console.log('💾 Ajout tâche dans Supabase:', taskToInsert);
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, tasks: [taskWithLinks, ...prev.tasks] }));
     
-    const { data, error } = await supabase.from('tasks').insert(taskToInsert).select();
+    const { error } = await supabase.from('tasks').insert({
+      id: s.id, vehicle_id: s.vehicleId, title: s.title,
+      description: s.description || null, links: optimizedLinks, completed: s.completed,
+      created_at: s.createdAt || new Date().toISOString()
+    });
     
     if (error) {
-      console.error('❌ Erreur ajout tâche:', error);
+      setState(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== s.id) }));
       throw error;
     }
-    
-    console.log('✅ Tâche ajoutée avec succès:', data);
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
@@ -810,19 +771,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTask = async (id: string) => {
-    console.log('🗑️ Suppression tâche:', { id });
-    
+    // ✅ Optimistic update
+    setState(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== id) }));
     const { error } = await supabase.from('tasks').delete().eq('id', id);
-    
     if (error) {
-      console.error('❌ Erreur suppression tâche:', error);
+      await loadFromSupabase();
       throw error;
     }
-    
-    console.log('✅ Tâche supprimée de Supabase');
-    
-    // ✅ CRITIQUE : Recharger depuis Supabase
-    await loadFromSupabase();
   };
 
   const toggleTaskComplete = async (id: string) => {
@@ -1013,49 +968,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .eq('is_custom', true);
 
       console.log(`✅ Toutes les données du profil "${state.currentProfile.name}" ont été supprimées`);
-      console.log('ℹ️ Le profil lui-même est conservé');
-      
-      // Recharger les données depuis Supabase
-      const { data: vehiclesData } = await supabase.from('vehicles').select('*').order('name');
-      const { data: maintenanceEntriesData } = await supabase.from('maintenance_entries').select('*').order('date', { ascending: false });
-      const { data: tasksData } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
-      const { data: remindersData } = await supabase.from('reminders').select('*').order('created_at', { ascending: false });
-      const { data: templatesData } = await supabase.from('maintenance_templates').select('*').order('name');
-
-      // Mettre à jour l'état
-      setState(prev => ({
-        ...prev,
-        vehicles: (vehiclesData || []).map(v => ({ 
-          id: v.id, name: v.name, photo: v.photo, mileage: v.mileage,
-          brand: v.brand || undefined, model: v.model || undefined, year: v.year || undefined,
-          licensePlate: v.license_plate || undefined, vin: v.vin || undefined, ownerId: v.owner_id, 
-          fuelType: v.fuel_type || undefined, driveType: v.drive_type || undefined,
-          photos: v.photos || undefined,
-          documents: v.documents ? (typeof v.documents === 'string' ? JSON.parse(v.documents) : v.documents) : undefined 
-        })),
-        maintenanceEntries: (maintenanceEntriesData || []).map(e => ({ 
-          id: e.id, vehicleId: e.vehicle_id, type: e.type as any,
-          customType: e.custom_type || undefined, customIcon: e.custom_icon || undefined, date: e.date,
-          mileage: e.mileage, cost: e.cost || undefined, notes: e.notes || undefined, photos: e.photos || undefined 
-        })),
-        tasks: (tasksData || []).map(t => ({ 
-          id: t.id, vehicleId: t.vehicle_id, title: t.title,
-          description: t.description || undefined, links: t.links || undefined, completed: t.completed, createdAt: t.created_at 
-        })),
-        reminders: (remindersData || []).map(r => ({ 
-          id: r.id, vehicleId: r.vehicle_id, type: r.type,
-          dueDate: r.due_date || undefined, dueMileage: r.due_mileage || undefined, status: r.status as any, description: r.description 
-        })),
-        maintenanceTemplates: (templatesData || []).map(t => ({ 
-          id: t.id, name: t.name, icon: t.icon,
-          category: t.category || undefined, intervalMonths: t.interval_months || undefined, intervalKm: t.interval_km || undefined,
-          fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined 
-        })),
-      }));
-
-      console.log('✅ Données rechargées depuis Supabase');
+      // ✅ FIX : rechargement filtré correctement par utilisateur connecté
+      await loadFromSupabase();
     } catch (error) {
-      console.error('❌ Erreur lors de la réinitialisation:', error);
       throw error;
     }
   };

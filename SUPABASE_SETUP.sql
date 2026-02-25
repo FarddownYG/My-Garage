@@ -3,6 +3,12 @@
 -- Version SANS ERREUR (supprime les anciennes policies)
 -- Copie-colle ce fichier dans Supabase > SQL Editor
 -- ============================================
+-- 
+-- ⚠️ NOUVEAU : Pour les corrections de sécurité (audit score 10/10)
+-- Exécutez SECURITY_FIX.sql APRÈS ce fichier.
+-- Il corrige : Function Search Path, RLS backup table, 
+-- policies always-true, et Leaked Password Protection.
+-- ============================================
 
 -- ============================================
 -- 1️⃣ NETTOYAGE DES PROFILS EN DOUBLE
@@ -173,10 +179,11 @@ CREATE POLICY "Users can update their own maintenance profiles" ON maintenance_p
 CREATE POLICY "Users can delete their own maintenance profiles" ON maintenance_profiles FOR DELETE 
   USING (owner_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
 
--- ✅ APP_CONFIG (lecture publique)
-CREATE POLICY "Anyone can read app config" ON app_config FOR SELECT USING (true);
+-- ✅ APP_CONFIG (lecture pour utilisateurs authentifiés uniquement)
+CREATE POLICY "Anyone can read app config" ON app_config FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Only admins can update app config" ON app_config FOR UPDATE 
-  USING (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND is_admin = true));
+  USING (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND is_admin = true))
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND is_admin = true));
 
 -- ============================================
 -- 5️⃣ VÉRIFICATIONS

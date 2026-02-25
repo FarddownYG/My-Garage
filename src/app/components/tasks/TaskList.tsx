@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, CheckSquare, Square, Trash2, Edit2, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
@@ -8,7 +8,7 @@ import { EditTaskModal } from './EditTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 
 export function TaskList() {
-  const { tasks, updateTask, deleteTask, getUserVehicles } = useApp();
+  const { tasks, vehicles, currentProfile, updateTask, deleteTask, getUserVehicles } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [viewingTask, setViewingTask] = useState<any>(null);
@@ -16,18 +16,13 @@ export function TaskList() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
 
   // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
-  const userVehicles = getUserVehicles();
-  const userVehicleIds = userVehicles.map(v => v.id);
+  const userVehicles = useMemo(() => getUserVehicles(), [getUserVehicles]);
+  const userVehicleIds = useMemo(() => userVehicles.map(v => v.id), [userVehicles]);
 
-  const filteredTasks = tasks
+  const filteredTasks = useMemo(() => tasks
     .filter(task => {
-      // Filtre par véhicule
       if (selectedVehicleId !== 'all' && task.vehicleId !== selectedVehicleId) return false;
-      
-      // Filtre par véhicule de l'utilisateur actuel
       if (!userVehicleIds.includes(task.vehicleId)) return false;
-      
-      // Filtre par statut
       if (filter === 'pending') return !task.completed;
       if (filter === 'completed') return task.completed;
       return true;
@@ -37,17 +32,18 @@ export function TaskList() {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       return a.completed ? 1 : -1;
-    });
+    }), [tasks, userVehicleIds, selectedVehicleId, filter]);
 
-  const pendingCount = tasks.filter(t => {
-    const vehicle = vehicles.find(v => v.id === t.vehicleId);
-    return vehicle?.ownerId === currentProfile?.id && !t.completed;
-  }).length;
+  // ✅ FIX CRITIQUE : utiliser userVehicleIds au lieu de vehicles/currentProfile non définis
+  const pendingCount = useMemo(() =>
+    tasks.filter(t => userVehicleIds.includes(t.vehicleId) && !t.completed).length,
+    [tasks, userVehicleIds]
+  );
   
-  const completedCount = tasks.filter(t => {
-    const vehicle = vehicles.find(v => v.id === t.vehicleId);
-    return vehicle?.ownerId === currentProfile?.id && t.completed;
-  }).length;
+  const completedCount = useMemo(() =>
+    tasks.filter(t => userVehicleIds.includes(t.vehicleId) && t.completed).length,
+    [tasks, userVehicleIds]
+  );
 
   return (
     <div className="min-h-screen bg-black pb-24">
@@ -91,10 +87,7 @@ export function TaskList() {
           size="sm"
           className={filter === 'all' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
         >
-          Toutes ({tasks.filter(t => {
-            const vehicle = vehicles.find(v => v.id === t.vehicleId);
-            return vehicle?.ownerId === currentProfile?.id;
-          }).length})
+          Toutes ({tasks.filter(t => userVehicleIds.includes(t.vehicleId)).length})
         </Button>
         <Button
           onClick={() => setFilter('pending')}
@@ -117,7 +110,7 @@ export function TaskList() {
       <div className="px-6 py-4 space-y-3">
         {filteredTasks.length > 0 ? (
           filteredTasks.map((task) => {
-            const vehicle = vehicles.find(v => v.id === task.vehicleId);
+            const vehicle = userVehicles.find(v => v.id === task.vehicleId);
             return (
               <Card key={task.id} className="bg-zinc-900 border-zinc-800 rounded-2xl shadow-soft overflow-hidden">
                 {/* Liens en haut */}

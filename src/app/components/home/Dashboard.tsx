@@ -14,7 +14,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles }: DashboardProps) {
-  const { tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles, supabaseUser, getUserVehicles } = useApp();
+  const { tasks, currentProfile, maintenances, maintenanceTemplates, maintenanceProfiles, supabaseUser, getUserVehicles, vehicles } = useApp();
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Email admin
@@ -66,18 +66,15 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
   // Si panneau admin affiché, le rendre
   if (showAdminPanel && isAdmin) {
     return (
-      <div className="min-h-screen bg-black">
-        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white p-4">
+      <div className="min-h-screen bg-zinc-950">
+        <AdminPanel />
+        <div className="fixed top-4 left-4 z-50">
           <button
             onClick={() => setShowAdminPanel(false)}
-            className="flex items-center gap-2 text-white/80 hover:text-white mb-2"
+            className="flex items-center gap-2 px-3 py-2 bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-sm transition-colors"
           >
-            ← Retour
+            ← Retour au Dashboard
           </button>
-          <h1 className="text-2xl font-bold">Panneau Admin</h1>
-        </div>
-        <div className="p-4">
-          <AdminPanel />
         </div>
       </div>
     );

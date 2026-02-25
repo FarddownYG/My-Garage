@@ -15,21 +15,22 @@ import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
 // 🚀 Lazy load heavy components for better performance
 const VehicleList = lazy(() => import('./components/vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
 const VehicleDetail = lazy(() => import('./components/vehicles/VehicleDetail').then(m => ({ default: m.VehicleDetail })));
-const MaintenanceLog = lazy(() => import('./components/maintenance/MaintenanceLog').then(m => ({ default: m.MaintenanceLog })));
 const UpcomingMaintenance = lazy(() => import('./components/maintenance/UpcomingMaintenance').then(m => ({ default: m.UpcomingMaintenance })));
 const TaskList = lazy(() => import('./components/tasks/TaskList').then(m => ({ default: m.TaskList })));
 const Settings = lazy(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })));
 
 // v1.2.0 - Supabase Auth Only (plus de sélection de profils)
-type AppTab = 'home' | 'vehicles' | 'maintenance' | 'tasks' | 'settings';
+type AppTab = 'home' | 'vehicles' | 'tasks' | 'settings';
 type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 
 function AppContent() {
-  const { currentProfile, setCurrentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut, getUserVehicles } = useApp();
+  const { currentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut, getUserVehicles } = useApp();
   
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     const savedTab = localStorage.getItem('valcar-active-tab');
-    return (savedTab as AppTab) || 'home';
+    // ✅ FIX : s'assurer que la valeur sauvegardée est toujours un tab valide
+    const validTabs: AppTab[] = ['home', 'vehicles', 'tasks', 'settings'];
+    return validTabs.includes(savedTab as AppTab) ? (savedTab as AppTab) : 'home';
   });
 
   // View management for nested screens
@@ -180,17 +181,6 @@ function AppContent() {
               variants={pageTransitions}
             >
               <VehicleList />
-            </motion.div>
-          )}
-          {activeTab === 'maintenance' && (
-            <motion.div
-              key="maintenance"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageTransitions}
-            >
-              <MaintenanceLog />
             </motion.div>
           )}
           {activeTab === 'tasks' && (

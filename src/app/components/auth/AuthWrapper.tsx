@@ -18,13 +18,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const [showProfileSelector, setShowProfileSelector] = useState(false);
 
   useEffect(() => {
-    // Déterminer quel écran afficher
     if (isLoading) return;
-
-    console.log('🔐 État Auth:', {
-      isAuthenticated,
-      hasCurrentProfile: !!currentProfile,
-    });
 
     // Cas 1: Pas de user → forcer auth (obligatoire)
     if (!isAuthenticated) {
@@ -35,7 +29,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
     // Cas 2: User connecté, pas de profil sélectionné → sélecteur
     if (isAuthenticated && !currentProfile) {
-      console.log('👤 Affichage sélection de profil');
       setShowProfileSelector(true);
       setShowAuth(false);
       return;
@@ -43,14 +36,12 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
     // Cas 3: User connecté avec profil → app normale
     if (isAuthenticated && currentProfile) {
-      console.log('✅ Affichage app normale');
       setShowAuth(false);
       setShowProfileSelector(false);
       return;
     }
 
     // Cas 4: Fallback - forcer auth
-    console.log('⚠️ État non géré, retour à l\'auth');
     setShowAuth(true);
     setShowProfileSelector(false);
   }, [isAuthenticated, currentProfile, isLoading]);
@@ -65,7 +56,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return (
       <AuthScreen
         onSuccess={async () => {
-          console.log('✅ Connexion réussie, rechargement de l\'état...');
           await refreshAuth();
         }}
       />
@@ -76,8 +66,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   if (showProfileSelector) {
     return (
       <ProfileSelectorAfterAuth
-        onProfileSelected={(profile) => {
-          console.log('✅ Profil sélectionné:', profile.name);
+        onProfileSelected={() => {
           setShowProfileSelector(false);
         }}
       />

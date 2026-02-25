@@ -60,7 +60,6 @@ export function calculateUpcomingAlerts(
 
     if (assignedProfile) {
       // ✅ Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
-      console.log(`🔧 [Alerts] Véhicule "${vehicle.name}" utilise le profil personnalisé "${assignedProfile.name}"`);
       applicableTemplates = templates.filter(t => t.profileId === assignedProfile.id);
     } else {
       // ✅ Sinon, afficher les templates généraux (sans profileId) selon motorisation et transmission
