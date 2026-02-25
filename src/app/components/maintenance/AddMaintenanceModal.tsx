@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { defaultMaintenanceTemplates } from '../../data/defaultMaintenanceTemplates';
 
 interface AddMaintenanceModalProps {
   vehicleId: string;
@@ -38,87 +39,78 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
 
   // Filtrer les templates selon la motorisation ET le type de transmission du véhicule
   const filteredByEngine = useMemo(() => {
-    const vehicleFuelType = vehicle?.engineType || vehicle?.fuelType;
+    const vehicleFuelType = vehicle?.fuelType || (vehicle?.engineType === 'gasoline' ? 'essence' : vehicle?.engineType);
     const vehicleDriveType = vehicle?.driveType;
-    
+
     // Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
     if (assignedProfile) {
       const profileTemplates = maintenanceTemplates.filter(t => t.profileId === assignedProfile.id);
-      
-      // Dédupliquer par nom de template
+
+      // Si le profil n'a aucun template, fallback sur les defaults
+      const source = profileTemplates.length > 0 ? profileTemplates : defaultMaintenanceTemplates as any[];
+
       const uniqueTemplates = new Map();
-      profileTemplates.forEach(t => {
-        if (!uniqueTemplates.has(t.name)) {
-          uniqueTemplates.set(t.name, t);
-        }
+      source.forEach((t: any) => {
+        if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
       });
-      
       return Array.from(uniqueTemplates.values());
     }
-    
-    // Sinon, afficher les templates généraux (sans profileId)
+
+    // Templates généraux (sans profileId) depuis Supabase
     const generalTemplates = maintenanceTemplates.filter(t => !t.profileId);
-    
+
+    // ✅ FALLBACK : si aucun template général en base, utiliser les 41 templates par défaut
+    const source = generalTemplates.length > 0 ? generalTemplates : (defaultMaintenanceTemplates as any[]);
+
     if (!vehicleFuelType) {
-      // Dédupliquer par nom
+      // Pas de motorisation renseignée → afficher tous (dédupliquer)
       const uniqueTemplates = new Map();
-      generalTemplates.forEach(t => {
-        if (!uniqueTemplates.has(t.name)) {
-          uniqueTemplates.set(t.name, t);
-        }
+      source.forEach((t: any) => {
+        if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
       });
       return Array.from(uniqueTemplates.values());
     }
-    
-    const filtered = generalTemplates.filter(template => {
-      // Filtrage par motorisation (essence/diesel)
-      const fuelMatch = template.fuelType === 'both' || 
-        template.fuelType === (vehicleFuelType === 'gasoline' ? 'essence' : vehicleFuelType);
-      
+
+    const filtered = source.filter((template: any) => {
+      // Normaliser le fuelType du template ('essence' | 'diesel' | 'both')
+      const tFuelType = template.fuelType || template.engineType || 'both';
+
+      // Filtrage par motorisation
+      const fuelMatch =
+        tFuelType === 'both' ||
+        tFuelType === vehicleFuelType;
+
       if (!fuelMatch) return false;
-      
-      // Filtrage par transmission (4x2/4x4)
-      // Si le template n'a pas de driveType ou est "both", toujours l'afficher
-      if (!template.driveType || template.driveType === 'both') {
-        return true;
-      }
-      
-      // Si le template a un driveType spécifique, vérifier la compatibilité
-      // Si le véhicule n'a pas de driveType, afficher quand même
-      if (!vehicleDriveType) {
-        return true;
-      }
-      
-      // Vérifier la correspondance
+
+      // Filtrage par transmission (4x4 / 4x2)
+      if (!template.driveType || template.driveType === 'both') return true;
+      if (!vehicleDriveType) return true;
       return template.driveType === vehicleDriveType;
     });
-    
+
     // Dédupliquer par nom
     const uniqueTemplates = new Map();
-    filtered.forEach(t => {
-      if (!uniqueTemplates.has(t.name)) {
-        uniqueTemplates.set(t.name, t);
-      }
+    filtered.forEach((t: any) => {
+      if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
     });
-    
     return Array.from(uniqueTemplates.values());
-  }, [maintenanceTemplates, vehicle?.engineType, vehicle?.fuelType, vehicle?.driveType, assignedProfile]);
+  }, [maintenanceTemplates, vehicle?.fuelType, vehicle?.engineType, vehicle?.driveType, assignedProfile]);
 
   // Filtrer par recherche
   const filteredTemplates = useMemo(() => {
-    // Si une recherche est en cours, chercher dans TOUS les templates
     if (searchQuery.trim()) {
       const normalizedQuery = normalizeText(searchQuery);
-      
-      return maintenanceTemplates.filter(template => {
+      // Chercher dans les templates Supabase + les defaults (pour couvrir le fallback)
+      const allAvailable = maintenanceTemplates.length > 0
+        ? maintenanceTemplates
+        : (defaultMaintenanceTemplates as any[]);
+
+      return allAvailable.filter((template: any) => {
         const normalizedName = normalizeText(template.name);
         const normalizedCategory = normalizeText(template.category || '');
-        
         return normalizedName.includes(normalizedQuery) || normalizedCategory.includes(normalizedQuery);
       });
     }
-    
-    // Sinon, afficher les templates filtrés par motorisation/profil
     return filteredByEngine;
   }, [filteredByEngine, searchQuery, maintenanceTemplates]);
 
@@ -145,8 +137,14 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
       return;
     }
 
+    // Chercher dans Supabase templates ET dans les defaults (fallback)
+    const allTemplates = [
+      ...maintenanceTemplates,
+      ...(defaultMaintenanceTemplates as any[]),
+    ];
+
     selectedTemplates.forEach((selectedTemplate, index) => {
-      const template = maintenanceTemplates.find(t => t.id === selectedTemplate);
+      const template = allTemplates.find(t => t.id === selectedTemplate);
       
       const entry = {
         id: `${Date.now()}-${index}`, // ID unique pour chaque entrée
