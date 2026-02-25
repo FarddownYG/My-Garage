@@ -3,6 +3,7 @@ import { Car, Wrench, AlertTriangle, CheckSquare, LogOut, ChevronRight, External
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { calculateUpcomingAlerts } from '../../utils/alerts';
+import { getAlertThresholds } from '../settings/AlertThresholdSettings';
 import { Footer } from '../shared/Footer';
 import { AdminPanel } from '../admin/AdminPanel';
 
@@ -37,9 +38,8 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
     return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
   }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
 
-  // Filtrer les alertes proches (2000km ou 60 jours) ou expirées pour le Dashboard
-  const MILEAGE_THRESHOLD = 2000; // km
-  const DATE_THRESHOLD_DAYS = 60; // ~2 mois
+  // Filtrer les alertes proches (1500km ou 30 jours) ou expirées pour le Dashboard
+  const { mileageThreshold: MILEAGE_THRESHOLD, dateThresholdDays: DATE_THRESHOLD_DAYS } = getAlertThresholds();
 
   const nearbyAlerts = useMemo(() => {
     return alerts.filter((alert) => {
@@ -58,7 +58,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
 
       return false;
     });
-  }, [alerts]);
+  }, [alerts, MILEAGE_THRESHOLD, DATE_THRESHOLD_DAYS]);
 
   // Afficher le nom complet depuis user_metadata ou le nom du profil
   const displayName = supabaseUser?.user_metadata?.full_name || currentProfile?.name;
@@ -66,12 +66,12 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
   // Si panneau admin affiché, le rendre
   if (showAdminPanel && isAdmin) {
     return (
-      <div className="min-h-screen bg-zinc-950">
+      <div className="min-h-screen bg-[#0a0a0f]">
         <AdminPanel />
         <div className="fixed top-4 left-4 z-50">
           <button
             onClick={() => setShowAdminPanel(false)}
-            className="flex items-center gap-2 px-3 py-2 bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-sm transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-[#12121a]/90 backdrop-blur-sm border border-white/5 text-slate-300 hover:text-white rounded-xl text-sm transition-colors"
           >
             ← Retour au Dashboard
           </button>
@@ -81,17 +81,17 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
   }
 
   return (
-    <div className="h-screen overflow-auto bg-black pb-24">
+    <div className="h-screen overflow-auto bg-[#0a0a0f] pb-24">
       {/* Header */}
-      <div className="bg-gradient-to-b from-zinc-900 to-black px-4 sm:px-6 pt-12 pb-8">
+      <div className="bg-gradient-to-b from-[#12121a] to-[#0a0a0f] px-4 sm:px-6 pt-12 pb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-2xl sm:text-3xl border-2 border-zinc-700 flex-shrink-0">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-violet-500/20 flex items-center justify-center text-2xl sm:text-3xl border border-cyan-500/20 flex-shrink-0">
               {currentProfile?.avatar}
             </div>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-2xl text-white truncate">Bonjour, {displayName}</h1>
-              <p className="text-xs sm:text-sm text-zinc-500 truncate">
+              <p className="text-xs sm:text-sm text-slate-500 truncate">
                 {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
@@ -100,7 +100,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             {isAdmin && (
               <button
                 onClick={() => setShowAdminPanel(true)}
-                className="p-2 text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
+                className="p-2 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
                 title="Panneau Admin"
               >
                 <Shield className="w-5 h-5" />
@@ -108,7 +108,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             )}
             <button
               onClick={onLogout}
-              className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0"
+              className="p-2 text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -119,7 +119,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
       {/* Ressources Maintenance & Entretiens */}
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center gap-2 mb-4">
-          <BookOpen className="w-5 h-5 text-purple-500" />
+          <BookOpen className="w-5 h-5 text-violet-400" />
           <h2 className="text-base sm:text-lg text-white">Maintenance & Entretiens</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -130,23 +130,23 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             rel="noopener noreferrer"
             className="group"
           >
-            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 border-purple-800/30 p-4 hover:border-purple-600/50 transition-all hover-lift">
+            <Card className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border-violet-500/10 p-4 hover:border-violet-500/25 transition-all hover-lift rounded-2xl">
               <div className="flex flex-col gap-3">
                 <div className="flex items-start justify-between">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <Video className="w-5 h-5 text-purple-400" />
+                  <div className="p-2 bg-gradient-to-br from-violet-500/15 to-purple-500/15 rounded-xl border border-violet-500/10">
+                    <Video className="w-5 h-5 text-violet-400" />
                   </div>
-                  <ExternalLink className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-4 h-4 text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div>
                   <h3 className="text-white font-medium mb-1 flex items-center gap-2">
                     CarCareKiosk
                     <div className="flex items-center gap-1 text-xs">
-                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                      <span className="text-yellow-500">4.2</span>
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span className="text-amber-400">4.2</span>
                     </div>
                   </h3>
-                  <p className="text-xs text-zinc-400">Tutoriels vidéo gratuits et bien faits</p>
+                  <p className="text-xs text-slate-400">Tutoriels vidéo gratuits et bien faits</p>
                 </div>
               </div>
             </Card>
@@ -159,23 +159,23 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             rel="noopener noreferrer"
             className="group"
           >
-            <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border-blue-800/30 p-4 hover:border-blue-600/50 transition-all hover-lift">
+            <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border-cyan-500/10 p-4 hover:border-cyan-500/25 transition-all hover-lift rounded-2xl">
               <div className="flex flex-col gap-3">
                 <div className="flex items-start justify-between">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <BookOpen className="w-5 h-5 text-blue-400" />
+                  <div className="p-2 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 rounded-xl border border-cyan-500/10">
+                    <BookOpen className="w-5 h-5 text-cyan-400" />
                   </div>
-                  <ExternalLink className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-4 h-4 text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div>
                   <h3 className="text-white font-medium mb-1 flex items-center gap-2">
                     Club Auto-Doc
                     <div className="flex items-center gap-1 text-xs">
-                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                      <span className="text-yellow-500">4.1</span>
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span className="text-amber-400">4.1</span>
                     </div>
                   </h3>
-                  <p className="text-xs text-zinc-400">Guides et vidéos solides (connexion requise)</p>
+                  <p className="text-xs text-slate-400">Guides et vidéos solides (connexion requise)</p>
                 </div>
               </div>
             </Card>
@@ -188,23 +188,23 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             rel="noopener noreferrer"
             className="group"
           >
-            <Card className="bg-gradient-to-br from-orange-900/20 to-orange-800/10 border-orange-800/30 p-4 hover:border-orange-600/50 transition-all hover-lift">
+            <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/10 p-4 hover:border-amber-500/25 transition-all hover-lift rounded-2xl">
               <div className="flex flex-col gap-3">
                 <div className="flex items-start justify-between">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Wrench className="w-5 h-5 text-orange-400" />
+                  <div className="p-2 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10">
+                    <Wrench className="w-5 h-5 text-amber-400" />
                   </div>
-                  <ExternalLink className="w-4 h-4 text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-4 h-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div>
                   <h3 className="text-white font-medium mb-1 flex items-center gap-2">
                     Mister-Auto
                     <div className="flex items-center gap-1 text-xs">
-                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                      <span className="text-yellow-500">3.3</span>
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span className="text-amber-400">3.3</span>
                     </div>
                   </h3>
-                  <p className="text-xs text-zinc-400">Tutoriels pratiques pour guides et pièces</p>
+                  <p className="text-xs text-slate-400">Tutoriels pratiques pour guides et pièces</p>
                 </div>
               </div>
             </Card>
@@ -216,17 +216,17 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
       <div className="px-4 sm:px-6 py-6 space-y-4">
         <Card 
           onClick={onViewVehicles}
-          className="bg-zinc-900 border-zinc-800 p-4 sm:p-6 cursor-pointer hover:border-zinc-700 transition-colors"
+          className="bg-[#12121a]/80 border-white/5 p-4 sm:p-6 cursor-pointer hover:border-cyan-500/15 transition-all rounded-2xl backdrop-blur-sm"
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-blue-500/10 rounded-xl flex-shrink-0">
-              <Car className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+            <div className="p-2 sm:p-3 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 rounded-xl border border-cyan-500/10 flex-shrink-0">
+              <Car className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-zinc-500">Véhicules</p>
+              <p className="text-xs sm:text-sm text-slate-500">Véhicules</p>
               <p className="text-xl sm:text-2xl text-white">{userVehicles.length}</p>
             </div>
-            <button className="px-2 sm:px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button className="px-2 sm:px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-400 rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0 border border-cyan-500/10">
               Voir
               <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
@@ -235,17 +235,17 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
 
         <Card 
           onClick={onViewAlerts}
-          className="bg-zinc-900 border-zinc-800 p-4 sm:p-6 cursor-pointer hover:border-zinc-700 transition-colors"
+          className="bg-[#12121a]/80 border-white/5 p-4 sm:p-6 cursor-pointer hover:border-amber-500/15 transition-all rounded-2xl backdrop-blur-sm"
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-orange-500/10 rounded-xl flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+            <div className="p-2 sm:p-3 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10 flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-zinc-500">Échéances à venir</p>
+              <p className="text-xs sm:text-sm text-slate-500">Échéances à venir</p>
               <p className="text-xl sm:text-2xl text-white">{nearbyAlerts.length}</p>
             </div>
-            <button className="px-2 sm:px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button className="px-2 sm:px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0 border border-amber-500/10">
               Voir
               <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
@@ -254,17 +254,17 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
 
         <Card 
           onClick={onViewTasks}
-          className="bg-zinc-900 border-zinc-800 p-4 sm:p-6 cursor-pointer hover:border-zinc-700 transition-colors"
+          className="bg-[#12121a]/80 border-white/5 p-4 sm:p-6 cursor-pointer hover:border-emerald-500/15 transition-all rounded-2xl backdrop-blur-sm"
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-green-500/10 rounded-xl flex-shrink-0">
-              <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+            <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-500/15 to-teal-500/15 rounded-xl border border-emerald-500/10 flex-shrink-0">
+              <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-zinc-500">Tâches en attente</p>
+              <p className="text-xs sm:text-sm text-slate-500">Tâches en attente</p>
               <p className="text-xl sm:text-2xl text-white">{incompleteTasks.length}</p>
             </div>
-            <button className="px-2 sm:px-3 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button className="px-2 sm:px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0 border border-emerald-500/10">
               Voir
               <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
@@ -279,7 +279,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             <h2 className="text-base sm:text-lg text-white">Prochaines échéances</h2>
             <button
               onClick={onViewAlerts}
-              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded-lg text-xs sm:text-sm transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 rounded-xl text-xs sm:text-sm transition-colors border border-amber-500/10"
             >
               Voir tout
               <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -287,22 +287,22 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
           </div>
           <div className="space-y-3">
             {nearbyAlerts.slice(0, 3).map((alert) => {
-              const urgencyColor = alert.urgency === 'high' ? 'bg-red-500' : 
-                                   alert.urgency === 'medium' ? 'bg-orange-500' : 'bg-blue-500';
+              const urgencyColor = alert.urgency === 'high' ? 'bg-red-400' : 
+                                   alert.urgency === 'medium' ? 'bg-amber-400' : 'bg-cyan-400';
               return (
-                <Card key={alert.id} className="bg-zinc-900 border-zinc-800 p-3 sm:p-4 hover-lift rounded-2xl shadow-soft">
+                <Card key={alert.id} className="bg-[#12121a]/80 border-white/5 p-3 sm:p-4 hover-lift rounded-2xl backdrop-blur-sm">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-2 h-2 rounded-full ${urgencyColor} shadow-glow-blue flex-shrink-0`} />
+                    <div className={`w-2 h-2 rounded-full ${urgencyColor} flex-shrink-0`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm sm:text-base text-white truncate">{alert.maintenanceName}</p>
-                      <p className="text-xs sm:text-sm text-zinc-500 truncate">{alert.vehicleName}</p>
+                      <p className="text-xs sm:text-sm text-slate-500 truncate">{alert.vehicleName}</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
                       {alert.mileageAlert && (
-                        <span className="text-xs sm:text-sm text-zinc-400 whitespace-nowrap">{alert.mileageAlert.remainingKm} km</span>
+                        <span className="text-xs sm:text-sm text-slate-400 whitespace-nowrap">{alert.mileageAlert.remainingKm} km</span>
                       )}
                       {alert.dateAlert && (
-                        <span className="text-xs sm:text-sm text-zinc-400 whitespace-nowrap">{alert.dateAlert.remainingDays}j</span>
+                        <span className="text-xs sm:text-sm text-slate-400 whitespace-nowrap">{alert.dateAlert.remainingDays}j</span>
                       )}
                     </div>
                   </div>
@@ -320,7 +320,7 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             <h2 className="text-base sm:text-lg text-white">Tâches en attente</h2>
             <button
               onClick={onViewTasks}
-              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg text-xs sm:text-sm transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 rounded-xl text-xs sm:text-sm transition-colors border border-emerald-500/10"
             >
               Voir tout
               <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -330,12 +330,12 @@ export function Dashboard({ onLogout, onViewAlerts, onViewTasks, onViewVehicles 
             {incompleteTasks.slice(0, 3).map((task) => {
               const vehicle = vehicles.find(v => v.id === task.vehicleId);
               return (
-                <Card key={task.id} className="bg-zinc-900 border-zinc-800 p-4 hover-lift rounded-2xl shadow-soft">
+                <Card key={task.id} className="bg-[#12121a]/80 border-white/5 p-4 hover-lift rounded-2xl backdrop-blur-sm">
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
                     <div className="flex-1">
                       <p className="text-white">{task.title}</p>
-                      <p className="text-sm text-zinc-500">{vehicle?.name}</p>
+                      <p className="text-sm text-slate-500">{vehicle?.name}</p>
                     </div>
                   </div>
                 </Card>

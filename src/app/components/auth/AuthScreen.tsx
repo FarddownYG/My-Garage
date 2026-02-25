@@ -101,17 +101,17 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border-zinc-800 p-6 sm:p-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0e16] via-[#0a0a0f] to-[#0e0e16] flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-[#12121a]/90 backdrop-blur-xl border-white/[0.06] p-6 sm:p-8 rounded-3xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/20">
             <span className="text-4xl">🚗</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             {mode === 'signin' ? 'Connexion' : 'Créer un compte'}
           </h1>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-slate-400 text-sm">
             {mode === 'signin' 
               ? 'Accédez à vos véhicules et entretiens' 
               : 'Sécurisez vos données avec un compte'}
@@ -122,17 +122,17 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
+              <label className="block text-sm text-slate-400 mb-2">
                 Nom complet
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Sarah Dupont"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#1a1a2e] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
                   required={mode === 'signup'}
                 />
               </div>
@@ -140,17 +140,17 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
           )}
 
           <div>
-            <label className="block text-sm text-zinc-400 mb-2">
+            <label className="block text-sm text-slate-400 mb-2">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="exemple@email.com"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#1a1a2e] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
                 required
               />
             </div>
@@ -158,11 +158,11 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
 
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
+              <label className="block text-sm text-slate-400 mb-2">
                 Confirmer l'email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input
                   type="email"
                   value={emailConfirm}
@@ -170,28 +170,28 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                   onPaste={(e) => e.preventDefault()}
                   onCopy={(e) => e.preventDefault()}
                   placeholder="Confirmez votre email"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#1a1a2e] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
                   required
                 />
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Tapez à nouveau votre email (copier-coller désactivé)
               </p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm text-zinc-400 mb-2">
+            <label className="block text-sm text-slate-400 mb-2">
               Mot de passe
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-12 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#1a1a2e] border border-white/[0.06] rounded-xl pl-11 pr-12 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 required
                 minLength={6}
@@ -199,7 +199,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -209,7 +209,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               </button>
             </div>
             {mode === 'signup' && (
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Minimum 6 caractères
               </p>
             )}
@@ -217,11 +217,11 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
 
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
+              <label className="block text-sm text-slate-400 mb-2">
                 Confirmer le mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input
                   type={showPasswordConfirm ? 'text' : 'password'}
                   value={passwordConfirm}
@@ -229,14 +229,14 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                   onPaste={(e) => e.preventDefault()}
                   onCopy={(e) => e.preventDefault()}
                   placeholder="••••••••"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-11 pr-12 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#1a1a2e] border border-white/[0.06] rounded-xl pl-11 pr-12 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
                 >
                   {showPasswordConfirm ? (
                     <EyeOff className="w-5 h-5" />
@@ -245,7 +245,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Tapez à nouveau votre mot de passe (copier-coller désactivé)
               </p>
             </div>
@@ -266,7 +266,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
           <Button
             type="submit"
             disabled={isLoading || rateLimitSeconds !== null}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 h-12 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg shadow-cyan-500/20"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -294,7 +294,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               setEmailConfirm('');
               setPasswordConfirm('');
             }}
-            className="text-sm text-blue-400 hover:text-blue-300"
+            className="text-sm text-cyan-400 hover:text-cyan-300"
           >
             {mode === 'signin' 
               ? "Pas encore de compte ? Créer un compte" 

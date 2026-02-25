@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Lock, LockOpen, Link as LinkIcon } from 'lucide-react';
+import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Link as LinkIcon, Bell } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Card } from '../ui/card';
 import { ProfileManagement } from './ProfileManagement';
@@ -8,27 +8,24 @@ import { MaintenanceSettings } from './MaintenanceSettings';
 import { CustomMaintenanceProfiles } from './CustomMaintenanceProfiles';
 import { MaintenanceProfileDetail } from './MaintenanceProfileDetail';
 import { EditProfileModal } from './EditProfileModal';
-import { UserPinModal } from './UserPinModal';
-import { PinSetupModal } from './PinSetupModal';
 import { LinkProfileModal } from './LinkProfileModal';
+import { AlertThresholdSettings } from './AlertThresholdSettings';
 import { Footer } from '../shared/Footer';
-import { Switch } from '../ui/switch';
 
 interface SettingsProps {
   onLogout: () => void;
 }
 
 export function Settings({ onLogout }: SettingsProps) {
-  const { currentProfile, resetData, updateFontSize, updateProfile } = useApp();
+  const { currentProfile, resetData, updateFontSize } = useApp();
   const [showProfileManagement, setShowProfileManagement] = useState(false);
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
   const [showCustomProfiles, setShowCustomProfiles] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-  const [showPinSetupModal, setShowPinSetupModal] = useState(false);
   const [showLinkProfileModal, setShowLinkProfileModal] = useState(false);
+  const [showAlertThresholds, setShowAlertThresholds] = useState(false);
   
   // Utiliser le fontSize du profil courant
   const fontSize = currentProfile?.fontSize || 50;
@@ -54,28 +51,9 @@ export function Settings({ onLogout }: SettingsProps) {
     }
   };
 
-  const handleTogglePinProtection = async () => {
-    if (!currentProfile) return;
-
-    if (currentProfile.isPinProtected) {
-      // Désactiver le verrouillage
-      if (confirm('Êtes-vous sûr de vouloir désactiver le verrouillage par PIN ?')) {
-        try {
-          await updateProfile(currentProfile.id, {
-            isPinProtected: false,
-            pin: undefined
-          });
-          console.log('✅ Verrouillage désactivé');
-        } catch (error) {
-          console.error('❌ Erreur désactivation verrouillage:', error);
-          alert('Erreur lors de la désactivation du verrouillage');
-        }
-      }
-    } else {
-      // Activer le verrouillage - ouvrir le modal pour définir le PIN
-      setShowPinSetupModal(true);
-    }
-  };
+  if (showAlertThresholds) {
+    return <AlertThresholdSettings onBack={() => setShowAlertThresholds(false)} />;
+  }
 
   if (showProfileManagement) {
     return <ProfileManagement onBack={() => setShowProfileManagement(false)} />;
@@ -110,69 +88,69 @@ export function Settings({ onLogout }: SettingsProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black pb-24">
-      <div className="bg-gradient-to-b from-zinc-900 to-black px-6 pt-12 pb-8">
+    <div className="min-h-screen bg-[#0a0a0f] pb-24">
+      <div className="bg-gradient-to-b from-[#12121a] to-[#0a0a0f] px-6 pt-12 pb-8">
         <h1 className="text-3xl text-white mb-2">Paramètres</h1>
-        <p className="text-zinc-500">{currentProfile?.name}</p>
+        <p className="text-slate-500">{currentProfile?.name}</p>
       </div>
 
       <div className="px-6 py-6 space-y-6">
         {/* Admin Section */}
         {currentProfile?.isAdmin && (
           <div>
-            <h2 className="text-sm text-zinc-500 mb-3">ADMINISTRATION</h2>
+            <h2 className="text-sm text-slate-500 mb-3">ADMINISTRATION</h2>
             <div className="space-y-2">
               <Card
-                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
                 onClick={() => setShowProfileManagement(true)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Users className="w-5 h-5 text-blue-500" />
+                    <div className="p-2 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 rounded-xl border border-cyan-500/10">
+                      <Users className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div>
                       <p className="text-white">Gérer les profils</p>
-                      <p className="text-sm text-zinc-500">Créer, modifier, supprimer</p>
+                      <p className="text-sm text-slate-500">Créer, modifier, supprimer</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                  <ChevronRight className="w-5 h-5 text-slate-600" />
                 </div>
               </Card>
 
               <Card
-                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
                 onClick={() => setShowAdminPinModal(true)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                      <Shield className="w-5 h-5 text-purple-500" />
+                    <div className="p-2 bg-gradient-to-br from-violet-500/15 to-purple-500/15 rounded-xl border border-violet-500/10">
+                      <Shield className="w-5 h-5 text-violet-400" />
                     </div>
                     <div>
                       <p className="text-white">Modifier le PIN admin</p>
-                      <p className="text-sm text-zinc-500">Sécurité</p>
+                      <p className="text-sm text-slate-500">Sécurité</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                  <ChevronRight className="w-5 h-5 text-slate-600" />
                 </div>
               </Card>
 
               <Card
-                className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+                className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
                 onClick={() => setShowLinkProfileModal(true)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-500/10 rounded-lg">
-                      <LinkIcon className="w-5 h-5 text-orange-500" />
+                    <div className="p-2 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10">
+                      <LinkIcon className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
                       <p className="text-white">Lier un profil ancien</p>
-                      <p className="text-sm text-zinc-500">Récupérer mes données</p>
+                      <p className="text-sm text-slate-500">Récupérer mes données</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-600" />
+                  <ChevronRight className="w-5 h-5 text-slate-600" />
                 </div>
               </Card>
             </div>
@@ -181,97 +159,43 @@ export function Settings({ onLogout }: SettingsProps) {
 
         {/* User Profile Section */}
         <div>
-          <h2 className="text-sm text-zinc-500 mb-3">PROFIL</h2>
+          <h2 className="text-sm text-slate-500 mb-3">PROFIL</h2>
           <div className="space-y-2">
             <Card
-              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
               onClick={() => setShowEditProfileModal(true)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <User className="w-5 h-5 text-green-500" />
+                  <div className="p-2 bg-gradient-to-br from-emerald-500/15 to-teal-500/15 rounded-xl border border-emerald-500/10">
+                    <User className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
                     <p className="text-white">Modifier mon profil</p>
-                    <p className="text-sm text-zinc-500">Nom, prénom, avatar</p>
+                    <p className="text-sm text-slate-500">Nom, prénom, avatar</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
+                <ChevronRight className="w-5 h-5 text-slate-600" />
               </div>
             </Card>
           </div>
         </div>
 
-        {/* User Security Section */}
-        {!currentProfile?.isAdmin && (
-          <div>
-            <h2 className="text-sm text-zinc-500 mb-3">SÉCURITÉ</h2>
-            <div className="space-y-2">
-              {/* Toggle verrouillage */}
-              <Card className="bg-zinc-900 border-zinc-800 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${currentProfile?.isPinProtected ? 'bg-green-500/10' : 'bg-zinc-700/30'}`}>
-                      {currentProfile?.isPinProtected ? (
-                        <Lock className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <LockOpen className="w-5 h-5 text-zinc-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-white">Verrouillage du profil</p>
-                      <p className="text-sm text-zinc-500">
-                        {currentProfile?.isPinProtected ? 'Profil protégé par PIN' : 'Profil non protég��'}
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={currentProfile?.isPinProtected || false}
-                    onCheckedChange={handleTogglePinProtection}
-                  />
-                </div>
-              </Card>
-
-              {/* Modifier le PIN (uniquement si activé) */}
-              {currentProfile?.isPinProtected && (
-                <Card
-                  className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
-                  onClick={() => setShowUserPinModal(true)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Shield className="w-5 h-5 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-white">Modifier mon code PIN</p>
-                        <p className="text-sm text-zinc-500">Changer le code de connexion</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-zinc-600" />
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Display Section */}
         <div>
-          <h2 className="text-sm text-zinc-500 mb-3">AFFICHAGE</h2>
-          <Card className="bg-zinc-900 border-zinc-800 p-4">
+          <h2 className="text-sm text-slate-500 mb-3">AFFICHAGE</h2>
+          <Card className="bg-[#12121a]/80 border-white/5 p-4 rounded-2xl">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-indigo-500/10 rounded-lg flex-shrink-0">
-                <Type className="w-5 h-5 text-indigo-500" />
+              <div className="p-2 bg-gradient-to-br from-violet-500/15 to-indigo-500/15 rounded-xl border border-violet-500/10 flex-shrink-0">
+                <Type className="w-5 h-5 text-violet-400" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-white">Taille de police</p>
-                    <p className="text-sm text-zinc-500">Ajuster la taille du texte</p>
+                    <p className="text-sm text-slate-500">Ajuster la taille du texte</p>
                   </div>
-                  <div className="text-white font-semibold text-lg">{fontSize}%</div>
+                  <div className="text-cyan-400 font-semibold text-lg">{fontSize}%</div>
                 </div>
                 
                 {/* Slider */}
@@ -283,24 +207,16 @@ export function Settings({ onLogout }: SettingsProps) {
                     step="5"
                     value={fontSize}
                     onChange={(e) => updateFontSize(Number(e.target.value))}
-                    className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    className="w-full h-2 bg-[#1a1a2e] rounded-lg appearance-none cursor-pointer slider-thumb"
                     style={{
-                      background: `linear-gradient(to right, rgb(99 102 241) 0%, rgb(99 102 241) ${fontSize}%, rgb(39 39 42) ${fontSize}%, rgb(39 39 42) 100%)`
+                      background: `linear-gradient(to right, rgb(34 211 238) 0%, rgb(34 211 238) ${fontSize}%, rgb(26 26 46) ${fontSize}%, rgb(26 26 46) 100%)`
                     }}
                   />
-                  <div className="flex justify-between text-xs text-zinc-600">
+                  <div className="flex justify-between text-xs text-slate-600">
                     <span>0%</span>
                     <span>50%</span>
                     <span>100%</span>
                   </div>
-                </div>
-                
-                {/* Preview */}
-                <div className="mt-4 p-3 bg-zinc-800/50 rounded-lg">
-                  <p className="text-zinc-400 text-xs mb-2">Aperçu:</p>
-                  <p className="text-white" style={{ fontSize: `${fontSize}%` }}>
-                    Exemple de texte
-                  </p>
                 </div>
               </div>
             </div>
@@ -309,41 +225,59 @@ export function Settings({ onLogout }: SettingsProps) {
 
         {/* Maintenance Section */}
         <div>
-          <h2 className="text-sm text-zinc-500 mb-3">ENTRETIEN</h2>
+          <h2 className="text-sm text-slate-500 mb-3">ENTRETIEN</h2>
           <div className="space-y-2">
             <Card
-              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
               onClick={() => setShowMaintenanceSettings(true)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Wrench className="w-5 h-5 text-orange-500" />
+                  <div className="p-2 bg-gradient-to-br from-orange-500/15 to-amber-500/15 rounded-xl border border-orange-500/10">
+                    <Wrench className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
                     <p className="text-white">Paramètres d'entretien</p>
-                    <p className="text-sm text-zinc-500">Types et intervalles</p>
+                    <p className="text-sm text-slate-500">Types et intervalles</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
+                <ChevronRight className="w-5 h-5 text-slate-600" />
               </div>
             </Card>
 
             <Card
-              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
               onClick={() => setShowCustomProfiles(true)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Wrench className="w-5 h-5 text-orange-500" />
+                  <div className="p-2 bg-gradient-to-br from-orange-500/15 to-amber-500/15 rounded-xl border border-orange-500/10">
+                    <Wrench className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
                     <p className="text-white">Profils d'entretien personnalisés</p>
-                    <p className="text-sm text-zinc-500">Types et intervalles</p>
+                    <p className="text-sm text-slate-500">Types et intervalles</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
+                <ChevronRight className="w-5 h-5 text-slate-600" />
+              </div>
+            </Card>
+
+            <Card
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
+              onClick={() => setShowAlertThresholds(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 rounded-xl border border-cyan-500/10">
+                    <Bell className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-white">Seuils d'alertes</p>
+                    <p className="text-sm text-slate-500">Km et mois avant échéance</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-600" />
               </div>
             </Card>
           </div>
@@ -351,42 +285,42 @@ export function Settings({ onLogout }: SettingsProps) {
 
         {/* Data Section */}
         <div>
-          <h2 className="text-sm text-zinc-500 mb-3">DONNÉES</h2>
+          <h2 className="text-sm text-slate-500 mb-3">DONNÉES</h2>
           <div className="space-y-2">
             {/* Lier un profil - disponible pour tous */}
             <Card
-              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors relative"
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl relative"
               onClick={() => setShowLinkProfileModal(true)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <LinkIcon className="w-5 h-5 text-orange-500" />
+                  <div className="p-2 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10">
+                    <LinkIcon className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
                     <p className="text-white">Lier un profil ancien</p>
-                    <p className="text-sm text-zinc-500">Récupérer mes anciennes données</p>
+                    <p className="text-sm text-slate-500">Récupérer mes anciennes données</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
+                <ChevronRight className="w-5 h-5 text-slate-600" />
               </div>
             </Card>
 
             <Card
-              className="bg-zinc-900 border-zinc-800 p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+              className="bg-[#12121a]/80 border-white/5 p-4 cursor-pointer hover:bg-[#1a1a2e] transition-colors rounded-2xl"
               onClick={handleResetData}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-500/10 rounded-lg">
-                    <Database className="w-5 h-5 text-red-500" />
+                  <div className="p-2 bg-gradient-to-br from-red-500/15 to-rose-500/15 rounded-xl border border-red-500/10">
+                    <Database className="w-5 h-5 text-red-400" />
                   </div>
                   <div>
                     <p className="text-white">Réinitialiser les données du profil</p>
-                    <p className="text-sm text-zinc-500">Supprimer véhicules, entretiens et tâches</p>
+                    <p className="text-sm text-slate-500">Supprimer véhicules, entretiens et tâches</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
+                <ChevronRight className="w-5 h-5 text-slate-600" />
               </div>
             </Card>
           </div>
@@ -394,9 +328,9 @@ export function Settings({ onLogout }: SettingsProps) {
 
         {/* App Info */}
         <div className="pt-8 text-center">
-          <p className="text-zinc-600 text-sm mb-1">Valcar 🔒</p>
-          <p className="text-zinc-700 text-xs">Version 1.0.0 - Données cryptées</p>
-          <p className="text-zinc-700 text-xs mt-4">
+          <p className="text-slate-600 text-sm mb-1">Valcar</p>
+          <p className="text-slate-700 text-xs">Version 1.0.0 - Données cryptées</p>
+          <p className="text-slate-700 text-xs mt-4">
             Gestion de véhicules personnelle
           </p>
         </div>
@@ -406,23 +340,10 @@ export function Settings({ onLogout }: SettingsProps) {
         <AdminPinModal onClose={() => setShowAdminPinModal(false)} />
       )}
       
-      {showUserPinModal && currentProfile && (
-        <UserPinModal 
-          profile={currentProfile}
-          onClose={() => setShowUserPinModal(false)} 
-        />
-      )}
-      
       {showEditProfileModal && currentProfile && (
         <EditProfileModal 
           profile={currentProfile}
           onClose={() => setShowEditProfileModal(false)} 
-        />
-      )}
-      
-      {showPinSetupModal && currentProfile && (
-        <PinSetupModal 
-          onClose={() => setShowPinSetupModal(false)} 
         />
       )}
       

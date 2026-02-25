@@ -25,13 +25,14 @@
 
   /* Glassmorphism amélioré */
   .glass-enhanced {
-    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+    @apply backdrop-blur-xl border border-white/[0.06];
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
   }
 
   /* Bordures avec gradient subtil */
   .border-gradient {
     position: relative;
-    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
   }
 
   /* Smooth transitions globales */
@@ -51,7 +52,7 @@
 
   /* Effet de focus amélioré */
   .focus-enhanced:focus {
-    @apply ring-2 ring-blue-500/50 ring-offset-2 ring-offset-zinc-900;
+    @apply ring-2 ring-cyan-500/50 ring-offset-2 ring-offset-[#0a0a0f];
   }
 }
 
@@ -80,19 +81,19 @@
   }
 
   .shadow-glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.25);
   }
 
   .shadow-glow-purple {
-    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.25);
   }
 
   .shadow-glow-orange {
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.25);
   }
 
   .shadow-glow-green {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.25);
   }
 
   /* Transitions améliorées */
@@ -106,19 +107,23 @@
 
   /* Glassmorphism variants */
   .glass-card {
-    @apply backdrop-blur-md bg-white/5 border border-white/10;
+    @apply backdrop-blur-md border border-white/[0.06];
+    background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
   }
 
   .glass-button {
-    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+    @apply backdrop-blur-sm border border-white/[0.08];
+    background: rgba(255,255,255,0.05);
   }
 
   .glass-modal {
-    @apply backdrop-blur-2xl bg-black/60 border border-white/10;
+    @apply backdrop-blur-2xl border border-white/[0.06];
+    background: rgba(10, 10, 15, 0.85);
   }
 
   .glass-input {
-    @apply backdrop-blur-sm bg-white/5 border border-white/10;
+    @apply backdrop-blur-sm border border-white/[0.06];
+    background: rgba(255,255,255,0.03);
   }
 }
 
@@ -138,7 +143,7 @@ button:not(:disabled):active {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.3), rgba(167, 139, 250, 0.3));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -152,18 +157,18 @@ button:not(:disabled):active {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(10, 10, 15, 0.4);
   border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 100px;
   transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Animation fade-in subtile pour les éléments */
@@ -272,8 +277,8 @@ select:focus {
 .glass-overlay {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
   );
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
@@ -316,5 +321,5 @@ select:focus {
 
 .hover-glow:hover {
   filter: brightness(1.1);
-  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 30px rgba(34, 211, 238, 0.2);
 }

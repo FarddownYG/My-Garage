@@ -5,6 +5,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { useApp } from '../../contexts/AppContext';
 import { formatDate } from '../../utils/formatDate';
+import { getAlertThresholds } from '../settings/AlertThresholdSettings';
 
 interface UpcomingMaintenanceProps {
   alerts: UpcomingAlert[];
@@ -71,9 +72,8 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
     }
   };
 
-  // FILTRER les alertes pour n'afficher que celles proches (2000km ou 60 jours) ou expirées
-  const MILEAGE_THRESHOLD = 2000; // km
-  const DATE_THRESHOLD_DAYS = 60; // ~2 mois
+  // FILTRER les alertes pour n'afficher que celles proches (1500km ou 30 jours) ou expirées
+  const { mileageThreshold: MILEAGE_THRESHOLD, dateThresholdDays: DATE_THRESHOLD_DAYS } = getAlertThresholds();
 
   const filteredAlerts = alerts.filter((alert) => {
     // Filtre par véhicule
@@ -97,16 +97,16 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
   });
 
   return (
-    <div className="min-h-screen bg-black pb-24">
-      <div className="bg-gradient-to-b from-zinc-900 to-black px-6 pt-12 pb-8">
+    <div className="min-h-screen bg-[#0a0a0f] pb-24">
+      <div className="bg-gradient-to-b from-[#12121a] to-[#0a0a0f] px-6 pt-12 pb-8">
         <button
           onClick={onBack}
-          className="text-blue-500 hover:text-blue-400 mb-4 flex items-center gap-2"
+          className="text-cyan-400 hover:text-cyan-300 mb-4 flex items-center gap-2 transition-colors"
         >
           ← Retour
         </button>
         <h1 className="text-3xl text-white mb-2">Échéances à venir</h1>
-        <p className="text-zinc-500">{filteredAlerts.length} alerte{filteredAlerts.length !== 1 ? 's' : ''} proche{filteredAlerts.length !== 1 ? 's' : ''}</p>
+        <p className="text-slate-500">{filteredAlerts.length} alerte{filteredAlerts.length !== 1 ? 's' : ''} proche{filteredAlerts.length !== 1 ? 's' : ''}</p>
       </div>
 
       {/* Sélecteur de véhicule */}
@@ -117,7 +117,7 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
               onClick={() => setSelectedVehicleId('all')}
               variant={selectedVehicleId === 'all' ? 'default' : 'outline'}
               size="sm"
-              className={selectedVehicleId === 'all' ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+              className={selectedVehicleId === 'all' ? 'bg-violet-600 whitespace-nowrap' : 'bg-transparent border-white/10 text-slate-400 whitespace-nowrap'}
             >
               Tous les véhicules
             </Button>
@@ -127,7 +127,7 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
                 onClick={() => setSelectedVehicleId(vehicle.id)}
                 variant={selectedVehicleId === vehicle.id ? 'default' : 'outline'}
                 size="sm"
-                className={selectedVehicleId === vehicle.id ? 'bg-purple-600 whitespace-nowrap' : 'bg-transparent border-zinc-700 text-zinc-400 whitespace-nowrap'}
+                className={selectedVehicleId === vehicle.id ? 'bg-violet-600 whitespace-nowrap' : 'bg-transparent border-white/10 text-slate-400 whitespace-nowrap'}
               >
                 {vehicle.name}
               </Button>
@@ -139,11 +139,11 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
       <div className="px-6 py-6 space-y-3">
         {filteredAlerts.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-10 h-10 text-green-500" />
+            <div className="w-20 h-20 bg-[#12121a] rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/10">
+              <AlertCircle className="w-10 h-10 text-emerald-400" />
             </div>
             <h3 className="text-white mb-2">Tout va bien !</h3>
-            <p className="text-zinc-500 text-sm">Aucune échéance pour l'instant</p>
+            <p className="text-slate-500 text-sm">Aucune échéance pour l'instant</p>
           </div>
         ) : (
           // Affichage simple : déjà trié par couleur (rouge → orange → vert) dans alerts.ts
@@ -151,7 +151,7 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
             <Card
               key={alert.id}
               onClick={() => onAlertClick(alert)}
-              className={`bg-zinc-900 border p-4 hover:border-zinc-600 transition-all cursor-pointer rounded-2xl shadow-soft hover-lift ${getUrgencyBg(
+              className={`bg-[#12121a]/80 border p-4 hover:border-white/10 transition-all cursor-pointer rounded-2xl backdrop-blur-sm ${getUrgencyBg(
                 alert.urgency
               )}`}
             >
@@ -173,8 +173,8 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
               <div className="space-y-2">
                 {alert.mileageAlert && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
-                      <Gauge className="w-4 h-4 text-blue-500" />
+                    <div className="w-8 h-8 rounded-lg bg-[#1a1a2e] flex items-center justify-center border border-white/5">
+                      <Gauge className="w-4 h-4 text-cyan-400" />
                     </div>
                     <div className="flex-1">
                       {alert.isExpired && alert.mileageAlert.remainingKm === 0 ? (
@@ -193,8 +193,8 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
 
                 {alert.dateAlert && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-purple-500" />
+                    <div className="w-8 h-8 rounded-lg bg-[#1a1a2e] flex items-center justify-center border border-white/5">
+                      <Calendar className="w-4 h-4 text-violet-400" />
                     </div>
                     <div className="flex-1">
                       {alert.isExpired && alert.dateAlert.remainingDays === 0 ? (
@@ -213,11 +213,11 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
               </div>
 
               {/* Bouton pour marquer comme vérifié */}
-              <div className="mt-4 pt-3 border-t border-zinc-800">
+              <div className="mt-4 pt-3 border-t border-white/5">
                 <Button
                   onClick={(e) => handleMarkAsChecked(alert, e)}
                   size="sm"
-                  className="w-full bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 active:scale-95 transition-transform"
+                  className="w-full bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 border border-emerald-500/15 active:scale-95 transition-transform"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Marquer comme vérifié

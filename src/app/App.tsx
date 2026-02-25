@@ -95,14 +95,14 @@ function AppContent() {
 
     return (
       <motion.div 
-        className="min-h-screen bg-black"
+        className="min-h-screen bg-[#0a0a0f]"
         initial="initial"
         animate="animate"
         exit="exit"
         variants={pageTransitions}
       >
         <Suspense fallback={
-          <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
             <LoadingSpinner size="lg" message="Chargement..." />
           </div>
         }>
@@ -122,14 +122,14 @@ function AppContent() {
     if (vehicle) {
       return (
         <motion.div 
-          className="min-h-screen bg-black"
+          className="min-h-screen bg-[#0a0a0f]"
           initial="initial"
           animate="animate"
           exit="exit"
           variants={pageTransitions}
         >
           <Suspense fallback={
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
               <LoadingSpinner size="lg" message="Chargement..." />
             </div>
           }>
@@ -149,10 +149,10 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[#0a0a0f]">
       <AnimatePresence mode="wait">
         <Suspense fallback={
-          <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
             <LoadingSpinner size="lg" message="Chargement..." />
           </div>
         }>
@@ -215,11 +215,11 @@ function AppContent() {
       
       {/* Admin only has settings */}
       {currentProfile?.isAdmin && (
-        <div className="fixed bottom-0 left-0 right-0 bg-zinc-900/80 backdrop-blur-xl border-t border-zinc-800">
+        <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/90 backdrop-blur-xl border-t border-white/[0.06]">
           <div className="max-w-md mx-auto px-6 h-20 flex items-center justify-center">
             <button
               onClick={handleLogout}
-              className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-medium active:scale-95 transition-all"
+              className="px-6 py-3 bg-[#12121a] hover:bg-[#1a1a2e] border border-white/5 rounded-xl font-medium active:scale-95 transition-all"
             >
               Quitter l'Admin
             </button>
