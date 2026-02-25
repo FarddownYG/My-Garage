@@ -43,15 +43,13 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     const vehicleFuelType = vehicle?.fuelType || (vehicle?.engineType === 'gasoline' ? 'essence' : vehicle?.engineType);
     const vehicleDriveType = vehicle?.driveType;
 
-    // Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates
+    // ✅ Si un profil personnalisé est assigné, afficher UNIQUEMENT ses templates — sans fallback
     if (assignedProfile) {
       const profileTemplates = maintenanceTemplates.filter(t => t.profileId === assignedProfile.id);
-
-      // Si le profil n'a aucun template, fallback sur les defaults
-      const source = profileTemplates.length > 0 ? profileTemplates : defaultMaintenanceTemplates as any[];
-
+      // ⚠️ PAS de fallback sur les defaults : si le profil n'a pas de templates, on retourne []
+      // (l'utilisateur doit en ajouter depuis Paramètres > Entretiens Perso)
       const uniqueTemplates = new Map();
-      source.forEach((t: any) => {
+      profileTemplates.forEach((t: any) => {
         if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
       });
       return Array.from(uniqueTemplates.values());
@@ -60,11 +58,10 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     // Templates généraux (sans profileId) depuis Supabase
     const generalTemplates = maintenanceTemplates.filter(t => !t.profileId);
 
-    // ✅ FALLBACK : si aucun template général en base, utiliser les 41 templates par défaut
+    // ✅ FALLBACK uniquement pour les templates GÉNÉRAUX (pas de profil perso)
     const source = generalTemplates.length > 0 ? generalTemplates : (defaultMaintenanceTemplates as any[]);
 
     if (!vehicleFuelType) {
-      // Pas de motorisation renseignée → afficher tous (dédupliquer)
       const uniqueTemplates = new Map();
       source.forEach((t: any) => {
         if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
@@ -73,23 +70,14 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     }
 
     const filtered = source.filter((template: any) => {
-      // Normaliser le fuelType du template ('essence' | 'diesel' | 'both')
       const tFuelType = template.fuelType || template.engineType || 'both';
-
-      // Filtrage par motorisation
-      const fuelMatch =
-        tFuelType === 'both' ||
-        tFuelType === vehicleFuelType;
-
+      const fuelMatch = tFuelType === 'both' || tFuelType === vehicleFuelType;
       if (!fuelMatch) return false;
-
-      // Filtrage par transmission (4x4 / 4x2)
       if (!template.driveType || template.driveType === 'both') return true;
       if (!vehicleDriveType) return true;
       return template.driveType === vehicleDriveType;
     });
 
-    // Dédupliquer par nom
     const uniqueTemplates = new Map();
     filtered.forEach((t: any) => {
       if (!uniqueTemplates.has(t.name)) uniqueTemplates.set(t.name, t);
@@ -97,23 +85,25 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     return Array.from(uniqueTemplates.values());
   }, [maintenanceTemplates, vehicle?.fuelType, vehicle?.engineType, vehicle?.driveType, assignedProfile]);
 
-  // Filtrer par recherche
+  // Filtrer par recherche — en respectant le profil perso si assigné
   const filteredTemplates = useMemo(() => {
     if (searchQuery.trim()) {
       const normalizedQuery = normalizeText(searchQuery);
-      // Chercher dans les templates Supabase + les defaults (pour couvrir le fallback)
-      const allAvailable = maintenanceTemplates.length > 0
-        ? maintenanceTemplates
-        : (defaultMaintenanceTemplates as any[]);
+      // ✅ Si profil perso, chercher UNIQUEMENT dans ses templates
+      const searchPool = assignedProfile
+        ? maintenanceTemplates.filter(t => t.profileId === assignedProfile.id)
+        : (maintenanceTemplates.filter(t => !t.profileId).length > 0
+            ? maintenanceTemplates.filter(t => !t.profileId)
+            : (defaultMaintenanceTemplates as any[]));
 
-      return allAvailable.filter((template: any) => {
+      return searchPool.filter((template: any) => {
         const normalizedName = normalizeText(template.name);
         const normalizedCategory = normalizeText(template.category || '');
         return normalizedName.includes(normalizedQuery) || normalizedCategory.includes(normalizedQuery);
       });
     }
     return filteredByEngine;
-  }, [filteredByEngine, searchQuery, maintenanceTemplates]);
+  }, [filteredByEngine, searchQuery, maintenanceTemplates, assignedProfile]);
 
   // Grouper par catégorie
   const groupedTemplates = useMemo(() => {

@@ -791,7 +791,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addMaintenanceTemplate = async (template: MaintenanceTemplate) => {
     // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
     const ownerProfile = state.currentProfile || state.profiles.find(p => !p.isAdmin);
-    if (!ownerProfile) return;
+    if (!ownerProfile) {
+      console.error('❌ addMaintenanceTemplate : aucun profil owner disponible');
+      return;
+    }
     const t = { ...template, ownerId: ownerProfile.id };
     
     // 🔧 FIX: Vérifier si le template existe déjà pour éviter les doublons
@@ -803,60 +806,100 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     if (existing) {
       console.warn(`⚠️ Template ${t.id} existe déjà, insertion ignorée`);
+      // Mettre à jour l'état local quand même pour éviter les désynchronisations
+      setState(prev => {
+        const exists = prev.maintenanceTemplates.some(mt => mt.id === t.id);
+        if (exists) return prev;
+        return { ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, t] };
+      });
       return;
     }
     
-    await supabase.from('maintenance_templates').insert({
+    const { error } = await supabase.from('maintenance_templates').insert({
       id: t.id, name: t.name, icon: t.icon, category: t.category || null,
       interval_months: t.intervalMonths || null, interval_km: t.intervalKm || null,
       fuel_type: t.fuelType || null, drive_type: t.driveType || null, owner_id: t.ownerId,
-      profile_id: t.profileId || null // 🔧 FIX: Sauvegarder le profileId
+      profile_id: t.profileId || null
     });
+    if (error) {
+      console.error('❌ Erreur insertion maintenance_templates:', error.message, '| Code:', error.code);
+      console.error('→ Vérifiez que la colonne profile_id existe et que les policies RLS sont configurées.');
+      // On met quand même à jour l'état local pour l'UX
+    }
     setState(prev => ({ ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, t] }));
   };
 
   const updateMaintenanceTemplate = async (id: string, updates: Partial<MaintenanceTemplate>) => {
     const db: any = {};
-    if (updates.name) db.name = updates.name;
-    if (updates.icon) db.icon = updates.icon;
+    if (updates.name !== undefined) db.name = updates.name;
+    if (updates.icon !== undefined) db.icon = updates.icon;
     if (updates.category !== undefined) db.category = updates.category;
     if (updates.intervalMonths !== undefined) db.interval_months = updates.intervalMonths;
     if (updates.intervalKm !== undefined) db.interval_km = updates.intervalKm;
     if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
     if (updates.driveType !== undefined) db.drive_type = updates.driveType;
-    if (updates.profileId !== undefined) db.profile_id = updates.profileId; // 🔧 FIX: Sauvegarder le profileId
-    await supabase.from('maintenance_templates').update(db).eq('id', id);
+    if (updates.profileId !== undefined) db.profile_id = updates.profileId;
+    const { error } = await supabase.from('maintenance_templates').update(db).eq('id', id);
+    if (error) console.error('❌ Erreur update maintenance_templates:', error.message);
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) }));
   };
 
   const deleteMaintenanceTemplate = async (id: string) => {
-    await supabase.from('maintenance_templates').delete().eq('id', id);
+    const { error } = await supabase.from('maintenance_templates').delete().eq('id', id);
+    if (error) {
+      console.error('❌ Erreur suppression maintenance_templates:', error.message, '| Code:', error.code);
+      console.error('→ Vérifiez les policies RLS DELETE sur maintenance_templates.');
+    }
+    // Mettre à jour l'état local même si Supabase échoue (pour l'UX)
     setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) }));
   };
 
   const addMaintenanceProfile = async (profile: MaintenanceProfile) => {
     // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
     const ownerProfile = state.currentProfile || state.profiles.find(p => !p.isAdmin);
-    if (!ownerProfile) return;
+    if (!ownerProfile) {
+      console.error('❌ addMaintenanceProfile : aucun profil owner disponible');
+      return;
+    }
     const p = { ...profile, ownerId: ownerProfile.id };
-    await supabase.from('maintenance_profiles').insert({
+    const { error } = await supabase.from('maintenance_profiles').insert({
       id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom, created_at: p.createdAt
     });
+    if (error) {
+      console.error('❌ Erreur insertion maintenance_profiles:', error.message, '| Code:', error.code);
+      console.error('→ Vérifiez que les colonnes vehicle_ids/is_custom/owner_id existent et que les policies RLS INSERT sont configurées.');
+    }
     setState(prev => ({ ...prev, maintenanceProfiles: [...prev.maintenanceProfiles, p] }));
   };
 
   const updateMaintenanceProfile = async (id: string, updates: Partial<MaintenanceProfile>) => {
     const db: any = {};
-    if (updates.name) db.name = updates.name;
+    if (updates.name !== undefined) db.name = updates.name;
     if (updates.vehicleIds !== undefined) db.vehicle_ids = updates.vehicleIds;
     if (updates.isCustom !== undefined) db.is_custom = updates.isCustom;
-    await supabase.from('maintenance_profiles').update(db).eq('id', id);
+    const { error } = await supabase.from('maintenance_profiles').update(db).eq('id', id);
+    if (error) {
+      console.error('❌ Erreur update maintenance_profiles:', error.message, '| Code:', error.code);
+      console.error('→ Vérifiez les policies RLS UPDATE sur maintenance_profiles.');
+    }
     setState(prev => ({ ...prev, maintenanceProfiles: prev.maintenanceProfiles.map(p => p.id === id ? { ...p, ...updates } : p) }));
   };
 
   const deleteMaintenanceProfile = async (id: string) => {
-    await supabase.from('maintenance_profiles').delete().eq('id', id);
-    setState(prev => ({ ...prev, maintenanceProfiles: prev.maintenanceProfiles.filter(p => p.id !== id) }));
+    // Supprimer d'abord tous les templates associés à ce profil
+    const { error: templatesError } = await supabase.from('maintenance_templates').delete().eq('profile_id', id);
+    if (templatesError) console.error('❌ Erreur suppression templates du profil:', templatesError.message);
+    
+    const { error } = await supabase.from('maintenance_profiles').delete().eq('id', id);
+    if (error) {
+      console.error('❌ Erreur suppression maintenance_profiles:', error.message, '| Code:', error.code);
+    }
+    setState(prev => ({
+      ...prev,
+      maintenanceProfiles: prev.maintenanceProfiles.filter(p => p.id !== id),
+      // Supprimer aussi les templates de ce profil du state local
+      maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.profileId !== id),
+    }));
   };
 
   const updateAdminPin = async (newPin: string) => {
