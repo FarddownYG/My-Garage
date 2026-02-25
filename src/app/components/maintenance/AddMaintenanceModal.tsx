@@ -274,6 +274,25 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
             {Object.keys(groupedTemplates).length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-zinc-500">Aucun entretien trouvé</p>
+                {assignedProfile && assignedProfile.isCustom && (
+                  <div className="mt-4 p-4 bg-purple-600/10 border border-purple-600/30 rounded-xl">
+                    <p className="text-sm text-purple-300 mb-2">
+                      Ce véhicule est lié au profil personnalisé « {assignedProfile.name} » qui ne contient aucun entretien.
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      💡 Ajoutez des entretiens dans <strong>Paramètres → Entretiens Perso → {assignedProfile.name}</strong>, ou déliez ce véhicule du profil pour utiliser les entretiens par défaut.
+                    </p>
+                    {onOpenSettings && (
+                      <button
+                        type="button"
+                        onClick={() => { onClose(); onOpenSettings(); }}
+                        className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-all"
+                      >
+                        Aller dans Paramètres
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               Object.entries(groupedTemplates).map(([category, templates]) => (

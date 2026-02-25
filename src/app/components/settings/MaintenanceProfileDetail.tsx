@@ -79,7 +79,7 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
   })();
 
   // ── Handlers template ──────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
@@ -99,15 +99,18 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
       profileId: profileId,
     };
 
-    if (editingId) {
-      updateMaintenanceTemplate(editingId, template);
-    } else {
-      addMaintenanceTemplate(template);
+    try {
+      if (editingId) {
+        await updateMaintenanceTemplate(editingId, template);
+      } else {
+        await addMaintenanceTemplate(template);
+      }
+      setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both', driveType: 'both' });
+      setShowAddForm(false);
+      setEditingId(null);
+    } catch (err: any) {
+      alert(`❌ Erreur: ${err.message}\n\n💡 Vérifiez que le SQL de migration a bien été exécuté dans Supabase SQL Editor.`);
     }
-
-    setFormData({ name: '', icon: '🔧', intervalMonths: '', intervalKm: '', fuelType: 'both', driveType: 'both' });
-    setShowAddForm(false);
-    setEditingId(null);
   };
 
   const handleEdit = (template: MaintenanceTemplate) => {
@@ -123,9 +126,13 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
     setShowAddForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce type d\'entretien ?')) {
-      deleteMaintenanceTemplate(id);
+      try {
+        await deleteMaintenanceTemplate(id);
+      } catch (err: any) {
+        alert(`❌ Erreur lors de la suppression: ${err.message}\n\n💡 Vérifiez que le SQL de migration a bien été exécuté dans Supabase SQL Editor.`);
+      }
     }
   };
 
@@ -136,17 +143,25 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
   };
 
   // ── Handlers véhicules ─────────────────────────────────────────
-  const handleLinkVehicle = (vehicleId: string) => {
-    updateMaintenanceProfile(profileId, {
-      vehicleIds: [...profile.vehicleIds, vehicleId],
-    });
-    setShowVehicleSelector(false);
+  const handleLinkVehicle = async (vehicleId: string) => {
+    try {
+      await updateMaintenanceProfile(profileId, {
+        vehicleIds: [...profile.vehicleIds, vehicleId],
+      });
+      setShowVehicleSelector(false);
+    } catch (err: any) {
+      alert(`❌ Erreur lors de la liaison: ${err.message}\n\n💡 Vérifiez que le SQL de migration a bien été exécuté dans Supabase SQL Editor.`);
+    }
   };
 
-  const handleUnlinkVehicle = (vehicleId: string) => {
-    updateMaintenanceProfile(profileId, {
-      vehicleIds: profile.vehicleIds.filter(id => id !== vehicleId),
-    });
+  const handleUnlinkVehicle = async (vehicleId: string) => {
+    try {
+      await updateMaintenanceProfile(profileId, {
+        vehicleIds: profile.vehicleIds.filter(id => id !== vehicleId),
+      });
+    } catch (err: any) {
+      alert(`❌ Erreur lors de la déliasion: ${err.message}`);
+    }
   };
 
   // ── Handlers renommage profil ──────────────────────────────────
@@ -155,11 +170,15 @@ export function MaintenanceProfileDetail({ profileId, onBack }: MaintenanceProfi
     setIsRenamingProfile(true);
   };
 
-  const handleConfirmRename = () => {
+  const handleConfirmRename = async () => {
     const trimmed = newProfileName.trim();
     if (!trimmed) return;
-    updateMaintenanceProfile(profileId, { name: trimmed });
-    setIsRenamingProfile(false);
+    try {
+      await updateMaintenanceProfile(profileId, { name: trimmed });
+      setIsRenamingProfile(false);
+    } catch (err: any) {
+      alert(`❌ Erreur lors du renommage: ${err.message}`);
+    }
   };
 
   const handleCancelRename = () => {

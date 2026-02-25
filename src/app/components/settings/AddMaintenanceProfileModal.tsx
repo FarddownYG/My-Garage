@@ -128,9 +128,14 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
       }
 
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la sauvegarde:', err);
-      setError('Une erreur est survenue lors de la sauvegarde');
+      const msg = err?.message || 'Une erreur est survenue lors de la sauvegarde';
+      if (msg.includes('column') || msg.includes('relation') || msg.includes('policy')) {
+        setError(`${msg}\n\n💡 Exécutez le SQL de migration dans Supabase SQL Editor pour créer les colonnes manquantes.`);
+      } else {
+        setError(msg);
+      }
     }
   };
 

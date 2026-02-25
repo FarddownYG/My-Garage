@@ -19,10 +19,14 @@ export function CustomMaintenanceProfiles({ onBack, onOpenProfileDetail }: Custo
   // Filtrer les profils par utilisateur courant
   const userProfiles = maintenanceProfiles.filter(p => p.ownerId === currentProfile?.id);
 
-  const handleDelete = (id: string, name: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`Voulez-vous vraiment supprimer le profil d'entretien "${name}" ?`)) {
-      deleteMaintenanceProfile(id);
+      try {
+        await deleteMaintenanceProfile(id);
+      } catch (err: any) {
+        alert(`❌ Erreur: ${err.message}`);
+      }
     }
   };
 

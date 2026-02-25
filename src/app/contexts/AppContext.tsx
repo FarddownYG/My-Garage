@@ -243,9 +243,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (entriesError) console.log('⚠️ Erreur entretiens:', entriesError.message);
       if (tasksError) console.log('⚠️ Erreur tâches:', tasksError.message);
       if (remindersError) console.log('⚠️ Erreur rappels:', remindersError.message);
-      if (templatesError) console.log('⚠️ Erreur templates:', templatesError.message);
-      if (maintenanceProfilesError) console.log('⚠️ Erreur profils maintenance:', maintenanceProfilesError.message);
+      if (templatesError) console.error('❌ Erreur templates:', templatesError.message, '→ Vérifiez que les colonnes profile_id et owner_id existent dans maintenance_templates');
+      if (maintenanceProfilesError) console.error('❌ Erreur profils maintenance:', maintenanceProfilesError.message, '→ Vérifiez que les colonnes vehicle_ids, is_custom, owner_id existent dans maintenance_profiles');
 
+      // 🔍 DIAGNOSTIC : Log des données chargées pour les profils perso
+      const loadedMProfiles = maintenanceProfiles || [];
+      const loadedTemplates = templates || [];
+      const customProfileTemplates = loadedTemplates.filter((t: any) => t.profile_id);
+      console.log(`📊 Chargement Supabase: ${loadedMProfiles.length} profils maintenance, ${loadedTemplates.length} templates (dont ${customProfileTemplates.length} liés à un profil perso)`);
+      if (loadedMProfiles.length > 0) {
+        loadedMProfiles.forEach((mp: any) => {
+          const mpTemplates = loadedTemplates.filter((t: any) => t.profile_id === mp.id);
+          console.log(`  → Profil "${mp.name}" (${mp.id}): ${mpTemplates.length} templates, véhicules: [${(mp.vehicle_ids || []).join(', ')}], is_custom: ${mp.is_custom}`);
+        });
+      }
 
       // 🔄 Préserver le profil actuel s'il existe déjà
       const currentProfileId = config?.current_profile_id;
@@ -823,9 +834,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) {
       console.error('❌ Erreur insertion maintenance_templates:', error.message, '| Code:', error.code);
-      console.error('→ Vérifiez que la colonne profile_id existe et que les policies RLS sont configurées.');
-      // On met quand même à jour l'état local pour l'UX
+      console.error('→ Vérifiez que la colonne profile_id existe et que les policies RLS INSERT sont configurées.');
+      console.error('→ Exécutez le SQL de migration dans Supabase SQL Editor !');
+      throw new Error(`Impossible d'ajouter le template: ${error.message}`);
     }
+    console.log(`✅ Template "${t.name}" ajouté dans Supabase (profile_id: ${t.profileId || 'null'})`);
     setState(prev => ({ ...prev, maintenanceTemplates: [...prev.maintenanceTemplates, t] }));
   };
 
@@ -839,19 +852,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
     if (updates.driveType !== undefined) db.drive_type = updates.driveType;
     if (updates.profileId !== undefined) db.profile_id = updates.profileId;
+    // ✅ Optimistic update avec snapshot
+    let snapshot: MaintenanceTemplate[] = [];
+    setState(prev => {
+      snapshot = prev.maintenanceTemplates;
+      return { ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) };
+    });
     const { error } = await supabase.from('maintenance_templates').update(db).eq('id', id);
-    if (error) console.error('❌ Erreur update maintenance_templates:', error.message);
-    setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.map(t => t.id === id ? { ...t, ...updates } : t) }));
+    if (error) {
+      console.error('❌ Erreur update maintenance_templates:', error.message);
+      setState(prev => ({ ...prev, maintenanceTemplates: snapshot }));
+      throw new Error(`Impossible de modifier le template: ${error.message}`);
+    }
   };
 
   const deleteMaintenanceTemplate = async (id: string) => {
+    // ✅ Optimistic update avec snapshot pour rollback
+    let snapshot: MaintenanceTemplate[] = [];
+    setState(prev => {
+      snapshot = prev.maintenanceTemplates;
+      return { ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) };
+    });
+    
     const { error } = await supabase.from('maintenance_templates').delete().eq('id', id);
     if (error) {
       console.error('❌ Erreur suppression maintenance_templates:', error.message, '| Code:', error.code);
       console.error('→ Vérifiez les policies RLS DELETE sur maintenance_templates.');
+      // ❌ Rollback si Supabase échoue → sinon le template revient au refresh
+      setState(prev => ({ ...prev, maintenanceTemplates: snapshot }));
+      throw new Error(`Impossible de supprimer le template: ${error.message}`);
     }
-    // Mettre à jour l'état local même si Supabase échoue (pour l'UX)
-    setState(prev => ({ ...prev, maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.id !== id) }));
+    console.log(`✅ Template ${id} supprimé de Supabase`);
   };
 
   const addMaintenanceProfile = async (profile: MaintenanceProfile) => {
@@ -867,8 +898,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) {
       console.error('❌ Erreur insertion maintenance_profiles:', error.message, '| Code:', error.code);
-      console.error('→ Vérifiez que les colonnes vehicle_ids/is_custom/owner_id existent et que les policies RLS INSERT sont configurées.');
+      console.error('→ Vérifiez que les colonnes vehicle_ids/is_custom/owner_id existent dans maintenance_profiles.');
+      console.error('→ Exécutez le SQL de migration dans Supabase SQL Editor !');
+      throw new Error(`Impossible de créer le profil: ${error.message}`);
     }
+    console.log(`✅ Profil maintenance "${p.name}" créé dans Supabase (id: ${p.id})`);
     setState(prev => ({ ...prev, maintenanceProfiles: [...prev.maintenanceProfiles, p] }));
   };
 
@@ -877,12 +911,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.name !== undefined) db.name = updates.name;
     if (updates.vehicleIds !== undefined) db.vehicle_ids = updates.vehicleIds;
     if (updates.isCustom !== undefined) db.is_custom = updates.isCustom;
+    
+    // ✅ Optimistic update avec snapshot pour rollback
+    let snapshot: MaintenanceProfile[] = [];
+    setState(prev => {
+      snapshot = prev.maintenanceProfiles;
+      return { ...prev, maintenanceProfiles: prev.maintenanceProfiles.map(p => p.id === id ? { ...p, ...updates } : p) };
+    });
+    
     const { error } = await supabase.from('maintenance_profiles').update(db).eq('id', id);
     if (error) {
       console.error('❌ Erreur update maintenance_profiles:', error.message, '| Code:', error.code);
       console.error('→ Vérifiez les policies RLS UPDATE sur maintenance_profiles.');
+      // Rollback
+      setState(prev => ({ ...prev, maintenanceProfiles: snapshot }));
+      throw new Error(`Impossible de mettre à jour le profil: ${error.message}`);
     }
-    setState(prev => ({ ...prev, maintenanceProfiles: prev.maintenanceProfiles.map(p => p.id === id ? { ...p, ...updates } : p) }));
+    console.log(`✅ Profil maintenance ${id} mis à jour dans Supabase:`, db);
   };
 
   const deleteMaintenanceProfile = async (id: string) => {
@@ -893,7 +938,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from('maintenance_profiles').delete().eq('id', id);
     if (error) {
       console.error('❌ Erreur suppression maintenance_profiles:', error.message, '| Code:', error.code);
+      throw new Error(`Impossible de supprimer le profil: ${error.message}`);
     }
+    console.log(`✅ Profil maintenance ${id} supprimé de Supabase`);
     setState(prev => ({
       ...prev,
       maintenanceProfiles: prev.maintenanceProfiles.filter(p => p.id !== id),
