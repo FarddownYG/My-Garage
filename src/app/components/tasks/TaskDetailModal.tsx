@@ -2,6 +2,7 @@ import React from 'react';
 import { X, CheckCircle2, Circle, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import type { Task } from '../../types';
 import { useApp } from '../../contexts/AppContext';
+import { formatDateTime } from '../../utils/formatDate';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -88,13 +89,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
           <div className="bg-zinc-800/50 rounded-lg p-4">
             <div className="text-zinc-400 text-sm mb-1">Créée le</div>
             <div className="text-white">
-              {new Date(task.createdAt).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDateTime(task.createdAt)}
             </div>
           </div>
         </div>

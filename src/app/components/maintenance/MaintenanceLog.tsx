@@ -5,6 +5,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddMaintenanceModal } from './AddMaintenanceModal';
 import { EditMaintenanceModal } from './EditMaintenanceModal';
+import { formatDate } from '../../utils/formatDate';
 import type { MaintenanceEntry } from '../../types';
 
 interface MaintenanceLogProps {
@@ -71,7 +72,7 @@ export function MaintenanceLog({ vehicleId, onOpenSettings }: MaintenanceLogProp
                   <div className="flex items-center gap-4 text-sm text-zinc-500 mb-2">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(entry.date).toLocaleDateString('fr-FR')}
+                      {formatDate(entry.date)}
                     </div>
                     <div className="flex items-center gap-1">
                       <Gauge className="w-3 h-3" />

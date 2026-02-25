@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Mail, Trash2, Ban, RefreshCw, UserX, CheckCircle, AlertTriangle, X, Lock, Users, Activity, ChevronLeft } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { supabase } from '@/app/utils/supabase';
 import { SecurityDashboard } from './SecurityDashboard';
+import { formatDate } from '../../utils/formatDate';
 
 interface SupabaseAuthUser {
   id: string;
@@ -357,7 +358,7 @@ export function AdminPanel() {
                         </div>
                         <div className="flex gap-3 text-xs text-zinc-500 ml-10">
                           <span>ID: {user.id.slice(0, 8)}...</span>
-                          <span>Créé: {new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+                          <span>Créé: {formatDate(user.created_at)}</span>
                         </div>
                       </div>
                       <Button
@@ -444,7 +445,7 @@ export function AdminPanel() {
                         <p className="text-white text-sm font-medium truncate">{banned.email}</p>
                         <div className="flex gap-2 text-xs text-zinc-500 mt-0.5">
                           {banned.reason && <span>• {banned.reason}</span>}
-                          <span>• {new Date(banned.banned_at).toLocaleDateString('fr-FR')}</span>
+                          <span>• {formatDate(banned.banned_at)}</span>
                         </div>
                       </div>
                       <button

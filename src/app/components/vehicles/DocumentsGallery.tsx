@@ -5,6 +5,7 @@ import { Card } from '../ui/card';
 import type { Vehicle, VehicleDocument } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { formatDate } from '../../utils/formatDate';
 
 interface DocumentsGalleryProps {
   vehicle: Vehicle;
@@ -278,7 +279,7 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
                     <span>•</span>
                     <span>{formatFileSize(doc.size)}</span>
                     <span>•</span>
-                    <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                    <span>{formatDate(doc.uploadedAt)}</span>
                   </div>
                 </div>
 

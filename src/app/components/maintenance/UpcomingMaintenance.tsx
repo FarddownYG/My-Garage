@@ -4,6 +4,7 @@ import type { UpcomingAlert } from '../../utils/alerts';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { useApp } from '../../contexts/AppContext';
+import { formatDate } from '../../utils/formatDate';
 
 interface UpcomingMaintenanceProps {
   alerts: UpcomingAlert[];
@@ -204,7 +205,7 @@ export function UpcomingMaintenance({ alerts, onAlertClick, onBack }: UpcomingMa
                         </p>
                       )}
                       <p className="text-xs text-zinc-600">
-                        Prévu le {alert.dateAlert.targetDate.toLocaleDateString('fr-FR')}
+                        Prévu le {formatDate(alert.dateAlert.targetDate)}
                       </p>
                     </div>
                   </div>
