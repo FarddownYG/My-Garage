@@ -175,12 +175,14 @@ export const cleanInvalidSession = async () => {
     // Déconnexion forcée (ignore les erreurs)
     await supabase.auth.signOut().catch(() => {});
     
-    // Nettoyer manuellement le localStorage Supabase
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('sb-') || key.includes('supabase')) {
-        localStorage.removeItem(key);
-      }
+    // Nettoyer manuellement localStorage ET sessionStorage (Supabase utilise sessionStorage)
+    [localStorage, sessionStorage].forEach(storage => {
+      const keys = Object.keys(storage);
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          storage.removeItem(key);
+        }
+      });
     });
     
     console.log('✅ Session nettoyée');

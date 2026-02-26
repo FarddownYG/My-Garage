@@ -15,6 +15,10 @@ import { calculateUpcomingAlerts } from './utils/alerts';
 import { pageTransitions } from './utils/animations';
 import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
 
+// 🔇 SÉCURITÉ : Silencer console en production IMMÉDIATEMENT (avant tout log)
+import { silenceConsoleInProduction } from './utils/security';
+silenceConsoleInProduction();
+
 // 🚀 Lazy load heavy components for better performance
 const VehicleList = lazy(() => import('./components/vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
 const VehicleDetail = lazy(() => import('./components/vehicles/VehicleDetail').then(m => ({ default: m.VehicleDetail })));

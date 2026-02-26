@@ -148,36 +148,52 @@ export function preventIframeEmbedding() {
 export function isProductionEnvironment(): boolean {
   return !window.location.hostname.includes('localhost') && 
          !window.location.hostname.includes('127.0.0.1') &&
-         !window.location.hostname.includes('makeproxy');
+         !window.location.hostname.includes('makeproxy') &&
+         !window.location.hostname.includes('figma.site');
+}
+
+/**
+ * 🔇 Silence ALL console output in production
+ * Prevents leaking user data (emails, IDs, PINs, tokens, etc.)
+ * In development, console works normally.
+ */
+export function silenceConsoleInProduction() {
+  if (!isProductionEnvironment()) return;
+
+  const noop = () => {};
+  const methods: (keyof Console)[] = ['log', 'warn', 'error', 'info', 'debug', 'trace', 'dir', 'table', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'timeLog', 'count', 'countReset', 'assert', 'profile', 'profileEnd'];
+  
+  methods.forEach(method => {
+    try {
+      (console as any)[method] = noop;
+    } catch (_) {
+      // Some environments may freeze console
+    }
+  });
 }
 
 /**
  * Initialize all security measures
  */
 export function initializeSecurity(enableDevToolsProtection: boolean = false) {
-  console.log('🔒 Initialisation des mesures de sécurité...');
-  
   // Detect environment
   const inProduction = isProductionEnvironment();
-  console.log('🌍 Environnement:', inProduction ? 'Production' : 'Développement');
+  
+  // 🔇 FIRST: Silence console in production before anything else
+  silenceConsoleInProduction();
   
   // Basic protections (always enabled)
   preventIframeEmbedding();
   clearClipboardOnExit();
   
-  // Optional: DevTools protection (can be annoying for development)
-  // Disabled in development environment for better development experience
+  // Optional: DevTools protection
   if (enableDevToolsProtection && inProduction) {
     disableContextMenu();
     disableDevToolsShortcuts();
     
-    // Periodic DevTools detection (silently - no console warnings)
+    // Periodic DevTools detection (silently)
     setInterval(() => {
-      if (detectDevTools()) {
-        // Silently detect - removed console.warn to avoid spam
-      }
+      detectDevTools();
     }, 1000);
   }
-  
-  console.log('✅ Sécurité initialisée');
 }

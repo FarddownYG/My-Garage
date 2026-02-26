@@ -193,8 +193,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const userId = session.user.id;
 
-      // 🔧 OPTIMISATION MULTI-USERS : Charger UNIQUEMENT les données de l'utilisateur connecté
-      const { data: config, error: configError } = await supabase.from('app_config').select('*').eq('id', 'global').maybeSingle();
+      // 🔧 SÉCURITÉ : Config SCOPÉE par utilisateur (pas 'global')
+      const { data: config, error: configError } = await supabase.from('app_config').select('*').eq('id', userId).maybeSingle();
       
       // ✅ Charger UNIQUEMENT les profils de cet utilisateur
       const { data: profiles, error: profilesError } = await supabase
@@ -427,12 +427,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setCurrentProfile = async (profile: Profile | null) => {
-    // ✅ FIX stale closure : lire adminPin depuis le state actuel via setState fonctionnel
+    // ✅ FIX : Scopé par userId (pas 'global') pour isoler chaque utilisateur
     setState(prev => {
-      // Fire and forget la sauvegarde Supabase avec la bonne valeur de adminPin
+      const configId = prev.supabaseUser?.id || 'unknown';
       supabase
         .from('app_config')
-        .upsert({ id: 'global', admin_pin: prev.adminPin, current_profile_id: profile?.id || null }, { onConflict: 'id' })
+        .upsert({ id: configId, admin_pin: prev.adminPin, current_profile_id: profile?.id || null }, { onConflict: 'id' })
         .then(() => {});
       return { ...prev, currentProfile: profile };
     });
@@ -547,8 +547,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteProfile = async (id: string) => {
-    await supabase.from('profiles').delete().eq('id', id);
-    setState(prev => ({ ...prev, profiles: prev.profiles.filter(p => p.id !== id) }));
+    try {
+      // 🔧 SÉCURITÉ : Suppression cascade complète
+      // 1. Récupérer les véhicules du profil
+      const { data: vehicles } = await supabase.from('vehicles').select('id').eq('owner_id', id);
+      const vehicleIds = (vehicles || []).map(v => v.id);
+
+      // 2. Supprimer les données liées aux véhicules
+      if (vehicleIds.length > 0) {
+        await supabase.from('maintenance_entries').delete().in('vehicle_id', vehicleIds);
+        await supabase.from('tasks').delete().in('vehicle_id', vehicleIds);
+        await supabase.from('reminders').delete().in('vehicle_id', vehicleIds);
+      }
+
+      // 3. Supprimer les véhicules
+      await supabase.from('vehicles').delete().eq('owner_id', id);
+
+      // 4. Supprimer les templates et profils d'entretien
+      await supabase.from('maintenance_templates').delete().eq('owner_id', id);
+      await supabase.from('maintenance_profiles').delete().eq('owner_id', id);
+
+      // 5. Supprimer le profil
+      await supabase.from('profiles').delete().eq('id', id);
+
+      // 6. Mise à jour optimiste de l'état local
+      setState(prev => ({
+        ...prev,
+        profiles: prev.profiles.filter(p => p.id !== id),
+        vehicles: prev.vehicles.filter(v => v.ownerId !== id),
+        maintenanceEntries: prev.maintenanceEntries.filter(e => !vehicleIds.includes(e.vehicleId)),
+        tasks: prev.tasks.filter(t => !vehicleIds.includes(t.vehicleId)),
+        reminders: prev.reminders.filter(r => !vehicleIds.includes(r.vehicleId)),
+        maintenanceTemplates: prev.maintenanceTemplates.filter(t => t.ownerId !== id),
+        maintenanceProfiles: prev.maintenanceProfiles.filter(p => p.ownerId !== id),
+        currentProfile: prev.currentProfile?.id === id ? null : prev.currentProfile,
+      }));
+    } catch (error) {
+      console.error('❌ Erreur suppression profil cascade:', error);
+      await loadFromSupabase(); // Recharger en cas d'erreur
+      throw error;
+    }
   };
 
   const addVehicle = async (vehicle: Vehicle) => {
@@ -792,11 +830,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTaskComplete = async (id: string) => {
-    const task = state.tasks.find(t => t.id === id);
-    if (!task) return;
-    const newCompleted = !task.completed;
+    // ✅ FIX : Utiliser setState fonctionnel pour éviter stale closure
+    let newCompleted = false;
+    setState(prev => {
+      const task = prev.tasks.find(t => t.id === id);
+      if (!task) return prev;
+      newCompleted = !task.completed;
+      return { ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) };
+    });
     await supabase.from('tasks').update({ completed: newCompleted }).eq('id', id);
-    setState(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) }));
   };
 
   const addMaintenanceTemplate = async (template: MaintenanceTemplate) => {
@@ -951,39 +993,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateAdminPin = async (newPin: string) => {
     try {
-      console.log('🔐 Début mise à jour PIN admin:', { newPin });
+      // 🔧 SÉCURITÉ : Scopé par userId (pas 'global')
+      const userId = state.supabaseUser?.id;
+      if (!userId) throw new Error('Utilisateur non connecté');
       
-      // 1️⃣ Sauvegarder dans Supabase d'abord
-      // 🔧 FIX: Ne mettre à jour QUE le admin_pin, pas current_profile_id
       const payload = { 
-        id: 'global', 
+        id: userId, 
         admin_pin: newPin
       };
       
-      console.log('📤 Tentative upsert Supabase:', payload);
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('app_config')
         .upsert(payload, { onConflict: 'id' });
-      
-      console.log('📥 Réponse Supabase:', { data, error });
       
       if (error) {
         console.error('❌ Erreur sauvegarde PIN admin:', error);
         throw error;
       }
       
-      // 2️⃣ Mettre à jour le state local uniquement si la sauvegarde a réussi
       setState(prev => ({ ...prev, adminPin: newPin }));
-      console.log('✅ PIN admin sauvegardé avec succès:', newPin);
     } catch (error) {
       console.error('❌ Échec mise à jour PIN admin:', error);
-      console.error('Détails de l\'erreur:', {
-        message: (error as any)?.message,
-        code: (error as any)?.code,
-        details: (error as any)?.details,
-        hint: (error as any)?.hint
-      });
       throw error;
     }
   };
@@ -1075,7 +1105,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const importData = async (file: File) => {
     const imported = await importEncryptedJSON(file);
-    setState(imported);
+    // ✅ SÉCURITÉ : Préserver l'état d'authentification lors de l'import
+    setState(prev => ({
+      ...imported,
+      supabaseUser: prev.supabaseUser,
+      isAuthenticated: prev.isAuthenticated,
+    }));
   };
 
   const maintenances: MaintenanceRecord[] = useMemo(() => {
