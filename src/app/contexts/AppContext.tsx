@@ -5,7 +5,7 @@ import { sanitizeInput } from '../utils/security';
 import { defaultMaintenanceTemplates } from '../data/defaultMaintenanceTemplates';
 import { supabase } from '../utils/supabase';
 import { migrateProfileIds, checkMigrationNeeded } from '../utils/migrateProfileIds';
-import { getCurrentUser, onAuthStateChange, signOut as authSignOut } from '../utils/auth';
+import { getCurrentUser, onAuthStateChange, signOut as authSignOut, cleanInvalidSession } from '../utils/auth';
 import { getProfilesByUser } from '../utils/migration';
 
 // v1.2.0 - Supabase Auth integration
@@ -314,8 +314,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('❌ Erreur lors du chargement:', error);
       
       // Si c'est une erreur de refresh token, nettoyer la session
-      if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
-        const { cleanInvalidSession } = await import('../utils/auth');
+      if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token') || error?.message?.includes('Invalid')) {
         await cleanInvalidSession();
         
         // Réinitialiser l'état complet
@@ -378,19 +377,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ Erreur initialisation:', error);
         
         // Si c'est une erreur de refresh token, nettoyer la session
-        if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token')) {
-          // Importer dynamiquement cleanInvalidSession
-          import('../utils/auth').then(({ cleanInvalidSession }) => {
-            cleanInvalidSession().then(() => {
-              // Réinitialiser l'état
-              setState({
-                ...defaultState,
-                supabaseUser: null,
-                isAuthenticated: false,
-              });
-              setIsLoading(false);
-            });
+        if (error?.message?.includes('refresh') || error?.message?.includes('Refresh Token') || error?.message?.includes('Invalid')) {
+          await cleanInvalidSession();
+          
+          // Réinitialiser l'état
+          setState({
+            ...defaultState,
+            supabaseUser: null,
+            isAuthenticated: false,
           });
+          setIsLoading(false);
         } else {
           setIsLoading(false);
         }
@@ -1180,7 +1176,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Si c'est une erreur de token, nettoyer
         if (error.message?.includes('refresh') || error.message?.includes('token')) {
           console.warn('⚠️ Token invalide, nettoyage...');
-          const { cleanInvalidSession } = await import('../utils/auth');
           await cleanInvalidSession();
           
           setState({
@@ -1232,7 +1227,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Si c'est une erreur de token, nettoyer
       if (error?.message?.includes('refresh') || error?.message?.includes('token')) {
         console.warn('⚠️ Token invalide dans catch, nettoyage...');
-        const { cleanInvalidSession } = await import('../utils/auth');
         await cleanInvalidSession();
         
         setState({

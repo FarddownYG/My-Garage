@@ -137,7 +137,7 @@ export const getCurrentUser = async (): Promise<SupabaseUser | null> => {
     
     // Si erreur de refresh token, nettoyer et retourner null
     if (error) {
-      if (error.message?.includes('refresh') || error.message?.includes('token')) {
+      if (isRefreshTokenError(error)) {
         console.warn('⚠️ Token invalide détecté, nettoyage de la session...');
         await cleanInvalidSession();
       }
@@ -158,11 +158,22 @@ export const getCurrentUser = async (): Promise<SupabaseUser | null> => {
     }
     
     return null;
-  } catch (error) {
-    // Échec silencieux - pas de session est normal
-    console.log('ℹ️ Pas de session active');
+  } catch (error: any) {
+    // Catch unhandled AuthApiError from refresh attempts
+    if (isRefreshTokenError(error)) {
+      console.warn('⚠️ Token invalide (catch), nettoyage...');
+      await cleanInvalidSession();
+    }
     return null;
   }
+};
+
+/**
+ * Vérifie si une erreur est liée à un refresh token invalide
+ */
+const isRefreshTokenError = (error: any): boolean => {
+  const msg = error?.message?.toLowerCase() || '';
+  return msg.includes('refresh') || msg.includes('token') || msg.includes('invalid');
 };
 
 /**
@@ -172,17 +183,19 @@ export const cleanInvalidSession = async () => {
   try {
     console.log('🧹 Nettoyage de la session invalide...');
     
-    // Déconnexion forcée (ignore les erreurs)
-    await supabase.auth.signOut().catch(() => {});
+    // Déconnexion locale uniquement (pas d'appel API qui échouerait aussi)
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     
-    // Nettoyer manuellement localStorage ET sessionStorage (Supabase utilise sessionStorage)
+    // Nettoyer manuellement localStorage ET sessionStorage
     [localStorage, sessionStorage].forEach(storage => {
-      const keys = Object.keys(storage);
-      keys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          storage.removeItem(key);
-        }
-      });
+      try {
+        const keys = Object.keys(storage);
+        keys.forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            storage.removeItem(key);
+          }
+        });
+      } catch (_) { /* ignore storage access errors */ }
     });
     
     console.log('✅ Session nettoyée');
@@ -229,19 +242,23 @@ export const updatePassword = async (newPassword: string) => {
 
 /**
  * Écouter les changements d'authentification
- * ⚠️ TRAITE UNIQUEMENT : SIGNED_OUT (déconnexion)
- * ⚠️ IGNORE : SIGNED_IN (géré par refreshAuth), INITIAL_SESSION (géré par init), etc.
+ * ⚠️ TRAITE : SIGNED_OUT (déconnexion) et erreurs de token
  */
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
-  return supabase.auth.onAuthStateChange((event, session) => {
-    // ⚠️ WHITELIST : SIGNED_OUT uniquement (pour détecter déconnexion)
-    if (event !== 'SIGNED_OUT') {
+  return supabase.auth.onAuthStateChange(async (event, session) => {
+    // Traiter SIGNED_OUT (déconnexion ou refresh token échoué)
+    if (event === 'SIGNED_OUT') {
+      console.log('🚨 Déconnexion détectée');
+      callback(null);
       return;
     }
-    
-    console.log('🚨 Déconnexion détectée');
-    
-    // Pour SIGNED_OUT, on passe null au callback
-    callback(null);
+
+    // Si on reçoit TOKEN_REFRESHED sans session valide, c'est un échec silencieux
+    if (event === 'TOKEN_REFRESHED' && !session) {
+      console.warn('⚠️ Token refresh sans session, nettoyage...');
+      await cleanInvalidSession();
+      callback(null);
+      return;
+    }
   });
 };

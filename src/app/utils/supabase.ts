@@ -9,11 +9,30 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // L'utilisateur devra se reconnecter à chaque nouvelle session de navigation
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: window.sessionStorage, // ✅ Utiliser sessionStorage au lieu de localStorage
-    persistSession: true, // ✅ Garder la session pendant la navigation
-    autoRefreshToken: true, // ✅ Refresh automatique pendant la session
-    detectSessionInUrl: false, // ✅ Désactiver la détection de session dans l'URL
+    storage: window.sessionStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
   },
+});
+
+// ✅ Global auth error handler: catch invalid refresh token errors early
+// When autoRefreshToken fires and the refresh token is stale, Supabase emits
+// a TOKEN_REFRESHED event that can fail. We listen here and clean up.
+supabase.auth.onAuthStateChange((event, session) => {
+  // If we get SIGNED_OUT due to a failed refresh, make sure storage is clean
+  if (event === 'SIGNED_OUT' && !session) {
+    // Clean any leftover Supabase keys from both storages
+    [localStorage, sessionStorage].forEach(storage => {
+      try {
+        Object.keys(storage).forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            storage.removeItem(key);
+          }
+        });
+      } catch (_) { /* ignore */ }
+    });
+  }
 });
 
 // Types de base de données pour TypeScript
