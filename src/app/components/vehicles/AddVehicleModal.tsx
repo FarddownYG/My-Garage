@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Upload, CheckCircle } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -24,6 +26,8 @@ interface AddVehicleModalProps {
 
 export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
   const { addVehicle, currentProfile } = useApp();
+  const { isDark } = useTheme();
+  const { t } = useI18n();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -191,6 +195,12 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]/95 backdrop-blur-2xl' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900';
+  const labelColor = isDark ? 'text-slate-400' : 'text-gray-500';
+  const closeBtn = isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600';
+
   return (
     <>
       <FeedbackToast
@@ -209,17 +219,17 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
         onClick={onClose}
       >
         <motion.div 
-          className="bg-zinc-900 w-full md:max-w-lg md:rounded-2xl rounded-t-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          className={`${modalBg} w-full md:max-w-lg md:rounded-2xl rounded-t-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl border ${borderColor}`}
           initial={modalTransitions.modalFromBottom.initial}
           animate={modalTransitions.modalFromBottom.animate}
           exit={modalTransitions.modalFromBottom.exit}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-800">
-            <h2 className="text-lg sm:text-xl text-white font-semibold">Ajouter un véhicule</h2>
+          <div className={`flex items-center justify-between p-4 sm:p-6 border-b ${borderColor}`}>
+            <h2 className={`text-lg sm:text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('vehicles.add')}</h2>
             <button 
               onClick={onClose} 
-              className="text-zinc-400 hover:text-white transition-colors"
+              className={`${closeBtn} transition-all duration-300 hover:rotate-90`}
               disabled={isSubmitting}
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -228,14 +238,14 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
             <div>
-              <Label htmlFor="name" className="text-zinc-400">Nom du véhicule *</Label>
+              <Label htmlFor="name" className={labelColor}>{t('vehicles.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 onBlur={(e) => validateField('name', e.target.value)}
                 placeholder="Ex: Ma BMW Série 3"
-                className={`bg-zinc-800 border-zinc-700 text-white ${errors.name ? 'border-red-500' : ''}`}
+                className={`${inputBg} ${errors.name ? 'border-red-500' : ''}`}
                 required
                 disabled={isSubmitting}
               />
@@ -251,21 +261,21 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="fuelType" className="text-zinc-400">Motorisation *</Label>
+              <Label htmlFor="fuelType" className={labelColor}>{t('vehicles.fuelType')} *</Label>
               <CustomSelect
                 id="fuelType"
                 value={formData.fuelType}
                 onChange={(value) => setFormData({ ...formData, fuelType: value as 'essence' | 'diesel' })}
                 options={[
-                  { value: 'essence', label: 'Essence', icon: '⛽' },
-                  { value: 'diesel', label: 'Diesel', icon: '💧' },
+                  { value: 'essence', label: t('common.gasoline'), icon: '⛽' },
+                  { value: 'diesel', label: t('common.diesel'), icon: '💧' },
                 ]}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="driveType" className="text-zinc-400">Transmission *</Label>
+              <Label htmlFor="driveType" className={labelColor}>{t('vehicles.driveType')} *</Label>
               <CustomSelect
                 id="driveType"
                 value={formData.driveType}
@@ -280,24 +290,24 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="brand" className="text-zinc-400">Marque</Label>
+                <Label htmlFor="brand" className={labelColor}>{t('vehicles.brand')}</Label>
                 <Input
                   id="brand"
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                   placeholder="BMW"
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className={inputBg}
                   disabled={isSubmitting}
                 />
               </div>
               <div>
-                <Label htmlFor="model" className="text-zinc-400">Modèle</Label>
+                <Label htmlFor="model" className={labelColor}>{t('vehicles.model')}</Label>
                 <Input
                   id="model"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                   placeholder="Série 3"
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className={inputBg}
                   disabled={isSubmitting}
                 />
               </div>
@@ -305,7 +315,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="year" className="text-zinc-400">Année</Label>
+                <Label htmlFor="year" className={labelColor}>{t('vehicles.year')}</Label>
                 <Input
                   id="year"
                   type="number"
@@ -313,7 +323,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                   onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                   onBlur={(e) => validateField('year', e.target.value)}
                   placeholder="2020"
-                  className={`bg-zinc-800 border-zinc-700 text-white ${errors.year ? 'border-red-500' : ''}`}
+                  className={`${inputBg} ${errors.year ? 'border-red-500' : ''}`}
                   disabled={isSubmitting}
                 />
                 {errors.year && (
@@ -327,14 +337,14 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                 )}
               </div>
               <div>
-                <Label htmlFor="licensePlate" className="text-zinc-400">Immatriculation</Label>
+                <Label htmlFor="licensePlate" className={labelColor}>{t('vehicles.licensePlate')}</Label>
                 <Input
                   id="licensePlate"
                   value={formData.licensePlate}
                   onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.toUpperCase() })}
                   onBlur={(e) => validateField('licensePlate', e.target.value)}
                   placeholder="AB-123-CD"
-                  className={`bg-zinc-800 border-zinc-700 text-white ${errors.licensePlate ? 'border-red-500' : ''}`}
+                  className={`${inputBg} ${errors.licensePlate ? 'border-red-500' : ''}`}
                   disabled={isSubmitting}
                 />
                 {errors.licensePlate && (
@@ -350,7 +360,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="mileage" className="text-zinc-400">Kilométrage actuel</Label>
+              <Label htmlFor="mileage" className={labelColor}>{t('vehicles.mileage')}</Label>
               <Input
                 id="mileage"
                 type="number"
@@ -358,7 +368,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                 onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
                 onBlur={(e) => validateField('mileage', e.target.value)}
                 placeholder="50000"
-                className={`bg-zinc-800 border-zinc-700 text-white ${errors.mileage ? 'border-red-500' : ''}`}
+                className={`${inputBg} ${errors.mileage ? 'border-red-500' : ''}`}
                 disabled={isSubmitting}
               />
               {errors.mileage && (
@@ -373,11 +383,11 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="photo" className="text-zinc-400">Photo du véhicule</Label>
+              <Label htmlFor="photo" className={labelColor}>{t('vehicles.photo')}</Label>
               <div className="space-y-3">
                 {photoPreview && (
                   <motion.div 
-                    className="relative w-full h-40 rounded-lg overflow-hidden bg-zinc-800"
+                    className={`relative w-full h-40 rounded-lg overflow-hidden ${isDark ? 'bg-[#1a1a2e]' : 'bg-gray-100'}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                   >
@@ -403,21 +413,21 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                 {!photoPreview && (
                   <label 
                     htmlFor="photo-upload" 
-                    className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-800/50 hover:bg-zinc-800 transition-colors ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDark ? 'border-white/10 bg-[#1a1a2e]/50 hover:bg-[#1a1a2e]' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
                       {isUploading ? (
                         <>
                           <LoadingSpinner size="sm" />
-                          <p className="text-sm text-zinc-400">Upload en cours...</p>
+                          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Upload en cours...</p>
                         </>
                       ) : (
                         <>
-                          <Upload className="w-8 h-8 text-zinc-500" />
-                          <p className="text-sm text-zinc-400">
-                            <span className="text-blue-500 font-medium">Choisir une photo</span> depuis votre galerie
+                          <Upload className={`w-8 h-8 ${isDark ? 'text-slate-500' : 'text-gray-400'}`} />
+                          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                            <span className="text-cyan-500 font-medium">Choisir une photo</span>
                           </p>
-                          <p className="text-xs text-zinc-500">PNG, JPG, WebP jusqu'à 5MB</p>
+                          <p className={`text-xs ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>PNG, JPG, WebP jusqu'à 5MB</p>
                         </>
                       )}
                     </div>
@@ -439,14 +449,14 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                 type="button" 
                 onClick={onClose} 
                 variant="outline" 
-                className="flex-1 bg-transparent border-zinc-700 text-zinc-400"
+                className={`flex-1 ${isDark ? 'bg-transparent border-white/10 text-slate-400' : 'bg-transparent border-gray-300 text-gray-500'}`}
                 disabled={isSubmitting}
               >
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button 
                 type="submit" 
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white"
                 disabled={isSubmitting || Object.keys(errors).length > 0}
               >
                 {isSubmitting ? (
@@ -455,7 +465,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
                     <span>Ajout...</span>
                   </div>
                 ) : (
-                  'Ajouter'
+                  t('common.add')
                 )}
               </Button>
             </div>

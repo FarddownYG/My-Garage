@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2, FileText } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2, FileText, Download } from 'lucide-react';
 import type { Vehicle } from '../../types';
 import { useApp } from '../../contexts/AppContext';
+import { useI18n } from '../../contexts/I18nContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { MaintenanceLog } from '../maintenance/MaintenanceLog';
@@ -10,6 +13,7 @@ import { EditVehicleModal } from './EditVehicleModal';
 import { EditMileageModal } from './EditMileageModal';
 import { PhotosGallery } from './PhotosGallery';
 import { DocumentsGallery } from './DocumentsGallery';
+import { exportMaintenancePdf } from '../../utils/exportPdf';
 
 interface VehicleDetailProps {
   vehicle: Vehicle;
@@ -19,8 +23,9 @@ interface VehicleDetailProps {
 
 export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: VehicleDetailProps) {
   const { maintenanceEntries, deleteVehicle } = useApp();
+  const { t, lang } = useI18n();
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'info' | 'maintenance' | 'gallery' | 'documents'>(() => {
-    // Si on a un type pré-rempli, ouvrir directement l'onglet entretien
     return prefilledMaintenanceType ? 'maintenance' : 'info';
   });
   const [showMaintenanceSettings, setShowMaintenanceSettings] = useState(false);
@@ -38,153 +43,140 @@ export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: Veh
     }
   };
 
+  const handleExportPdf = () => {
+    exportMaintenancePdf(vehicle, vehicleMaintenanceEntries, lang);
+  };
+
   if (showMaintenanceSettings) {
     return <MaintenanceSettings onBack={() => setShowMaintenanceSettings(false)} />;
   }
 
+  const tabBtnClass = (isActive: boolean) =>
+    isActive
+      ? isDark
+        ? 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white border-transparent'
+        : 'bg-blue-600 text-white border-transparent'
+      : isDark
+        ? 'bg-transparent border-white/10 text-slate-400 hover:border-white/20'
+        : 'bg-transparent border-gray-300 text-gray-500 hover:border-gray-400';
+
   return (
-    <div className="min-h-screen bg-black pb-24">
+    <div className={`min-h-screen pb-24 ${isDark ? 'bg-[#0a0a0f]' : 'bg-gray-50'}`}>
       {/* Header */}
       <div className="relative">
-        <div className="h-64 bg-zinc-900 flex items-center justify-center">
+        <div className={`h-56 sm:h-64 flex items-center justify-center ${isDark ? 'bg-[#12121a]' : 'bg-gray-200'}`}>
           {vehicle.photo ? (
             <img src={vehicle.photo} alt={vehicle.name} className="w-full h-full object-cover" />
           ) : (
-            <Gauge className="w-24 h-24 text-zinc-700" />
+            <Gauge className={`w-24 h-24 ${isDark ? 'text-slate-700' : 'text-gray-400'}`} />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/80 to-transparent" />
         </div>
-        <button
+        <motion.button
           onClick={onBack}
-          className="absolute top-6 left-6 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+          className={`absolute top-6 left-6 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm ${isDark ? 'bg-black/50 text-white' : 'bg-white/80 text-gray-800'}`}
+          whileTap={{ scale: 0.9 }}
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Vehicle Info */}
-      <div className="px-6 py-6">
+      <div className="px-4 sm:px-6 py-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl text-white mb-2">{vehicle.name}</h1>
+            <h1 className={`text-2xl sm:text-3xl mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{vehicle.name}</h1>
             {vehicle.licensePlate && (
-              <p className="text-zinc-500">{vehicle.licensePlate}</p>
+              <p className={isDark ? 'text-slate-500' : 'text-gray-500'}>{vehicle.licensePlate}</p>
             )}
           </div>
           <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowMileageModal(true)}
-              variant="outline" 
-              size="sm" 
-              className="bg-transparent border-zinc-700 text-green-500 hover:bg-green-500/10"
-            >
-              <Gauge className="w-4 h-4" />
-            </Button>
-            <Button 
-              onClick={() => setShowEditModal(true)}
-              variant="outline" 
-              size="sm" 
-              className="bg-transparent border-zinc-700 text-blue-500 hover:bg-blue-500/10"
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-transparent border-zinc-700 text-red-500 hover:bg-red-500/10"
-              onClick={handleDelete}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <Button onClick={() => setShowMileageModal(true)} variant="outline" size="sm"
+                className={isDark ? 'bg-transparent border-white/10 text-emerald-400 hover:bg-emerald-500/10' : 'bg-transparent border-gray-300 text-green-600 hover:bg-green-50'}>
+                <Gauge className="w-4 h-4" />
+              </Button>
+            </motion.div>
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <Button onClick={() => setShowEditModal(true)} variant="outline" size="sm"
+                className={isDark ? 'bg-transparent border-white/10 text-cyan-400 hover:bg-cyan-500/10' : 'bg-transparent border-gray-300 text-blue-600 hover:bg-blue-50'}>
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            </motion.div>
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <Button variant="outline" size="sm" onClick={handleDelete}
+                className={isDark ? 'bg-transparent border-white/10 text-red-400 hover:bg-red-500/10' : 'bg-transparent border-gray-300 text-red-600 hover:bg-red-50'}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </motion.div>
           </div>
         </div>
 
-        <Card className="bg-zinc-900 border-zinc-800 p-4 mb-6">
+        <Card className={`p-4 mb-6 rounded-2xl ${isDark ? 'bg-[#12121a]/80 border-white/5' : 'bg-white border-gray-200'}`}>
           <div className="grid grid-cols-2 gap-4">
             {vehicle.brand && (
               <div>
-                <p className="text-xs text-zinc-500 mb-1">Marque</p>
-                <p className="text-white">{vehicle.brand}</p>
+                <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.brand')}</p>
+                <p className={isDark ? 'text-white' : 'text-gray-900'}>{vehicle.brand}</p>
               </div>
             )}
             {vehicle.model && (
               <div>
-                <p className="text-xs text-zinc-500 mb-1">Modèle</p>
-                <p className="text-white">{vehicle.model}</p>
+                <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.model')}</p>
+                <p className={isDark ? 'text-white' : 'text-gray-900'}>{vehicle.model}</p>
               </div>
             )}
             {vehicle.year && (
               <div>
-                <p className="text-xs text-zinc-500 mb-1">Année</p>
-                <p className="text-white">{vehicle.year}</p>
+                <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.year')}</p>
+                <p className={isDark ? 'text-white' : 'text-gray-900'}>{vehicle.year}</p>
               </div>
             )}
             <div>
-              <p className="text-xs text-zinc-500 mb-1">Kilométrage</p>
-              <p className="text-white">{vehicle.mileage.toLocaleString()} km</p>
+              <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.mileage')}</p>
+              <p className={isDark ? 'text-white' : 'text-gray-900'}>{vehicle.mileage.toLocaleString()} km</p>
             </div>
           </div>
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          <Button
-            onClick={() => setActiveTab('info')}
-            variant={activeTab === 'info' ? 'default' : 'outline'}
-            className={activeTab === 'info' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
-          >
-            <Gauge className="w-4 h-4 mr-2" />
-            Infos
+        <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
+          <Button onClick={() => setActiveTab('info')} variant="outline" className={tabBtnClass(activeTab === 'info')}>
+            <Gauge className="w-4 h-4 mr-2" />{t('vehicles.infos')}
           </Button>
-          <Button
-            onClick={() => setActiveTab('maintenance')}
-            variant={activeTab === 'maintenance' ? 'default' : 'outline'}
-            className={activeTab === 'maintenance' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
-          >
-            <Wrench className="w-4 h-4 mr-2" />
-            Entretien ({vehicleMaintenanceEntries.length})
+          <Button onClick={() => setActiveTab('maintenance')} variant="outline" className={tabBtnClass(activeTab === 'maintenance')}>
+            <Wrench className="w-4 h-4 mr-2" />{t('vehicles.maintenance')} ({vehicleMaintenanceEntries.length})
           </Button>
-          <Button
-            onClick={() => setActiveTab('gallery')}
-            variant={activeTab === 'gallery' ? 'default' : 'outline'}
-            className={activeTab === 'gallery' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
-          >
-            <ImageIcon className="w-4 h-4 mr-2" />
-            Photos
+          <Button onClick={() => setActiveTab('gallery')} variant="outline" className={tabBtnClass(activeTab === 'gallery')}>
+            <ImageIcon className="w-4 h-4 mr-2" />{t('vehicles.photos')}
           </Button>
-          <Button
-            onClick={() => setActiveTab('documents')}
-            variant={activeTab === 'documents' ? 'default' : 'outline'}
-            className={activeTab === 'documents' ? 'bg-blue-600' : 'bg-transparent border-zinc-700 text-zinc-400'}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Documents
+          <Button onClick={() => setActiveTab('documents')} variant="outline" className={tabBtnClass(activeTab === 'documents')}>
+            <FileText className="w-4 h-4 mr-2" />{t('vehicles.documents')}
           </Button>
         </div>
 
+        {/* Export PDF button on maintenance tab */}
+        {activeTab === 'maintenance' && vehicleMaintenanceEntries.length > 0 && (
+          <motion.div className="mb-4" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <Button onClick={handleExportPdf}
+              className={`w-full h-12 rounded-xl ${isDark ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/20 text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20' : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'}`}>
+              <Download className="w-5 h-5 mr-2" />
+              {t('maintenance.exportPdf')}
+            </Button>
+          </motion.div>
+        )}
+
         {/* Tab Content */}
         {activeTab === 'maintenance' && (
-          <MaintenanceLog 
-            vehicleId={vehicle.id} 
-            onOpenSettings={() => setShowMaintenanceSettings(true)}
-          />
+          <MaintenanceLog vehicleId={vehicle.id} onOpenSettings={() => setShowMaintenanceSettings(true)} />
         )}
-
-        {activeTab === 'gallery' && (
-          <PhotosGallery vehicle={vehicle} />
-        )}
-
-        {activeTab === 'documents' && (
-          <DocumentsGallery vehicle={vehicle} />
-        )}
+        {activeTab === 'gallery' && <PhotosGallery vehicle={vehicle} />}
+        {activeTab === 'documents' && <DocumentsGallery vehicle={vehicle} />}
       </div>
 
       {/* Modals */}
-      {showEditModal && (
-        <EditVehicleModal vehicle={vehicle} onClose={() => setShowEditModal(false)} />
-      )}
-      {showMileageModal && (
-        <EditMileageModal vehicle={vehicle} onClose={() => setShowMileageModal(false)} />
-      )}
+      {showEditModal && <EditVehicleModal vehicle={vehicle} onClose={() => setShowEditModal(false)} />}
+      {showMileageModal && <EditMileageModal vehicle={vehicle} onClose={() => setShowMileageModal(false)} />}
     </div>
   );
 }

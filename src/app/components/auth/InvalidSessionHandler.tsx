@@ -30,8 +30,8 @@ export function InvalidSessionHandler() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border-zinc-800 p-8 text-center">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#12121a] to-[#0a0a0f] flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-[#12121a]/80 backdrop-blur-xl border-white/[0.06] p-8 text-center">
         {/* Icon */}
         <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertTriangle className="w-10 h-10 text-yellow-500" />
@@ -43,7 +43,7 @@ export function InvalidSessionHandler() {
         </h1>
 
         {/* Message */}
-        <p className="text-zinc-400 mb-6">
+        <p className="text-slate-400 mb-6">
           Votre session a expiré. Reconnexion en cours...
         </p>
 
@@ -57,13 +57,13 @@ export function InvalidSessionHandler() {
         {/* Button */}
         <Button
           onClick={handleReload}
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          className="w-full bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400"
         >
           Recharger maintenant
         </Button>
 
         {/* Info */}
-        <p className="text-zinc-500 text-sm mt-4">
+        <p className="text-slate-500 text-sm mt-4">
           Vous serez redirigé vers l'écran de connexion
         </p>
       </Card>

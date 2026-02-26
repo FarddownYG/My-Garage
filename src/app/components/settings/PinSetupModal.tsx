@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -11,6 +12,7 @@ interface PinSetupModalProps {
 
 export function PinSetupModal({ onClose }: PinSetupModalProps) {
   const { currentProfile, updateProfile } = useApp();
+  const { isDark } = useTheme();
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
@@ -44,24 +46,29 @@ export function PinSetupModal({ onClose }: PinSetupModalProps) {
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900';
+  const labelColor = isDark ? 'text-slate-400' : 'text-gray-500';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6">
-      <div className="bg-zinc-900 w-full md:max-w-md md:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+      <div className={`${modalBg} w-full md:max-w-md md:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl`}>
+        <div className={`flex items-center justify-between p-6 border-b ${borderColor}`}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <Lock className="w-5 h-5 text-green-500" />
+            <div className="p-2 bg-emerald-500/10 rounded-lg">
+              <Lock className="w-5 h-5 text-emerald-500" />
             </div>
-            <h2 className="text-xl text-white">Configurer le PIN</h2>
+            <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>Configurer le PIN</h2>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={onClose} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-colors`}>
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-            <p className="text-sm text-blue-400">
+          <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+            <p className="text-sm text-cyan-400">
               Créez un code PIN à 4 chiffres pour protéger votre profil
             </p>
           </div>
@@ -73,7 +80,7 @@ export function PinSetupModal({ onClose }: PinSetupModalProps) {
           )}
 
           <div>
-            <Label htmlFor="pin" className="text-zinc-400">Nouveau PIN *</Label>
+            <Label htmlFor="pin" className={labelColor}>Nouveau PIN *</Label>
             <Input
               id="pin"
               type="password"
@@ -86,14 +93,14 @@ export function PinSetupModal({ onClose }: PinSetupModalProps) {
                 setError('');
               }}
               placeholder="4 chiffres"
-              className="bg-zinc-800 border-zinc-700 text-white text-center text-2xl tracking-widest"
+              className={`${inputBg} text-center text-2xl tracking-widest`}
               required
               autoFocus
             />
           </div>
 
           <div>
-            <Label htmlFor="confirmPin" className="text-zinc-400">Confirmer le PIN *</Label>
+            <Label htmlFor="confirmPin" className={labelColor}>Confirmer le PIN *</Label>
             <Input
               id="confirmPin"
               type="password"
@@ -106,7 +113,7 @@ export function PinSetupModal({ onClose }: PinSetupModalProps) {
                 setError('');
               }}
               placeholder="4 chiffres"
-              className="bg-zinc-800 border-zinc-700 text-white text-center text-2xl tracking-widest"
+              className={`${inputBg} text-center text-2xl tracking-widest`}
               required
             />
           </div>
@@ -116,13 +123,13 @@ export function PinSetupModal({ onClose }: PinSetupModalProps) {
               type="button" 
               onClick={onClose} 
               variant="outline" 
-              className="flex-1 bg-transparent border-zinc-700 text-zinc-400"
+              className={`flex-1 ${isDark ? 'bg-transparent border-white/10 text-slate-400' : 'bg-transparent border-gray-300 text-gray-500'}`}
             >
               Annuler
             </Button>
             <Button 
               type="submit" 
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white"
             >
               Activer le verrouillage
             </Button>

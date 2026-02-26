@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '../ui/button';
 import { CustomSelect } from '../ui/CustomSelect';
 import { DateInputFR } from '../shared/DateInputFR';
@@ -13,7 +15,6 @@ interface EditMaintenanceModalProps {
   onOpenSettings?: () => void;
 }
 
-// Templates de base pour la compatibilité (sans Supabase)
 const builtinTemplates = [
   { id: 'oil', name: 'Vidange', icon: '💧', intervalMonths: 12, intervalKm: 15000 },
   { id: 'tires', name: 'Pneus', icon: '🔩', intervalMonths: 48, intervalKm: 40000 },
@@ -22,6 +23,8 @@ const builtinTemplates = [
 
 export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMaintenanceModalProps) {
   const { updateMaintenanceEntry, deleteMaintenanceEntry, maintenanceTemplates, updateReminder, reminders } = useApp();
+  const { isDark } = useTheme();
+  const { t } = useI18n();
 
   const [formData, setFormData] = useState({
     type: entry.type,
@@ -34,178 +37,96 @@ export function EditMaintenanceModal({ entry, onClose, onOpenSettings }: EditMai
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     updateMaintenanceEntry(entry.id, {
-      type: formData.type,
-      customType: formData.customType || undefined,
-      date: formData.date,
-      mileage: parseInt(formData.mileage),
+      type: formData.type, customType: formData.customType || undefined,
+      date: formData.date, mileage: parseInt(formData.mileage),
       cost: formData.cost ? parseFloat(formData.cost) : undefined,
       notes: formData.notes || undefined,
     });
 
-    // Mettre à jour le rappel si applicable
     const templateId = formData.customType || formData.type;
-    const allTemplates = [
-      ...builtinTemplates,
-      ...(defaultMaintenanceTemplates as any[]),
-      ...maintenanceTemplates,
-    ];
+    const allTemplates = [...builtinTemplates, ...(defaultMaintenanceTemplates as any[]), ...maintenanceTemplates];
     const template = allTemplates.find(t => t.id === templateId || t.name === templateId);
 
     if (template && (template.intervalMonths || template.intervalKm)) {
       const entryDate = new Date(formData.date);
       const entryMileage = parseInt(formData.mileage);
-
       let dueDate: string | undefined;
       let dueMileage: number | undefined;
-
-      if (template.intervalMonths) {
-        const nextDate = new Date(entryDate);
-        nextDate.setMonth(nextDate.getMonth() + template.intervalMonths);
-        dueDate = nextDate.toISOString().split('T')[0];
-      }
-
-      if (template.intervalKm) {
-        dueMileage = entryMileage + template.intervalKm;
-      }
-
-      const existingReminder = reminders.find(
-        r => r.vehicleId === entry.vehicleId && r.type === template.name
-      );
-
-      if (existingReminder) {
-        updateReminder(existingReminder.id, {
-          dueDate,
-          dueMileage,
-          status: 'ok',
-        });
-      }
+      if (template.intervalMonths) { const nextDate = new Date(entryDate); nextDate.setMonth(nextDate.getMonth() + template.intervalMonths); dueDate = nextDate.toISOString().split('T')[0]; }
+      if (template.intervalKm) { dueMileage = entryMileage + template.intervalKm; }
+      const existingReminder = reminders.find(r => r.vehicleId === entry.vehicleId && r.type === template.name);
+      if (existingReminder) { updateReminder(existingReminder.id, { dueDate, dueMileage, status: 'ok' }); }
     }
-
     onClose();
   };
 
   const handleDelete = () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet entretien ?')) {
-      deleteMaintenanceEntry(entry.id);
-      onClose();
-    }
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet entretien ?')) { deleteMaintenanceEntry(entry.id); onClose(); }
   };
 
   const handleTypeChange = (value: string) => {
-    if (value === '_add_new_') {
-      onClose();
-      onOpenSettings?.();
-    } else {
+    if (value === '_add_new_') { onClose(); onOpenSettings?.(); }
+    else {
       const builtinIds = ['oil', 'tires', 'brakes', 'filter', 'battery', 'inspection', 'other'];
       const isCustom = !builtinIds.includes(value);
-      setFormData({
-        ...formData,
-        type: isCustom ? 'other' : value as any,
-        customType: isCustom ? value : '',
-      });
+      setFormData({ ...formData, type: isCustom ? 'other' : value as any, customType: isCustom ? value : '' });
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const labelClass = isDark ? 'text-sm text-slate-400 mb-2 block' : 'text-sm text-gray-500 mb-2 block';
+  const inputClass = isDark ? 'w-full bg-[#1a1a2e] border border-white/[0.06] text-white rounded-lg px-4 py-2' : 'w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-lg px-4 py-2';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-zinc-800">
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-          <h2 className="text-xl text-white">Modifier l'entretien</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+      <div className={`${modalBg} w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border ${borderColor}`}>
+        <div className={`flex items-center justify-between p-6 border-b ${borderColor}`}>
+          <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('maintenance.edit')}</h2>
+          <button onClick={onClose} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-colors`}>
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">Type d'entretien *</label>
-            <CustomSelect
-              value={formData.customType || formData.type}
-              onChange={handleTypeChange}
+            <label className={labelClass}>{t('maintenance.type')} *</label>
+            <CustomSelect value={formData.customType || formData.type} onChange={handleTypeChange}
               options={[
-                { value: 'oil', label: 'Vidange', icon: '💧' },
-                { value: 'tires', label: 'Pneus', icon: '🔩' },
-                { value: 'brakes', label: 'Freins', icon: '⛔' },
-                { value: 'filter', label: 'Filtre à air', icon: '🔧' },
-                { value: 'battery', label: 'Batterie', icon: '⚡' },
-                { value: 'inspection', label: 'Contrôle technique', icon: '✅' },
-                ...maintenanceTemplates.map(template => ({
-                  value: template.id,
-                  label: template.name,
-                  icon: template.icon,
-                })),
+                { value: 'oil', label: 'Vidange', icon: '💧' }, { value: 'tires', label: 'Pneus', icon: '🔩' },
+                { value: 'brakes', label: 'Freins', icon: '⛔' }, { value: 'filter', label: 'Filtre à air', icon: '🔧' },
+                { value: 'battery', label: 'Batterie', icon: '⚡' }, { value: 'inspection', label: 'Contrôle technique', icon: '✅' },
+                ...maintenanceTemplates.map(t => ({ value: t.id, label: t.name, icon: t.icon })),
                 { value: '_add_new_', label: 'Ajouter un type...', icon: '➕' },
-              ]}
-              required
-            />
+              ]} required />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Date *</label>
-              <DateInputFR
-                value={formData.date}
-                onChange={(v) => setFormData({ ...formData, date: v })}
-                required
-              />
+              <label className={labelClass}>{t('maintenance.date')} *</label>
+              <DateInputFR value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} required />
             </div>
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Kilométrage *</label>
-              <input
-                type="number"
-                value={formData.mileage}
-                onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2"
-                required
-              />
+              <label className={labelClass}>{t('vehicles.mileage')} *</label>
+              <input type="number" value={formData.mileage} onChange={(e) => setFormData({ ...formData, mileage: e.target.value })} className={inputClass} required />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">Coût (€)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.cost}
-              onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-              placeholder="150.00"
-              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2"
-            />
+            <label className={labelClass}>{t('maintenance.cost')}</label>
+            <input type="number" step="0.01" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} placeholder="150.00" className={inputClass} />
           </div>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Détails de l'intervention..."
-              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2 min-h-24 resize-none"
-            />
+            <label className={labelClass}>{t('maintenance.notes')}</label>
+            <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Détails de l'intervention..." className={`${inputClass} min-h-24 resize-none`} />
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600/10 border border-red-600/20 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors"
-            >
-              Supprimer
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
-            >
-              Enregistrer
-            </button>
+            <button type="button" onClick={handleDelete} className="px-4 py-2 bg-red-600/10 border border-red-600/20 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors">{t('maintenance.delete')}</button>
+            <button type="button" onClick={onClose} className={`flex-1 py-2 rounded-lg transition-colors ${isDark ? 'bg-[#1a1a2e] hover:bg-[#252540] text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>{t('common.cancel')}</button>
+            <button type="submit" className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white py-2 rounded-lg transition-colors">{t('common.save')}</button>
           </div>
         </form>
       </div>

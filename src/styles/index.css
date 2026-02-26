@@ -29,7 +29,17 @@
   animation: shake 0.3s ease-in-out;
 }
 
-/* Dark mode by default */
+/* Dark mode by default - overridden by ThemeContext */
 html {
   color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+/* Light mode overrides */
+html.light body {
+  background-color: #f9fafb;
+  color: #111827;
 }

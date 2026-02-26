@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -11,6 +12,7 @@ interface AdminPinModalProps {
 
 export function AdminPinModal({ onClose }: AdminPinModalProps) {
   const { adminPin, updateAdminPin } = useApp();
+  const { isDark } = useTheme();
   const [formData, setFormData] = useState({
     currentPin: '',
     newPin: '',
@@ -47,19 +49,24 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900';
+  const labelColor = isDark ? 'text-slate-400' : 'text-gray-500';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-6">
-      <div className="bg-zinc-900 w-full md:max-w-lg md:rounded-2xl rounded-t-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-          <h2 className="text-xl text-white">Modifier le PIN admin</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+      <div className={`${modalBg} w-full md:max-w-lg md:rounded-2xl rounded-t-2xl overflow-hidden`}>
+        <div className={`flex items-center justify-between p-6 border-b ${borderColor}`}>
+          <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>Modifier le PIN admin</h2>
+          <button onClick={onClose} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-colors`}>
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <Label htmlFor="currentPin" className="text-zinc-400">PIN actuel *</Label>
+            <Label htmlFor="currentPin" className={labelColor}>PIN actuel *</Label>
             <Input
               id="currentPin"
               type="password"
@@ -67,14 +74,14 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
               onChange={(e) => setFormData({ ...formData, currentPin: e.target.value })}
               placeholder="••••"
               maxLength={6}
-              className="bg-zinc-800 border-zinc-700 text-white text-center tracking-widest"
+              className={`${inputBg} text-center tracking-widest`}
               required
               autoFocus
             />
           </div>
 
           <div>
-            <Label htmlFor="newPin" className="text-zinc-400">Nouveau PIN (4 chiffres) *</Label>
+            <Label htmlFor="newPin" className={labelColor}>Nouveau PIN (4 chiffres) *</Label>
             <Input
               id="newPin"
               type="password"
@@ -83,13 +90,13 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
               placeholder="••••"
               maxLength={4}
               pattern="[0-9]{4}"
-              className="bg-zinc-800 border-zinc-700 text-white text-center tracking-widest"
+              className={`${inputBg} text-center tracking-widest`}
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="confirmPin" className="text-zinc-400">Confirmer le nouveau PIN *</Label>
+            <Label htmlFor="confirmPin" className={labelColor}>Confirmer le nouveau PIN *</Label>
             <Input
               id="confirmPin"
               type="password"
@@ -98,7 +105,7 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
               placeholder="••••"
               maxLength={4}
               pattern="[0-9]{4}"
-              className="bg-zinc-800 border-zinc-700 text-white text-center tracking-widest"
+              className={`${inputBg} text-center tracking-widest`}
               required
             />
           </div>
@@ -108,10 +115,10 @@ export function AdminPinModal({ onClose }: AdminPinModalProps) {
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" onClick={onClose} variant="outline" className="flex-1 bg-transparent border-zinc-700 text-zinc-400">
+            <Button type="button" onClick={onClose} variant="outline" className={`flex-1 ${isDark ? 'bg-transparent border-white/10 text-slate-400' : 'bg-transparent border-gray-300 text-gray-500'}`}>
               Annuler
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white">
               Modifier
             </Button>
           </div>

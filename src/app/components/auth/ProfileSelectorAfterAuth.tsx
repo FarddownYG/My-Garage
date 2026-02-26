@@ -117,15 +117,15 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
   // Normalement, on ne devrait jamais arriver ici car le profil est sélectionné automatiquement
   // Mais au cas où, afficher un message
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border-zinc-800 p-8 text-center">
-        <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-          <User className="w-10 h-10 text-blue-500" />
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#12121a] to-[#0a0a0f] flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-[#12121a]/80 backdrop-blur-xl border-white/[0.06] p-8 text-center">
+        <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <User className="w-10 h-10 text-cyan-500" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-4">
           Initialisation...
         </h1>
-        <p className="text-zinc-400">
+        <p className="text-slate-400">
           Configuration de votre profil en cours...
         </p>
       </Card>

@@ -4,6 +4,8 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import type { Vehicle, VehicleDocument } from '../../types';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { formatDate } from '../../utils/formatDate';
 
@@ -13,6 +15,8 @@ interface DocumentsGalleryProps {
 
 export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
   const { updateVehicle } = useApp();
+  const { isDark } = useTheme();
+  const { t } = useI18n();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<VehicleDocument | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -201,7 +205,7 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
         <Button
           onClick={() => cameraInputRef.current?.click()}
           disabled={isUploading}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-14"
+          className="bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 h-14"
         >
           <Camera className="w-5 h-5 mr-2" />
           Appareil photo
@@ -210,7 +214,7 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           variant="outline"
-          className="bg-transparent border-zinc-700 text-white hover:bg-zinc-800 h-14"
+          className={`h-14 ${isDark ? 'bg-transparent border-white/10 text-white hover:bg-white/5' : 'bg-transparent border-gray-300 text-gray-700 hover:bg-gray-50'}`}
         >
           <Upload className="w-5 h-5 mr-2" />
           Fichiers
@@ -238,10 +242,10 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
 
       {/* État de chargement */}
       {isUploading && (
-        <Card className="bg-zinc-900 border-zinc-800 p-4">
+        <Card className={`p-4 ${isDark ? 'bg-[#12121a] border-white/5' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center justify-center gap-3">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-zinc-400">Upload en cours...</p>
+            <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            <p className={isDark ? 'text-slate-400' : 'text-gray-500'}>Upload en cours...</p>
           </div>
         </Card>
       )}
@@ -252,12 +256,12 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
           {documents.map((doc) => (
             <Card
               key={doc.id}
-              className="bg-zinc-900 border-zinc-800 p-4 hover:border-blue-500/50 transition-colors cursor-pointer group"
+              className={`p-4 transition-colors cursor-pointer group ${isDark ? 'bg-[#12121a] border-white/5 hover:border-cyan-500/50' : 'bg-white border-gray-200 hover:border-blue-300'}`}
               onClick={() => handleOpenDocument(doc)}
             >
               <div className="flex items-center gap-4">
                 {/* Icône ou miniature */}
-                <div className="flex-shrink-0 w-16 h-16 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden">
+                <div className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden ${isDark ? 'bg-[#1a1a2e]' : 'bg-gray-100'}`}>
                   {doc.type === 'photo' ? (
                     <ImageWithFallback
                       src={doc.url}
@@ -271,10 +275,10 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
 
                 {/* Infos */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-white text-sm sm:text-base truncate mb-1 group-hover:text-blue-400 transition-colors">
+                  <h4 className={`text-sm sm:text-base truncate mb-1 transition-colors ${isDark ? 'text-white group-hover:text-cyan-400' : 'text-gray-900 group-hover:text-blue-500'}`}>
                     {doc.name}
                   </h4>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
                     <span className="capitalize">{doc.type}</span>
                     <span>•</span>
                     <span>{formatFileSize(doc.size)}</span>
@@ -290,14 +294,14 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
                       e.stopPropagation();
                       handleOpenDocument(doc);
                     }}
-                    className="w-10 h-10 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-500 transition-colors"
+                    className="w-10 h-10 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-500 transition-colors"
                     title="Ouvrir"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => handleDownloadDocument(doc, e)}
-                    className="w-10 h-10 bg-green-500/10 hover:bg-green-500/20 rounded-lg flex items-center justify-center text-green-500 transition-colors"
+                    className="w-10 h-10 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-500 transition-colors"
                     title="Télécharger"
                   >
                     <Download className="w-4 h-4" />
@@ -319,11 +323,11 @@ export function DocumentsGallery({ vehicle }: DocumentsGalleryProps) {
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-10 h-10 text-zinc-600" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-[#12121a] border border-white/5' : 'bg-gray-100'}`}>
+            <FileText className={`w-10 h-10 ${isDark ? 'text-slate-600' : 'text-gray-400'}`} />
           </div>
-          <h3 className="text-white mb-2">Aucun document</h3>
-          <p className="text-zinc-500 text-sm">Ajoutez des factures, papiers ou documents</p>
+          <h3 className={`mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Aucun document</h3>
+          <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>Ajoutez des factures, papiers ou documents</p>
         </div>
       )}
 

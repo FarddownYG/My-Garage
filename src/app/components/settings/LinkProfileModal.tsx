@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { getUnmigratedProfiles, migrateProfileToUser, type UnmigratedProfile } from '../../utils/migration';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LinkProfileModalProps {
   onClose: () => void;
@@ -15,6 +16,7 @@ interface LinkProfileModalProps {
  */
 export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
   const { supabaseUser, refreshAuth } = useApp();
+  const { isDark } = useTheme();
   const [unmigratedProfiles, setUnmigratedProfiles] = useState<UnmigratedProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<UnmigratedProfile | null>(null);
   const [pin, setPin] = useState('');
@@ -91,27 +93,34 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const cardBg = isDark ? 'bg-[#1a1a2e]' : 'bg-gray-50';
+  const cardBorder = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800 max-h-[90vh] overflow-y-auto">
+      <Card className={`w-full max-w-lg ${modalBg} border ${borderColor} max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 p-6 flex items-center justify-between">
+        <div className={`sticky top-0 ${modalBg} border-b ${borderColor} p-6 flex items-center justify-between`}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <LinkIcon className="w-6 h-6 text-blue-500" />
+            <div className="p-2 bg-cyan-500/10 rounded-lg">
+              <LinkIcon className="w-6 h-6 text-cyan-500" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Lier un profil</h2>
-              <p className="text-sm text-zinc-400">
+              <h2 className={`text-xl ${textPrimary}`}>Lier un profil</h2>
+              <p className={`text-sm ${textMuted}`}>
                 Compte : {supabaseUser?.email}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
           >
-            <X className="w-6 h-6 text-zinc-400" />
+            <X className={`w-6 h-6 ${textMuted}`} />
           </button>
         </div>
 
@@ -119,11 +128,11 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
         <div className="p-6">
           {/* Message de succès */}
           {successMessage && (
-            <div className="mb-6 bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <div className="mb-6 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-green-400 font-medium">{successMessage}</p>
-                <p className="text-sm text-green-400/70 mt-1">
+                <p className="text-emerald-400 font-medium">{successMessage}</p>
+                <p className="text-sm text-emerald-400/70 mt-1">
                   Redirection en cours...
                 </p>
               </div>
@@ -133,21 +142,21 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
           {/* Loading */}
           {isLoading && (
             <div className="text-center py-8">
-              <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-zinc-400">Chargement des profils...</p>
+              <div className="inline-block w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className={textMuted}>Chargement des profils...</p>
             </div>
           )}
 
           {/* Aucun profil */}
           {!isLoading && unmigratedProfiles.length === 0 && (
             <div className="text-center py-8">
-              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-green-500" />
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-[#1a1a2e]' : 'bg-gray-100'}`}>
+                <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-white font-semibold mb-2">
+              <h3 className={`font-semibold mb-2 ${textPrimary}`}>
                 Tous vos profils sont déjà liés !
               </h3>
-              <p className="text-zinc-400 text-sm">
+              <p className={`text-sm ${textMuted}`}>
                 Aucun profil non lié trouvé.
               </p>
             </div>
@@ -157,7 +166,7 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
           {!isLoading && unmigratedProfiles.length > 0 && (
             <>
               <div className="mb-6">
-                <p className="text-zinc-400 text-sm mb-4">
+                <p className={`text-sm mb-4 ${textMuted}`}>
                   Sélectionnez un profil à lier à votre compte Supabase :
                 </p>
                 
@@ -166,26 +175,28 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
                     <Card
                       key={profile.id}
                       className={`
-                        bg-zinc-800 border-zinc-700 p-4 cursor-pointer transition-all
-                        ${selectedProfile?.id === profile.id ? 'border-blue-500 bg-blue-500/10' : 'hover:border-zinc-600'}
+                        p-4 cursor-pointer transition-all
+                        ${selectedProfile?.id === profile.id 
+                          ? 'border-cyan-500 bg-cyan-500/10' 
+                          : `${cardBg} border ${cardBorder} ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`}
                       `}
                       onClick={() => handleSelectProfile(profile)}
                     >
                       <div className="flex items-center gap-4">
                         {/* Avatar */}
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-2xl flex-shrink-0">
+                        <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-violet-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0">
                           {profile.avatar}
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-white font-semibold mb-1 flex items-center gap-2">
+                          <h3 className={`font-semibold mb-1 flex items-center gap-2 ${textPrimary}`}>
                             {profile.name}
                             {profile.isPinProtected && (
-                              <Lock className="w-4 h-4 text-yellow-500" />
+                              <Lock className="w-4 h-4 text-amber-500" />
                             )}
                           </h3>
-                          <p className="text-sm text-zinc-400">
+                          <p className={`text-sm ${textMuted}`}>
                             {profile.vehicleCount} véhicule{profile.vehicleCount > 1 ? 's' : ''}
                           </p>
                         </div>
@@ -193,19 +204,19 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
                         {/* Radio */}
                         <div className="flex-shrink-0">
                           {selectedProfile?.id === profile.id ? (
-                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
                               <div className="w-2 h-2 bg-white rounded-full" />
                             </div>
                           ) : (
-                            <div className="w-6 h-6 border-2 border-zinc-600 rounded-full" />
+                            <div className={`w-6 h-6 border-2 rounded-full ${isDark ? 'border-white/20' : 'border-gray-300'}`} />
                           )}
                         </div>
                       </div>
 
                       {/* PIN Input (si sélectionné et protégé) */}
                       {selectedProfile?.id === profile.id && profile.isPinProtected && (
-                        <div className="mt-4 pt-4 border-t border-zinc-700">
-                          <label className="block text-sm text-zinc-400 mb-2">
+                        <div className={`mt-4 pt-4 border-t ${borderColor}`}>
+                          <label className={`block text-sm mb-2 ${textMuted}`}>
                             Code PIN du profil
                           </label>
                           <input
@@ -216,7 +227,7 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
                             value={pin}
                             onChange={(e) => setPin(e.target.value)}
                             placeholder="••••"
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white text-center text-2xl tracking-widest focus:outline-none focus:border-blue-500"
+                            className={`w-full rounded-lg px-4 py-3 text-center text-2xl tracking-widest focus:outline-none focus:border-cyan-500 ${isDark ? 'bg-[#12121a] border border-white/[0.06] text-white' : 'bg-white border border-gray-200 text-gray-900'}`}
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
                           />
@@ -240,7 +251,7 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
                 <Button
                   onClick={onClose}
                   variant="outline"
-                  className="flex-1 bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
+                  className={`flex-1 ${isDark ? 'bg-transparent border-white/10 text-slate-400' : 'bg-transparent border-gray-300 text-gray-500'}`}
                   disabled={isMigrating}
                 >
                   Annuler
@@ -248,7 +259,7 @@ export function LinkProfileModal({ onClose }: LinkProfileModalProps) {
                 <Button
                   onClick={handleMigrate}
                   disabled={!selectedProfile || isMigrating}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white disabled:opacity-50"
                 >
                   {isMigrating ? (
                     <>

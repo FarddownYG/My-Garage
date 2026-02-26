@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { X, Car, Check, Wrench, FileText } from 'lucide-react';
 import type { MaintenanceProfile } from '../../types';
 import { defaultMaintenanceTemplates } from '../../data/defaultMaintenanceTemplates';
@@ -11,6 +12,7 @@ interface AddMaintenanceProfileModalProps {
 
 export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceProfileModalProps) {
   const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, profiles, addMaintenanceTemplate, maintenanceTemplates, getUserVehicles } = useApp();
+  const { isDark } = useTheme();
   
   const [name, setName] = useState(profile?.name || '');
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(profile?.vehicleIds || []);
@@ -139,17 +141,24 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
     }
   };
 
+  const modalBg = isDark ? 'bg-[#12121a]/95 backdrop-blur-2xl' : 'bg-white';
+  const borderColor = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-[#1a1a2e] border border-white/[0.06] text-white placeholder-slate-500' : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400';
+  const labelColor = isDark ? 'text-slate-400' : 'text-gray-500';
+  const cardBg = isDark ? 'bg-[#1a1a2e]' : 'bg-gray-50';
+  const cardBorder = isDark ? 'border-white/[0.06]' : 'border-gray-200';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in">
-      <div className="bg-zinc-900/95 backdrop-blur-2xl w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl border border-zinc-800/50 animate-scale-in">
+      <div className={`${modalBg} w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl border ${borderColor} animate-scale-in`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-          <h2 className="text-xl text-white">
+        <div className={`flex items-center justify-between p-6 border-b ${borderColor}`}>
+          <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {profile ? 'Modifier le Profil' : 'Nouveau Profil d\'Entretien'}
           </h2>
           <button 
             onClick={onClose}
-            className="text-zinc-400 hover:text-white transition-all duration-300 hover:rotate-90"
+            className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-all duration-300 hover:rotate-90`}
           >
             <X className="w-6 h-6" />
           </button>
@@ -159,7 +168,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Nom du profil */}
           <div>
-            <label htmlFor="profile-name" className="block text-sm text-zinc-400 mb-2">
+            <label htmlFor="profile-name" className={`block text-sm ${labelColor} mb-2`}>
               Nom du Profil *
             </label>
             <input
@@ -168,14 +177,14 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Entretien Sportif, Entretien Ville..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-300"
+              className={`w-full ${inputBg} rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300`}
               autoFocus
             />
           </div>
 
           {/* Type de profil */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-3">
+            <label className={`block text-sm ${labelColor} mb-3`}>
               Type de Profil
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -184,13 +193,13 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                 onClick={() => setProfileType('essence')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                   profileType === 'essence'
-                    ? 'bg-blue-600/20 border-blue-600 shadow-glow-blue'
-                    : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
+                    ? 'bg-cyan-500/20 border-cyan-500 shadow-glow-blue'
+                    : `${cardBg} ${cardBorder} border ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
                 }`}
               >
-                <FileText className="w-6 h-6 mx-auto mb-2" />
-                <div className="text-sm font-medium">Pré-rempli</div>
-                <div className="text-xs text-zinc-400 mt-1">
+                <FileText className={`w-6 h-6 mx-auto mb-2 ${profileType === 'essence' ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Pré-rempli</div>
+                <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   Templates par défaut selon motorisation
                 </div>
               </button>
@@ -200,13 +209,13 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                 onClick={() => setProfileType('custom')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                   profileType === 'custom'
-                    ? 'bg-purple-600/20 border-purple-600 shadow-glow-purple'
-                    : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
+                    ? 'bg-violet-500/20 border-violet-500 shadow-glow-purple'
+                    : `${cardBg} ${cardBorder} border ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
                 }`}
               >
-                <Wrench className="w-6 h-6 mx-auto mb-2" />
-                <div className="text-sm font-medium">Personnalisé</div>
-                <div className="text-xs text-zinc-400 mt-1">
+                <Wrench className={`w-6 h-6 mx-auto mb-2 ${profileType === 'custom' ? 'text-violet-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Personnalisé</div>
+                <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   Créez vos propres entretiens
                 </div>
               </button>
@@ -215,14 +224,14 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
 
           {/* Sélection des véhicules */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-3">
+            <label className={`block text-sm ${labelColor} mb-3`}>
               Véhicules Associés * ({selectedVehicleIds.length} sélectionné{selectedVehicleIds.length > 1 ? 's' : ''})
             </label>
             
             {userVehicles.length === 0 ? (
-              <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 text-center">
-                <Car className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
-                <p className="text-zinc-400 text-sm">
+              <div className={`${cardBg} border ${cardBorder} rounded-xl p-6 text-center`}>
+                <Car className={`w-10 h-10 mx-auto mb-2 ${isDark ? 'text-slate-600' : 'text-gray-400'}`} />
+                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   Aucun véhicule disponible. Ajoutez d'abord un véhicule.
                 </p>
               </div>
@@ -238,22 +247,22 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                       onClick={() => handleToggleVehicle(vehicle.id)}
                       className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${
                         isSelected
-                          ? 'bg-blue-600/20 border-blue-600 shadow-lg'
-                          : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
+                          ? 'bg-cyan-500/20 border-cyan-500 shadow-lg'
+                          : `${cardBg} border ${cardBorder} ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Car className="w-5 h-5" />
+                        <Car className={`w-5 h-5 ${isSelected ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
                         <div className="text-left">
-                          <div className="text-white font-medium">{vehicle.name}</div>
-                          <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1">
+                          <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{vehicle.name}</div>
+                          <div className={`text-xs flex items-center gap-2 mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                             {vehicle.fuelType && (
-                              <span className="px-2 py-0.5 bg-zinc-700 rounded-full">
+                              <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
                                 {vehicle.fuelType}
                               </span>
                             )}
                             {vehicle.driveType && (
-                              <span className="px-2 py-0.5 bg-zinc-700 rounded-full">
+                              <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
                                 {vehicle.driveType}
                               </span>
                             )}
@@ -262,8 +271,8 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                       </div>
                       
                       {isSelected && (
-                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                          <Check className="w-4 h-4" />
+                        <div className="w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
                     </button>
@@ -277,8 +286,8 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           {selectedVehicleIds.length > 0 && (
             <div className={`p-4 rounded-xl border ${
               profileType === 'custom'
-                ? 'bg-purple-600/10 border-purple-600/30'
-                : 'bg-blue-600/10 border-blue-600/30'
+                ? 'bg-violet-500/10 border-violet-500/30'
+                : 'bg-cyan-500/10 border-cyan-500/30'
             }`}>
               <div className="flex gap-3">
                 {profileType === 'custom' ? (
@@ -316,18 +325,18 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
         </form>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-zinc-800">
+        <div className={`flex gap-3 p-6 border-t ${borderColor}`}>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all duration-300 active:scale-95"
+            className={`flex-1 px-4 py-3 rounded-xl transition-all duration-300 active:scale-95 ${isDark ? 'bg-[#1a1a2e] hover:bg-[#252540] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
           >
             Annuler
           </button>
           <button
             onClick={handleSubmit}
             disabled={!name.trim() || selectedVehicleIds.length === 0}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed hover-glow"
+            className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {profile ? 'Enregistrer' : 'Créer le Profil'}
           </button>

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Plus, Edit2, Trash2, Car, Wrench } from 'lucide-react';
 import { AddMaintenanceProfileModal } from './AddMaintenanceProfileModal';
 import type { MaintenanceProfile } from '../../types';
 
 export function MaintenanceProfilesSettings() {
   const { maintenanceProfiles, deleteMaintenanceProfile, currentProfile, getUserVehicles } = useApp();
+  const { isDark } = useTheme();
   
   // 🔧 Utiliser getUserVehicles() pour filtrer par user_id
   const vehicles = getUserVehicles();
@@ -30,14 +32,14 @@ export function MaintenanceProfilesSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl text-white">Profils d'Entretien</h2>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>Profils d'Entretien</h2>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
             Créez des profils d'entretien personnalisés pour vos véhicules
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 rounded-xl transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl text-white"
         >
           <Plus className="w-4 h-4" />
           <span>Créer un Profil</span>
@@ -46,17 +48,17 @@ export function MaintenanceProfilesSettings() {
 
       {/* Liste des profils */}
       {userProfiles.length === 0 ? (
-        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-12 text-center animate-fade-in">
-          <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Wrench className="w-10 h-10 text-zinc-600" />
+        <div className={`backdrop-blur-sm border rounded-2xl p-12 text-center animate-fade-in ${isDark ? 'bg-[#12121a]/50 border-white/[0.06]' : 'bg-white border-gray-200'}`}>
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-[#1a1a2e]' : 'bg-gray-100'}`}>
+            <Wrench className={`w-10 h-10 ${isDark ? 'text-slate-600' : 'text-gray-400'}`} />
           </div>
-          <h3 className="text-lg text-white mb-2">Aucun profil d'entretien</h3>
-          <p className="text-zinc-400 text-sm mb-6">
+          <h3 className={`text-lg mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Aucun profil d'entretien</h3>
+          <p className={`text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
             Créez votre premier profil pour organiser les entretiens de vos véhicules
           </p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl transition-all duration-300 active:scale-95"
+            className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white rounded-xl transition-all duration-300 active:scale-95"
           >
             Créer un Profil
           </button>
@@ -69,20 +71,20 @@ export function MaintenanceProfilesSettings() {
             return (
               <div
                 key={profile.id}
-                className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-all duration-300 group animate-fade-in"
+                className={`backdrop-blur-sm border rounded-2xl p-6 transition-all duration-300 group animate-fade-in ${isDark ? 'bg-[#12121a]/50 border-white/[0.06] hover:border-white/20' : 'bg-white border-gray-200 hover:border-gray-300'}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                        <Wrench className="w-5 h-5" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-violet-500 rounded-lg flex items-center justify-center shadow-lg">
+                        <Wrench className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-lg text-white">{profile.name}</h3>
+                        <h3 className={`text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile.name}</h3>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           profile.isCustom 
-                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                            : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                         }`}>
                           {profile.isCustom ? 'Personnalisé' : 'Pré-rempli'}
                         </span>
@@ -91,7 +93,7 @@ export function MaintenanceProfilesSettings() {
 
                     {/* Véhicules associés */}
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                         <Car className="w-4 h-4" />
                         <span>{profileVehicles.length} véhicule(s) associé(s)</span>
                       </div>
@@ -100,7 +102,7 @@ export function MaintenanceProfilesSettings() {
                           {profileVehicles.map(vehicle => (
                             <span
                               key={vehicle.id}
-                              className="px-3 py-1 bg-zinc-800 rounded-full text-xs text-zinc-300 border border-zinc-700"
+                              className={`px-3 py-1 rounded-full text-xs border ${isDark ? 'bg-white/5 text-slate-300 border-white/[0.06]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
                             >
                               {vehicle.name}
                             </span>
@@ -114,13 +116,13 @@ export function MaintenanceProfilesSettings() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEdit(profile)}
-                      className="p-2 bg-zinc-800 hover:bg-blue-600/20 text-zinc-400 hover:text-blue-400 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className={`p-2 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100 ${isDark ? 'bg-[#1a1a2e] hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400' : 'bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-500'}`}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(profile.id, profile.name)}
-                      className="p-2 bg-zinc-800 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className={`p-2 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100 ${isDark ? 'bg-[#1a1a2e] hover:bg-red-500/20 text-slate-400 hover:text-red-400' : 'bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500'}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { I18nProvider } from './contexts/I18nContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { AuthWrapper } from './components/auth/AuthWrapper';
 import { Dashboard } from './components/home/Dashboard';
 import { BottomNav } from './components/shared/BottomNav';
+import { Onboarding } from './components/shared/Onboarding';
 import { LoadingSpinner } from './components/shared/FeedbackComponents';
 import type { UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
@@ -25,10 +28,10 @@ type AppView = 'main' | 'upcoming-alerts' | 'vehicle-detail';
 
 function AppContent() {
   const { currentProfile, isLoading, vehicles, maintenances, maintenanceTemplates, maintenanceProfiles, signOut, getUserVehicles } = useApp();
+  const { isDark } = useTheme();
   
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     const savedTab = localStorage.getItem('valcar-active-tab');
-    // ✅ FIX : s'assurer que la valeur sauvegardée est toujours un tab valide
     const validTabs: AppTab[] = ['home', 'vehicles', 'tasks', 'settings'];
     return validTabs.includes(savedTab as AppTab) ? (savedTab as AppTab) : 'home';
   });
@@ -37,40 +40,32 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>('main');
   const [selectedVehicleIdForAlert, setSelectedVehicleIdForAlert] = useState<string | null>(null);
   const [prefilledMaintenanceType, setPrefilledMaintenanceType] = useState<string | null>(null);
+  
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('valcar-onboarding-done');
+  });
 
-  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() qui filtre par user_id
   const userVehicles = useMemo(() => getUserVehicles(), [getUserVehicles]);
   
   const alerts = useMemo(() => {
     return calculateUpcomingAlerts(userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles);
   }, [userVehicles, maintenances, maintenanceTemplates, maintenanceProfiles]);
   
-  // Apply font size globally via CSS variable (seulement si un profil est connecté)
   useEffect(() => {
     if (currentProfile) {
       const fontSize = currentProfile.fontSize || 50;
       document.documentElement.style.setProperty('--font-size-scale', `${fontSize}%`);
     } else {
-      // Réinitialiser à 50% (normal) quand déconnecté (page de connexion)
       document.documentElement.style.setProperty('--font-size-scale', '50%');
     }
   }, [currentProfile]);
   
-  // Initialize security measures on mount
   useEffect(() => {
-    // Set to 'false' during development, 'true' for production
     const isProduction = process.env.NODE_ENV === 'production';
     initializeSecurity(isProduction);
-    
-    // 🔥 Hot-reload information message (dev only)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('%c🔥 Mode Développement', 'background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;');
-      console.log('%cℹ️ Si vous voyez une erreur "useApp must be used within AppProvider" après un hot-reload, faites simplement un hard refresh (Ctrl+Shift+R ou Cmd+Shift+R).', 'color: #10b981; font-size: 12px;');
-      console.log('%cℹ️ Cette erreur est normale en développement et disparaîtra en production.', 'color: #10b981; font-size: 12px;');
-    }
   }, []);
   
-  // Save activeTab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('valcar-active-tab', activeTab);
   }, [activeTab]);
@@ -84,7 +79,13 @@ function AppContent() {
     }
   };
 
-  // Main app
+  const bgColor = isDark ? 'bg-[#0a0a0f]' : 'bg-gray-50';
+
+  // Onboarding
+  if (showOnboarding && currentProfile) {
+    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+  }
+
   // Handle upcoming alerts view
   if (currentView === 'upcoming-alerts') {
     const handleAlertClick = (alert: UpcomingAlert) => {
@@ -94,23 +95,9 @@ function AppContent() {
     };
 
     return (
-      <motion.div 
-        className="min-h-screen bg-[#0a0a0f]"
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageTransitions}
-      >
-        <Suspense fallback={
-          <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-            <LoadingSpinner size="lg" message="Chargement..." />
-          </div>
-        }>
-          <UpcomingMaintenance
-            alerts={alerts}
-            onAlertClick={handleAlertClick}
-            onBack={() => setCurrentView('main')}
-          />
+      <motion.div className={`min-h-screen ${bgColor}`} initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
+        <Suspense fallback={<div className={`min-h-screen ${bgColor} flex items-center justify-center`}><LoadingSpinner size="lg" message="Chargement..." /></div>}>
+          <UpcomingMaintenance alerts={alerts} onAlertClick={handleAlertClick} onBack={() => setCurrentView('main')} />
         </Suspense>
       </motion.div>
     );
@@ -121,25 +108,11 @@ function AppContent() {
     const vehicle = vehicles.find(v => v.id === selectedVehicleIdForAlert);
     if (vehicle) {
       return (
-        <motion.div 
-          className="min-h-screen bg-[#0a0a0f]"
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          variants={pageTransitions}
-        >
-          <Suspense fallback={
-            <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-              <LoadingSpinner size="lg" message="Chargement..." />
-            </div>
-          }>
+        <motion.div className={`min-h-screen ${bgColor}`} initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
+          <Suspense fallback={<div className={`min-h-screen ${bgColor} flex items-center justify-center`}><LoadingSpinner size="lg" message="Chargement..." /></div>}>
             <VehicleDetail
               vehicle={vehicle}
-              onBack={() => {
-                setCurrentView('main');
-                setSelectedVehicleIdForAlert(null);
-                setPrefilledMaintenanceType(null);
-              }}
+              onBack={() => { setCurrentView('main'); setSelectedVehicleIdForAlert(null); setPrefilledMaintenanceType(null); }}
               prefilledMaintenanceType={prefilledMaintenanceType}
             />
           </Suspense>
@@ -149,78 +122,41 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className={`min-h-screen ${bgColor}`}>
       <AnimatePresence mode="wait">
-        <Suspense fallback={
-          <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-            <LoadingSpinner size="lg" message="Chargement..." />
-          </div>
-        }>
+        <Suspense fallback={<div className={`min-h-screen ${bgColor} flex items-center justify-center`}><LoadingSpinner size="lg" message="Chargement..." /></div>}>
           {activeTab === 'home' && (
-            <motion.div
-              key="home"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageTransitions}
-            >
-              <Dashboard
-                onLogout={handleLogout}
-                onViewAlerts={() => setCurrentView('upcoming-alerts')}
-                onViewTasks={() => setActiveTab('tasks')}
-                onViewVehicles={() => setActiveTab('vehicles')}
-              />
+            <motion.div key="home" initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
+              <Dashboard onLogout={handleLogout} onViewAlerts={() => setCurrentView('upcoming-alerts')} onViewTasks={() => setActiveTab('tasks')} onViewVehicles={() => setActiveTab('vehicles')} />
             </motion.div>
           )}
           {activeTab === 'vehicles' && (
-            <motion.div
-              key="vehicles"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageTransitions}
-            >
+            <motion.div key="vehicles" initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
               <VehicleList />
             </motion.div>
           )}
           {activeTab === 'tasks' && (
-            <motion.div
-              key="tasks"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageTransitions}
-            >
+            <motion.div key="tasks" initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
               <TaskList />
             </motion.div>
           )}
           {activeTab === 'settings' && (
-            <motion.div
-              key="settings"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageTransitions}
-            >
+            <motion.div key="settings" initial="initial" animate="animate" exit="exit" variants={pageTransitions}>
               <Settings onLogout={handleLogout} />
             </motion.div>
           )}
         </Suspense>
       </AnimatePresence>
       
-      {/* Hide bottom nav for admin */}
       {!currentProfile?.isAdmin && (
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab as any} />
       )}
       
-      {/* Admin only has settings */}
       {currentProfile?.isAdmin && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/90 backdrop-blur-xl border-t border-white/[0.06]">
+        <div className={`fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t ${isDark ? 'bg-[#0a0a0f]/90 border-white/[0.06]' : 'bg-white/90 border-gray-200'}`}>
           <div className="max-w-md mx-auto px-6 h-20 flex items-center justify-center">
-            <button
-              onClick={handleLogout}
-              className="px-6 py-3 bg-[#12121a] hover:bg-[#1a1a2e] border border-white/5 rounded-xl font-medium active:scale-95 transition-all"
-            >
+            <button onClick={handleLogout}
+              className={`px-6 py-3 rounded-xl font-medium active:scale-95 transition-all ${isDark ? 'bg-[#12121a] hover:bg-[#1a1a2e] border border-white/5 text-white' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700'}`}>
               Quitter l'Admin
             </button>
           </div>
@@ -232,12 +168,16 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <ErrorBoundary>
-        <AuthWrapper>
-          <AppContent />
-        </AuthWrapper>
-      </ErrorBoundary>
-    </AppProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <ErrorBoundary>
+            <AuthWrapper>
+              <AppContent />
+            </AuthWrapper>
+          </ErrorBoundary>
+        </AppProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }

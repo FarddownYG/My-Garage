@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -23,7 +25,7 @@ function normalizeText(text: string): string {
 }
 
 export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddMaintenanceModalProps) {
-  const { addMaintenanceEntry, vehicles, maintenanceTemplates, addReminder, updateReminder, reminders, maintenanceProfiles } = useApp();
+  const { addMaintenanceEntry, vehicles, maintenanceTemplates, addReminder, updateReminder, reminders, maintenanceProfiles, maintenanceEntries } = useApp();
   const vehicle = vehicles.find(v => v.id === vehicleId);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,6 +136,36 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
       ...(defaultMaintenanceTemplates as any[]),
     ];
 
+    // 🔍 DUPLICATE DETECTION: Check for entries with same type + date + mileage
+    const enteredMileage = parseInt(formData.mileage);
+    const enteredDate = formData.date;
+    const duplicateNames: string[] = [];
+
+    selectedTemplates.forEach((selectedTemplate) => {
+      const template = allTemplates.find(t => t.id === selectedTemplate);
+      const entryName = template?.name || selectedTemplate;
+      
+      const isDuplicate = maintenanceEntries.some(existing => {
+        const existingName = existing.customType || existing.type;
+        return (
+          existing.vehicleId === vehicleId &&
+          existingName === entryName &&
+          existing.date === enteredDate &&
+          existing.mileage === enteredMileage
+        );
+      });
+
+      if (isDuplicate) {
+        duplicateNames.push(entryName);
+      }
+    });
+
+    if (duplicateNames.length > 0) {
+      const names = duplicateNames.map(n => `« ${n} »`).join(', ');
+      alert(`⚠️ Entretien déjà enregistré\n\nL'entretien ${names} existe déjà avec le même kilométrage (${enteredMileage.toLocaleString()} km) et la même date (${enteredDate}).`);
+      return;
+    }
+
     selectedTemplates.forEach((selectedTemplate, index) => {
       const template = allTemplates.find(t => t.id === selectedTemplate);
       
@@ -200,48 +232,51 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
     onClose();
   };
 
+  const { isDark } = useTheme();
+  const { t } = useI18n();
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-modal z-50 flex items-end md:items-center justify-center p-0 md:p-6">
-      <div className="bg-zinc-900 w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+      <div className={`${isDark ? 'bg-[#12121a]/95 backdrop-blur-2xl' : 'bg-white'} w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col shadow-2xl border ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+        <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
-            <h2 className="text-xl text-white">Ajouter un entretien</h2>
+            <h2 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('maintenance.addTitle')}</h2>
             {selectedTemplates.length > 0 && (
-              <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded-full font-medium animate-fade-in">
-                {selectedTemplates.length} sélectionné{selectedTemplates.length > 1 ? 's' : ''}
+              <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white text-sm rounded-full font-medium animate-fade-in">
+                {selectedTemplates.length} {selectedTemplates.length > 1 ? t('maintenance.selecteds') : t('maintenance.selected')}
               </span>
             )}
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={onClose} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} transition-all duration-300 hover:rotate-90`}>
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           {/* Recherche */}
-          <div className="p-6 pb-4 border-b border-zinc-800">
-            <Label htmlFor="search" className="text-zinc-400 mb-2 block">
-              Type d'entretien * 
+          <div className={`p-6 pb-4 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+            <Label htmlFor="search" className={`${isDark ? 'text-slate-400' : 'text-gray-500'} mb-2 block`}>
+              {t('maintenance.type')} * 
               {assignedProfile && assignedProfile.isCustom ? (
-                <span className="ml-2 text-xs text-purple-400">
+                <span className="ml-2 text-xs text-violet-400">
                   (Profil: {assignedProfile.name})
                 </span>
               ) : vehicle?.engineType ? (
-                <span className="ml-2 text-xs text-blue-400">
-                  (Filtré: {vehicle.engineType === 'gasoline' ? 'Essence' : 'Diesel'})
+                <span className="ml-2 text-xs text-cyan-400">
+                  (Filtré: {vehicle.engineType === 'gasoline' ? t('common.gasoline') : t('common.diesel')})
                 </span>
               ) : null}
             </Label>
             <div className="flex gap-2 mb-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-slate-500' : 'text-gray-400'}`} />
                 <Input
                   id="search"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher un entretien..."
-                  className="bg-zinc-800 border-zinc-700 text-white pl-10"
+                  placeholder={t('maintenance.search')}
+                  className={`${isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} pl-10`}
                 />
               </div>
               <button
@@ -253,9 +288,9 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                     setSelectedTemplates(filteredTemplates.map(t => t.id));
                   }
                 }}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded-lg transition-all duration-300 text-sm whitespace-nowrap"
+                className={`px-4 py-2 border rounded-lg transition-all duration-300 text-sm whitespace-nowrap ${isDark ? 'bg-[#1a1a2e] hover:bg-[#252540] border-white/[0.06] text-slate-300' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600'}`}
               >
-                {selectedTemplates.length === filteredTemplates.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                {selectedTemplates.length === filteredTemplates.length ? t('maintenance.deselectAll') : t('maintenance.selectAll')}
               </button>
             </div>
           </div>
@@ -264,29 +299,29 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
           <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
             {/* Info sélection multiple */}
             {selectedTemplates.length === 0 && (
-              <div className="bg-blue-600/10 border border-blue-600/30 rounded-xl p-3 mb-4 animate-fade-in">
-                <p className="text-sm text-blue-300">
-                  💡 <strong>Astuce :</strong> Vous pouvez sélectionner plusieurs entretiens pour les ajouter en une seule fois !
+              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-3 mb-4 animate-fade-in">
+                <p className="text-sm text-cyan-300">
+                  {t('maintenance.tip')}
                 </p>
               </div>
             )}
 
             {Object.keys(groupedTemplates).length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-zinc-500">Aucun entretien trouvé</p>
+                <p className={isDark ? 'text-slate-500' : 'text-gray-500'}>{t('maintenance.noResult')}</p>
                 {assignedProfile && assignedProfile.isCustom && (
-                  <div className="mt-4 p-4 bg-purple-600/10 border border-purple-600/30 rounded-xl">
-                    <p className="text-sm text-purple-300 mb-2">
+                  <div className="mt-4 p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl">
+                    <p className="text-sm text-violet-300 mb-2">
                       Ce véhicule est lié au profil personnalisé « {assignedProfile.name} » qui ne contient aucun entretien.
                     </p>
-                    <p className="text-xs text-zinc-400">
-                      💡 Ajoutez des entretiens dans <strong>Paramètres → Entretiens Perso → {assignedProfile.name}</strong>, ou déliez ce véhicule du profil pour utiliser les entretiens par défaut.
+                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                      Ajoutez des entretiens dans <strong>Paramètres → Entretiens Perso → {assignedProfile.name}</strong>, ou déliez ce véhicule du profil pour utiliser les entretiens par défaut.
                     </p>
                     {onOpenSettings && (
                       <button
                         type="button"
                         onClick={() => { onClose(); onOpenSettings(); }}
-                        className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-all"
+                        className="mt-3 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-all"
                       >
                         Aller dans Paramètres
                       </button>
@@ -297,7 +332,7 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
             ) : (
               Object.entries(groupedTemplates).map(([category, templates]) => (
                 <div key={category}>
-                  <h3 className="text-sm text-zinc-500 mb-2 font-medium">{category}</h3>
+                  <h3 className={`text-sm mb-2 font-medium ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>{category}</h3>
                   <div className="grid grid-cols-1 gap-2">
                     {templates.map((template) => (
                       <button
@@ -306,15 +341,15 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                         onClick={() => setSelectedTemplates(prev => prev.includes(template.id) ? prev.filter(id => id !== template.id) : [...prev, template.id])}
                         className={`p-3 rounded-xl border transition-all text-left relative ${
                           selectedTemplates.includes(template.id)
-                            ? 'bg-blue-600 border-blue-500 text-white'
-                            : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
+                            ? 'bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border-cyan-500 text-white'
+                            : isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-slate-300 hover:border-white/20' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{template.icon}</span>
                           <div className="flex-1">
                             <p className="font-medium">{template.name}</p>
-                            <p className="text-xs text-zinc-400 mt-0.5">
+                            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                               {template.intervalKm && `${template.intervalKm.toLocaleString()} km`}
                               {template.intervalKm && template.intervalMonths && ' • '}
                               {template.intervalMonths && `${template.intervalMonths} mois`}
@@ -322,7 +357,7 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                           </div>
                           {selectedTemplates.includes(template.id) && (
                             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center animate-fade-in">
-                              <Check className="w-4 h-4 text-blue-600" />
+                              <Check className="w-4 h-4 text-cyan-600" />
                             </div>
                           )}
                         </div>
@@ -335,10 +370,10 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
           </div>
 
           {/* Formulaire */}
-          <div className="p-6 pt-4 border-t border-zinc-800 space-y-4">
+          <div className={`p-6 pt-4 border-t ${isDark ? 'border-white/[0.06]' : 'border-gray-200'} space-y-4`}>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="date" className="text-zinc-400">Date *</Label>
+                <Label htmlFor="date" className={isDark ? 'text-slate-400' : 'text-gray-500'}>{t('maintenance.date')} *</Label>
                 <DateInputFR
                   id="date"
                   value={formData.date}
@@ -347,21 +382,21 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                 />
               </div>
               <div>
-                <Label htmlFor="mileage" className="text-zinc-400">Kilométrage *</Label>
+                <Label htmlFor="mileage" className={isDark ? 'text-slate-400' : 'text-gray-500'}>{t('vehicles.mileage')} *</Label>
                 <Input
                   id="mileage"
                   type="number"
                   value={formData.mileage}
                   onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
                   placeholder="50000"
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className={isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="cost" className="text-zinc-400">Coût (€)</Label>
+              <Label htmlFor="cost" className={isDark ? 'text-slate-400' : 'text-gray-500'}>{t('maintenance.cost')}</Label>
               <Input
                 id="cost"
                 type="number"
@@ -369,18 +404,18 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                 value={formData.cost}
                 onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
                 placeholder="0.00"
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className={isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}
               />
             </div>
 
             <div>
-              <Label htmlFor="notes" className="text-zinc-400">Notes</Label>
+              <Label htmlFor="notes" className={isDark ? 'text-slate-400' : 'text-gray-500'}>{t('maintenance.notes')}</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Remarques..."
-                className="bg-zinc-800 border-zinc-700 text-white min-h-20"
+                className={`${isDark ? 'bg-[#1a1a2e] border-white/[0.06] text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} min-h-20`}
               />
             </div>
 
@@ -389,18 +424,18 @@ export function AddMaintenanceModal({ vehicleId, onClose, onOpenSettings }: AddM
                 type="button"
                 onClick={onClose}
                 variant="outline"
-                className="flex-1 bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                className={`flex-1 ${isDark ? 'bg-transparent border-white/10 text-slate-400' : 'bg-transparent border-gray-300 text-gray-500'}`}
               >
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white"
                 disabled={selectedTemplates.length === 0}
               >
                 {selectedTemplates.length === 0 
-                  ? 'Ajouter' 
-                  : `Ajouter ${selectedTemplates.length} entretien${selectedTemplates.length > 1 ? 's' : ''}`
+                  ? t('maintenance.add')
+                  : `${t('maintenance.add')} ${selectedTemplates.length} entretien${selectedTemplates.length > 1 ? 's' : ''}`
                 }
               </Button>
             </div>
