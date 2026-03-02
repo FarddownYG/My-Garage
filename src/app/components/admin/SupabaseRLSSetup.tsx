@@ -486,6 +486,89 @@ export function SupabaseRLSSetup() {
         tables={['profiles', 'vehicles', 'maintenance_entries', 'tasks', 'reminders', 'maintenance_templates', 'maintenance_profiles', 'app_config']}
       />
 
+      {/* Fix FK profile_id */}
+      <SqlBlock
+        title="FIX: Foreign Key profile_id (maintenance_templates)"
+        description="Corrige l'erreur 23503 — rend profile_id nullable et recrée la FK correctement"
+        sql={`-- ══════════════════════════════════════════════════════════════
+-- FIX: maintenance_templates.profile_id FK constraint
+-- Erreur: 23503 foreign key constraint "maintenance_templates_profile_id_fkey"
+-- ══════════════════════════════════════════════════════════════
+
+-- 1. Supprimer l'ancienne FK constraint si elle existe
+ALTER TABLE public.maintenance_templates
+  DROP CONSTRAINT IF EXISTS maintenance_templates_profile_id_fkey;
+
+-- 2. S'assurer que la colonne profile_id existe et est NULLABLE
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'maintenance_templates'
+      AND column_name = 'profile_id'
+  ) THEN
+    ALTER TABLE public.maintenance_templates ADD COLUMN profile_id TEXT DEFAULT NULL;
+  ELSE
+    ALTER TABLE public.maintenance_templates ALTER COLUMN profile_id DROP NOT NULL;
+    ALTER TABLE public.maintenance_templates ALTER COLUMN profile_id SET DEFAULT NULL;
+  END IF;
+END $$;
+
+-- 3. Recréer la FK avec ON DELETE CASCADE (nullable)
+ALTER TABLE public.maintenance_templates
+  ADD CONSTRAINT maintenance_templates_profile_id_fkey
+  FOREIGN KEY (profile_id)
+  REFERENCES public.maintenance_profiles(id)
+  ON DELETE CASCADE;
+
+-- 4. Vérification
+SELECT column_name, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'maintenance_templates' AND column_name = 'profile_id';
+`}
+        tables={['maintenance_templates']}
+      />
+
+      {/* Migration fuel_type / is_4x4 */}
+      <SqlBlock
+        title="Migration: fuel_type & is_4x4 (maintenance_profiles)"
+        description="Ajoute les colonnes fuel_type et is_4x4 à maintenance_profiles si manquantes"
+        sql={`-- ══════════════════════════════════════════════════════════════
+-- MIGRATION: Ajout fuel_type et is_4x4 à maintenance_profiles
+-- ══════════════════════════════════════════════════════════════
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'maintenance_profiles'
+      AND column_name = 'fuel_type'
+  ) THEN
+    ALTER TABLE public.maintenance_profiles ADD COLUMN fuel_type TEXT DEFAULT 'essence';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'maintenance_profiles'
+      AND column_name = 'is_4x4'
+  ) THEN
+    ALTER TABLE public.maintenance_profiles ADD COLUMN is_4x4 BOOLEAN DEFAULT false;
+  END IF;
+END $$;
+
+-- Vérification
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'maintenance_profiles'
+  AND column_name IN ('fuel_type', 'is_4x4')
+ORDER BY column_name;
+`}
+        tables={['maintenance_profiles']}
+      />
+
       {/* Note sur le fix de maintenance_profiles */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300/80 leading-relaxed">
         <p className="font-semibold text-blue-300 mb-1">💡 Pourquoi cette erreur ?</p>
@@ -494,6 +577,16 @@ export function SupabaseRLSSetup() {
           référence un profil (pas directement l'auth user). La policy RLS doit donc vérifier la chaîne :
           <code className="bg-blue-500/20 px-1 rounded font-mono ml-1">maintenance_profiles.owner_id → profiles.id → profiles.user_id = auth.uid()</code>.
           Le script ci-dessus configure exactement ce comportement pour toutes les tables.
+        </p>
+      </div>
+
+      {/* Note sur le fix FK */}
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300/80 leading-relaxed">
+        <p className="font-semibold text-amber-300 mb-1">⚠️ Erreur 23503 (FK violation sur profile_id)</p>
+        <p>
+          Si vous voyez <code className="bg-amber-500/20 px-1 rounded font-mono">maintenance_templates_profile_id_fkey</code>, exécutez le script
+          "FIX: Foreign Key profile_id" ci-dessus. Il rend <code className="bg-amber-500/20 px-1 rounded font-mono">profile_id</code> nullable
+          (les templates globaux n'ont pas de profil d'entretien associé) et recrée la FK avec <code className="bg-amber-500/20 px-1 rounded font-mono">ON DELETE CASCADE</code>.
         </p>
       </div>
     </div>

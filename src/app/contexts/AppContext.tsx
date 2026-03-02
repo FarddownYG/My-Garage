@@ -916,12 +916,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    const { error } = await supabase.from('maintenance_templates').insert({
+    // 🔧 FIX: Ne pas envoyer profile_id si null/undefined pour éviter la violation FK
+    const insertPayload: any = {
       id: t.id, name: t.name, icon: t.icon, category: t.category || null,
       interval_months: t.intervalMonths || null, interval_km: t.intervalKm || null,
       fuel_type: t.fuelType || null, drive_type: t.driveType || null, owner_id: t.ownerId,
-      profile_id: t.profileId || null
-    });
+    };
+    // Seulement ajouter profile_id s'il a une vraie valeur (évite FK violation sur null)
+    if (t.profileId) {
+      insertPayload.profile_id = t.profileId;
+    }
+    const { error } = await supabase.from('maintenance_templates').insert(insertPayload);
     if (error) {
       console.error('❌ Erreur insertion maintenance_templates:', error.message, '| Code:', error.code);
       console.error('→ Vérifiez que la colonne profile_id existe et que les policies RLS INSERT sont configurées.');
@@ -941,7 +946,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.intervalKm !== undefined) db.interval_km = updates.intervalKm;
     if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
     if (updates.driveType !== undefined) db.drive_type = updates.driveType;
-    if (updates.profileId !== undefined) db.profile_id = updates.profileId;
+    if (updates.profileId) db.profile_id = updates.profileId;
     // ✅ Optimistic update avec snapshot
     let snapshot: MaintenanceTemplate[] = [];
     setState(prev => {
