@@ -232,9 +232,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? await supabase.from('maintenance_templates').select('*').in('owner_id', userProfileIds).order('name')
         : { data: [], error: null };
         
-      const { data: maintenanceProfiles, error: maintenanceProfilesError } = userProfileIds.length > 0
-        ? await supabase.from('maintenance_profiles').select('*').in('owner_id', userProfileIds).order('name')
-        : { data: [], error: null };
+      // ✅ FIX RLS v2 : Charger par user_id direct OU par owner_id (compatibilité)
+      let maintenanceProfiles: any[] = [];
+      let maintenanceProfilesError: any = null;
+      
+      // D'abord essayer par user_id direct (nouvelle méthode, plus fiable)
+      const { data: mpByUserId, error: mpByUserIdError } = await supabase
+        .from('maintenance_profiles').select('*').eq('user_id', userId).order('name');
+      
+      if (!mpByUserIdError && mpByUserId) {
+        maintenanceProfiles = mpByUserId;
+      }
+      
+      // Fallback : aussi charger par owner_id (ancienne méthode, données avant migration)
+      if (userProfileIds.length > 0) {
+        const { data: mpByOwner, error: mpByOwnerError } = await supabase
+          .from('maintenance_profiles').select('*').in('owner_id', userProfileIds).order('name');
+        if (!mpByOwnerError && mpByOwner) {
+          // Fusionner sans doublons (par ID)
+          const existingIds = new Set(maintenanceProfiles.map(mp => mp.id));
+          const newProfiles = mpByOwner.filter(mp => !existingIds.has(mp.id));
+          maintenanceProfiles = [...maintenanceProfiles, ...newProfiles];
+        }
+        if (mpByOwnerError) maintenanceProfilesError = mpByOwnerError;
+      }
 
       // 🔍 DIAGNOSTIC : Afficher les erreurs
       if (configError) console.log('⚠️ Erreur config:', configError.message);
@@ -309,7 +330,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined })),
         maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
           vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false,
-          fuelType: mp.fuel_type || undefined, is4x4: mp.is_4x4 || false, createdAt: mp.created_at })),
+          fuelType: mp.fuel_type || undefined, is4x4: mp.is_4x4 || false, 
+          userId: mp.user_id || undefined, createdAt: mp.created_at })),
       }));
     } catch (error: any) {
       console.error('❌ Erreur lors du chargement:', error);
@@ -489,17 +511,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addProfile = async (profile: Profile) => {
     const s = { ...profile, firstName: sanitizeInput(profile.firstName), lastName: sanitizeInput(profile.lastName), name: sanitizeInput(profile.name) };
     
-    // ✅ VÉRIFIER SI UN PROFIL EXISTE DÉJÀ POUR CET UTILISATEUR
+    // ✅ VÉRIFIER SI UN PROFIL EXISTE DÉJÀ POUR CET UTILISATEUR (anti-doublon)
     if (s.userId) {
       const { data: existingProfiles } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, first_name, last_name, name, avatar, is_pin_protected, pin, is_admin, user_id')
         .eq('user_id', s.userId)
         .eq('is_admin', false);
       
       if (existingProfiles && existingProfiles.length > 0) {
-        // Recharger les données pour mettre à jour l'état
-        await loadFromSupabase();
+        console.log('⚠️ Profil existant détecté, skip création. Profil:', existingProfiles[0].name);
+        // Mettre à jour le state local avec le profil existant
+        const existing = existingProfiles[0];
+        const existingProfile: Profile = {
+          id: existing.id,
+          firstName: existing.first_name || '',
+          lastName: existing.last_name || '',
+          name: existing.name || '',
+          avatar: existing.avatar || '👤',
+          isPinProtected: existing.is_pin_protected || false,
+          pin: existing.pin || undefined,
+          isAdmin: existing.is_admin || false,
+          fontSize: 50,
+          userId: existing.user_id,
+        };
+        setState(prev => {
+          const alreadyInState = prev.profiles.some(p => p.id === existing.id);
+          return alreadyInState ? prev : { ...prev, profiles: [...prev.profiles, existingProfile] };
+        });
         return;
       }
     }
@@ -517,6 +556,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (error) {
+      // 🔒 Si c'est une erreur de contrainte unique (doublon), recharger au lieu de crash
+      if (error.code === '23505') {
+        console.log('⚠️ Contrainte unique violée (profil doublon), rechargement...');
+        await loadFromSupabase();
+        return;
+      }
       throw error;
     }
     
@@ -988,10 +1033,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 🔧 FIX RLS : S'assurer que le profil owner a bien user_id renseigné
-    // Sans ça, la policy RLS bloque l'INSERT car profiles.user_id != auth.uid()
+    // ✅ FIX RLS v2 : Récupérer auth.uid() pour l'envoyer directement dans user_id
     const authUserId = state.supabaseUser?.id;
-    if (authUserId && !ownerProfile.userId) {
+    if (!authUserId) {
+      console.error('❌ addMaintenanceProfile : pas d\'utilisateur authentifié');
+      throw new Error('Vous devez être connecté pour créer un profil d\'entretien');
+    }
+
+    // 🔧 FIX RLS : S'assurer que le profil owner a bien user_id renseigné
+    if (!ownerProfile.userId) {
       console.log('🔧 Correction user_id manquant sur le profil owner avant insertion...');
       const { error: fixError } = await supabase
         .from('profiles')
@@ -1000,10 +1050,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (fixError) {
         console.error('❌ Impossible de corriger user_id sur le profil:', fixError.message);
-        // Tenter quand même l'insertion au cas où
       } else {
         console.log('✅ user_id corrigé sur le profil owner');
-        // Mettre à jour le state local aussi
         setState(prev => ({
           ...prev,
           profiles: prev.profiles.map(p => 
@@ -1016,15 +1064,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const p = { ...profile, ownerId: ownerProfile.id };
+    const p = { ...profile, ownerId: ownerProfile.id, userId: authUserId };
+    
+    // ✅ FIX RLS v2 : Envoyer user_id directement dans maintenance_profiles
+    // Cela permet une policy RLS simple (user_id = auth.uid()) sans JOIN fragile
     const { error } = await supabase.from('maintenance_profiles').insert({
       id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom,
-      fuel_type: p.fuelType || null, is_4x4: p.is4x4 || false, created_at: p.createdAt
+      fuel_type: p.fuelType || null, is_4x4: p.is4x4 || false, user_id: authUserId, created_at: p.createdAt
     });
     if (error) {
       console.error('❌ Erreur insertion maintenance_profiles:', error.message, '| Code:', error.code);
-      console.error('→ owner_id utilisé:', p.ownerId, '| auth.uid():', authUserId);
-      console.error('→ Vérifiez que le profil', p.ownerId, 'a bien user_id =', authUserId, 'dans la table profiles');
+      console.error('→ owner_id utilisé:', p.ownerId, '| user_id:', authUserId);
+      console.error('→ Si erreur RLS, exécutez le script SQL depuis Admin > RLS Policies');
       throw new Error(`Impossible de créer le profil: ${error.message}`);
     }
     console.log(`✅ Profil maintenance "${p.name}" créé dans Supabase (id: ${p.id})`);

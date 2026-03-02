@@ -20,11 +20,21 @@ WHERE user_id IS NULL;
 -- Vérification
 SELECT id, name, user_id FROM public.profiles;
 
--- ── ÉTAPE 1b : Ajouter les colonnes fuel_type et is_4x4 ─────
+-- ── ÉTAPE 1b : Ajouter les colonnes fuel_type, is_4x4 et user_id ──
 -- (si elles n'existent pas encore)
 ALTER TABLE public.maintenance_profiles
   ADD COLUMN IF NOT EXISTS fuel_type TEXT DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS is_4x4 BOOLEAN DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS is_4x4 BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- ── ÉTAPE 1c : Remplir user_id sur maintenance_profiles existants ──
+-- Via la chaîne maintenance_profiles.owner_id → profiles.user_id
+UPDATE public.maintenance_profiles mp
+SET user_id = p.user_id
+FROM public.profiles p
+WHERE mp.owner_id = p.id
+  AND mp.user_id IS NULL
+  AND p.user_id IS NOT NULL;
 
 -- ── ÉTAPE 2 : Supprimer TOUTES les anciennes policies ────────
 DO $$
@@ -248,37 +258,51 @@ CREATE POLICY "maint_templates_delete_own"
   ));
 
 -- ── ÉTAPE 10 : MAINTENANCE_PROFILES ─────────────────────────
+-- ✅ FIX RLS v2 : Policy directe via user_id (plus de JOIN fragile)
+-- Fallback : accepte aussi via owner_id → profiles.user_id pour compatibilité
 CREATE POLICY "maint_profiles_select_own"
   ON public.maintenance_profiles FOR SELECT TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = maintenance_profiles.owner_id
-      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
-  ));
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = maintenance_profiles.owner_id
+        AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
+    )
+  );
 
 CREATE POLICY "maint_profiles_insert_own"
   ON public.maintenance_profiles FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = maintenance_profiles.owner_id
-      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
-  ));
+  WITH CHECK (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = maintenance_profiles.owner_id
+        AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
+    )
+  );
 
 CREATE POLICY "maint_profiles_update_own"
   ON public.maintenance_profiles FOR UPDATE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = maintenance_profiles.owner_id
-      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
-  ));
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = maintenance_profiles.owner_id
+        AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
+    )
+  );
 
 CREATE POLICY "maint_profiles_delete_own"
   ON public.maintenance_profiles FOR DELETE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = maintenance_profiles.owner_id
-      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
-  ));
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = maintenance_profiles.owner_id
+        AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
+    )
+  );
 
 -- ── ÉTAPE 11 : APP_CONFIG ────────────────────────────────────
 CREATE POLICY "app_config_select_own"
@@ -383,7 +407,7 @@ export function SupabaseRLSSetup() {
     { name: 'tasks', status: 'via vehicles → profiles' },
     { name: 'reminders', status: 'via vehicles → profiles' },
     { name: 'maintenance_templates', status: 'via profiles.user_id' },
-    { name: 'maintenance_profiles', status: 'via profiles.user_id' },
+    { name: 'maintenance_profiles', status: 'user_id direct + fallback owner_id' },
     { name: 'app_config', status: 'id = auth.uid()' },
   ];
 
@@ -530,6 +554,64 @@ WHERE table_name = 'maintenance_templates' AND column_name = 'profile_id';
         tables={['maintenance_templates']}
       />
 
+      {/* FIX RLS v2: user_id direct */}
+      <SqlBlock
+        title="FIX RLS v2: Ajout user_id sur maintenance_profiles"
+        description="Ajoute user_id direct pour résoudre l'erreur 'new row violates row-level security policy'"
+        sql={`-- ══════════════════════════════════════════════════════════════
+-- FIX RLS v2: Ajout user_id direct sur maintenance_profiles
+-- Résout: "new row violates row-level security policy"
+-- ══════════════════════════════════════════════════════════════
+
+-- 1. Ajouter la colonne user_id (UUID, FK vers auth.users)
+ALTER TABLE public.maintenance_profiles
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- 2. Migrer les user_id depuis profiles (pour les données existantes)
+UPDATE public.maintenance_profiles mp
+SET user_id = p.user_id
+FROM public.profiles p
+WHERE mp.owner_id = p.id
+  AND mp.user_id IS NULL
+  AND p.user_id IS NOT NULL;
+
+-- 3. Supprimer les anciennes policies
+DROP POLICY IF EXISTS "maint_profiles_select_own" ON public.maintenance_profiles;
+DROP POLICY IF EXISTS "maint_profiles_insert_own" ON public.maintenance_profiles;
+DROP POLICY IF EXISTS "maint_profiles_update_own" ON public.maintenance_profiles;
+DROP POLICY IF EXISTS "maint_profiles_delete_own" ON public.maintenance_profiles;
+
+-- 4. Recréer avec user_id direct + fallback owner_id
+CREATE POLICY "maint_profiles_select_own"
+  ON public.maintenance_profiles FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM public.profiles WHERE profiles.id = maintenance_profiles.owner_id
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)));
+
+CREATE POLICY "maint_profiles_insert_own"
+  ON public.maintenance_profiles FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM public.profiles WHERE profiles.id = maintenance_profiles.owner_id
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)));
+
+CREATE POLICY "maint_profiles_update_own"
+  ON public.maintenance_profiles FOR UPDATE TO authenticated
+  USING (user_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM public.profiles WHERE profiles.id = maintenance_profiles.owner_id
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)));
+
+CREATE POLICY "maint_profiles_delete_own"
+  ON public.maintenance_profiles FOR DELETE TO authenticated
+  USING (user_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM public.profiles WHERE profiles.id = maintenance_profiles.owner_id
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)));
+
+-- 5. Vérification
+SELECT id, name, owner_id, user_id FROM public.maintenance_profiles;
+`}
+        tables={['maintenance_profiles']}
+      />
+
       {/* Migration fuel_type / is_4x4 */}
       <SqlBlock
         title="Migration: fuel_type & is_4x4 (maintenance_profiles)"
@@ -571,12 +653,13 @@ ORDER BY column_name;
 
       {/* Note sur le fix de maintenance_profiles */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300/80 leading-relaxed">
-        <p className="font-semibold text-blue-300 mb-1">💡 Pourquoi cette erreur ?</p>
+        <p className="font-semibold text-blue-300 mb-1">💡 FIX RLS v2 — user_id direct</p>
         <p>
-          La table <code className="bg-blue-500/20 px-1 rounded font-mono">maintenance_profiles</code> utilise un <code className="bg-blue-500/20 px-1 rounded font-mono">owner_id</code> qui
-          référence un profil (pas directement l'auth user). La policy RLS doit donc vérifier la chaîne :
-          <code className="bg-blue-500/20 px-1 rounded font-mono ml-1">maintenance_profiles.owner_id → profiles.id → profiles.user_id = auth.uid()</code>.
-          Le script ci-dessus configure exactement ce comportement pour toutes les tables.
+          La table <code className="bg-blue-500/20 px-1 rounded font-mono">maintenance_profiles</code> a désormais une colonne <code className="bg-blue-500/20 px-1 rounded font-mono">user_id</code> directe
+          qui référence <code className="bg-blue-500/20 px-1 rounded font-mono">auth.users</code>. La policy RLS vérifie d'abord{' '}
+          <code className="bg-blue-500/20 px-1 rounded font-mono">user_id = auth.uid()</code> (rapide, sans JOIN), avec un fallback via{' '}
+          <code className="bg-blue-500/20 px-1 rounded font-mono">owner_id → profiles.user_id</code> pour la compatibilité.
+          Le script migre automatiquement les profils existants.
         </p>
       </div>
 

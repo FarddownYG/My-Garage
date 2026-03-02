@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User } from 'lucide-react';
 import { Card } from '../ui/card';
 import { useApp } from '../../contexts/AppContext';
@@ -18,6 +18,7 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
   const { profiles, supabaseUser, setCurrentProfile, addProfile, isLoading } = useApp();
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const initLockRef = useRef(false); // 🔒 Verrou anti-doublon
 
   // Filtrer les profils non-admin liés à ce user
   const userProfiles = profiles.filter(p => 
@@ -36,6 +37,10 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
   // 🔧 GESTION AUTOMATIQUE DU PROFIL
   const initializeProfile = useCallback(async () => {
     if (!supabaseUser?.email || hasInitialized || isLoading) return;
+    
+    // 🔒 Verrou : empêcher les appels simultanés (race condition)
+    if (initLockRef.current) return;
+    initLockRef.current = true;
 
     console.log('🚀 Initialisation du profil...', { 
       userProfilesCount: userProfiles.length 
@@ -56,6 +61,35 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
     setIsCreatingProfile(true);
     
     try {
+      // 🔒 Double-vérification côté Supabase (anti race condition)
+      const { data: existingInDb } = await (await import('../../utils/supabase')).supabase
+        .from('profiles')
+        .select('id, first_name, last_name, name, avatar, is_pin_protected, pin, is_admin, user_id')
+        .eq('user_id', supabaseUser.id)
+        .eq('is_admin', false)
+        .limit(1);
+      
+      if (existingInDb && existingInDb.length > 0) {
+        console.log('✅ Profil trouvé en DB (race condition évitée), sélection...');
+        const dbProfile = existingInDb[0];
+        const existingProfile: Profile = {
+          id: dbProfile.id,
+          firstName: dbProfile.first_name || '',
+          lastName: dbProfile.last_name || '',
+          name: dbProfile.name || '',
+          avatar: dbProfile.avatar || '👤',
+          isPinProtected: dbProfile.is_pin_protected || false,
+          pin: dbProfile.pin || undefined,
+          isAdmin: false,
+          fontSize: 50,
+          userId: dbProfile.user_id,
+        };
+        await setCurrentProfile(existingProfile);
+        setHasInitialized(true);
+        onProfileSelected(existingProfile);
+        return;
+      }
+
       // Extraire le prénom depuis l'email (partie avant le @)
       const emailUsername = supabaseUser.email.split('@')[0];
       const firstName = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
@@ -84,6 +118,7 @@ export function ProfileSelectorAfterAuth({ onProfileSelected }: ProfileSelectorA
       console.log('✅ Profil créé et sélectionné');
     } catch (error) {
       console.error('❌ Erreur création profil:', error);
+      initLockRef.current = false; // 🔓 Débloquer en cas d'erreur pour réessayer
     } finally {
       setIsCreatingProfile(false);
     }

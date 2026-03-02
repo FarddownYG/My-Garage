@@ -14,7 +14,7 @@ interface AddProfileModalProps {
 const avatars = ['👤', '👨', '👩', '👦', '👧', '🧑', '👴', '👵', '🚗', '🏍️', '🚙', '🚕', '🏎️', '🚌', '🛵', '🚲', '⚙️', '🔧', '🛠️', '💼', '🎯', '⭐', '🔥', '💎', '🎨', '🌟', '✨', '💫', '🌈'];
 
 export function AddProfileModal({ onClose }: AddProfileModalProps) {
-  const { addProfile } = useApp();
+  const { addProfile, supabaseUser, profiles } = useApp();
   const { isDark } = useTheme();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -34,6 +34,15 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
     if (!formData.firstName.trim()) {
       setError('❌ Le prénom est obligatoire');
       return;
+    }
+    
+    // 🔒 Anti-doublon : vérifier qu'aucun profil non-admin n'existe déjà pour ce user
+    if (supabaseUser) {
+      const existingUserProfile = profiles.find(p => !p.isAdmin && p.userId === supabaseUser.id);
+      if (existingUserProfile) {
+        setError('❌ Vous avez déjà un profil. Modifiez-le dans les paramètres.');
+        return;
+      }
     }
     
     if (formData.isPinProtected) {
@@ -60,6 +69,7 @@ export function AddProfileModal({ onClose }: AddProfileModalProps) {
       avatar: formData.avatar,
       isPinProtected: formData.isPinProtected,
       pin: formData.isPinProtected ? formData.pin : undefined,
+      userId: supabaseUser?.id, // ✅ Associer au user connecté
     });
 
     onClose();

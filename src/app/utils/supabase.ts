@@ -149,6 +149,21 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['app_config']['Row'], 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['app_config']['Insert']>;
       };
+      maintenance_profiles: {
+        Row: {
+          id: string;
+          name: string;
+          vehicle_ids: string[];
+          owner_id: string;
+          is_custom: boolean;
+          fuel_type: string | null;
+          is_4x4: boolean;
+          user_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['maintenance_profiles']['Row'], 'created_at'>;
+        Update: Partial<Database['public']['Tables']['maintenance_profiles']['Insert']>;
+      };
       maintenance_templates: {
         Row: {
           id: string;

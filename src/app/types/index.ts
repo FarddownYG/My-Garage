@@ -75,6 +75,7 @@ export interface MaintenanceProfile {
   isCustom: boolean; // true = entretiens personnalisés, false = basé sur templates
   fuelType?: 'essence' | 'diesel'; // Motorisation du profil (essence ou diesel)
   is4x4?: boolean; // true = profil 4x4
+  userId?: string; // ✅ Lien direct vers auth.users pour RLS simplifié
   createdAt: string;
 }
 
