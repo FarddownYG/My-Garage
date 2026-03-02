@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Mail, Trash2, Ban, RefreshCw, UserX, CheckCircle, AlertTriangle, X, Lock, Users, Activity, ChevronLeft } from 'lucide-react';
+import { Shield, Mail, Trash2, Ban, RefreshCw, UserX, CheckCircle, AlertTriangle, X, Lock, Users, Activity, ChevronLeft, Database } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { supabase } from '@/app/utils/supabase';
 import { SecurityDashboard } from './SecurityDashboard';
+import { SupabaseRLSSetup } from './SupabaseRLSSetup';
 import { formatDate } from '../../utils/formatDate';
 
 interface SupabaseAuthUser {
@@ -24,7 +24,7 @@ interface BannedEmail {
   reason?: string;
 }
 
-type AdminTab = 'overview' | 'users' | 'security' | 'banned';
+type AdminTab = 'overview' | 'users' | 'security' | 'banned' | 'rls';
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -167,6 +167,7 @@ export function AdminPanel() {
 
   const tabs: { id: AdminTab; label: string; icon: typeof Shield; badge?: number }[] = [
     { id: 'overview', label: 'Aperçu', icon: Activity },
+    { id: 'rls', label: 'RLS Setup', icon: Database },
     { id: 'security', label: 'Sécurité', icon: Shield },
     { id: 'users', label: 'Utilisateurs', icon: Users, badge: users.length },
     { id: 'banned', label: 'Bannis', icon: Lock, badge: bannedEmails.length },
@@ -305,6 +306,11 @@ export function AdminPanel() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ── TAB: RLS SETUP ───────────────────────────────────── */}
+        {activeTab === 'rls' && (
+          <SupabaseRLSSetup />
         )}
 
         {/* ── TAB: SECURITY ─────────────────────────────────────── */}

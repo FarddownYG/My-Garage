@@ -13,6 +13,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
+    // ✅ FIX: Custom lock implementation to avoid navigator.locks timeout
+    // The default navigator.locks API can cause "Lock not released within 5000ms"
+    // errors in React Strict Mode or when components unmount during auth operations
+    lock: async (name: string, acquireTimeout: number, fn: () => Promise<any>) => {
+      // Simple sequential lock using a Promise queue per lock name
+      const key = `__lock:${name}`;
+      const w = window as any;
+      if (!w[key]) {
+        w[key] = Promise.resolve();
+      }
+      let release: () => void;
+      const waitForTurn = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const prev = w[key];
+      w[key] = waitForTurn;
+      try {
+        await prev;
+        return await fn();
+      } finally {
+        release!();
+      }
+    },
   },
 });
 
