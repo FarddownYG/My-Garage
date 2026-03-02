@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Upload, CheckCircle } from 'lucide-react';
+import { X, Upload, CheckCircle, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -38,7 +38,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
     mileage: '',
     photo: '',
     fuelType: 'essence' as 'essence' | 'diesel',
-    driveType: '4x2' as '4x2' | '4x4',
+    is4x4: false,
   });
   
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -177,7 +177,7 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
         photo: sanitizedData.photo || 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400',
         ownerId: currentProfile.id,
         fuelType: sanitizedData.fuelType,
-        driveType: sanitizedData.driveType,
+        driveType: sanitizedData.is4x4 ? '4x4' : '4x2',
       });
 
       // Show success feedback
@@ -274,18 +274,41 @@ export function AddVehicleModal({ onClose }: AddVehicleModalProps) {
               />
             </div>
 
+            {/* Checkbox 4x4 */}
             <div>
-              <Label htmlFor="driveType" className={labelColor}>{t('vehicles.driveType')} *</Label>
-              <CustomSelect
-                id="driveType"
-                value={formData.driveType}
-                onChange={(value) => setFormData({ ...formData, driveType: value as '4x2' | '4x4' })}
-                options={[
-                  { value: '4x2', label: '4x2 (2 roues motrices)', icon: '🚗' },
-                  { value: '4x4', label: '4x4 (4 roues motrices)', icon: '🚙' },
-                ]}
-                required
-              />
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, is4x4: !formData.is4x4 })}
+                disabled={isSubmitting}
+                className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${
+                  formData.is4x4
+                    ? 'bg-cyan-500/20 border-cyan-500'
+                    : isDark
+                      ? 'bg-[#1a1a2e] border-white/[0.06] hover:border-white/20'
+                      : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    formData.is4x4 ? 'bg-cyan-500/30' : isDark ? 'bg-white/5' : 'bg-gray-200'
+                  }`}>
+                    <span className="text-lg">🚙</span>
+                  </div>
+                  <div className="text-left">
+                    <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Transmission 4x4</div>
+                    <div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                      Active les entretiens 4x4 (ponts, transfert...)
+                    </div>
+                  </div>
+                </div>
+                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                  formData.is4x4
+                    ? 'bg-cyan-500 border-cyan-500'
+                    : isDark ? 'border-white/20' : 'border-gray-300'
+                }`}>
+                  {formData.is4x4 && <Check className="w-4 h-4 text-white" />}
+                </div>
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

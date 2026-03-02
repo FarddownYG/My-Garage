@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Plus, Edit2, Trash2, Car, Wrench } from 'lucide-react';
+import { Plus, Edit2, Trash2, Car, Wrench, Fuel } from 'lucide-react';
 import { AddMaintenanceProfileModal } from './AddMaintenanceProfileModal';
 import type { MaintenanceProfile } from '../../types';
 
@@ -81,13 +81,30 @@ export function MaintenanceProfilesSettings() {
                       </div>
                       <div>
                         <h3 className={`text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile.name}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          profile.isCustom 
-                            ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                            : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                        }`}>
-                          {profile.isCustom ? 'Personnalisé' : 'Pré-rempli'}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            profile.isCustom 
+                              ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                              : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                          }`}>
+                            {profile.isCustom ? 'Personnalise' : 'Pre-rempli'}
+                          </span>
+                          {profile.fuelType && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                              profile.fuelType === 'essence'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              <Fuel className="w-3 h-3" />
+                              {profile.fuelType === 'essence' ? 'Essence' : 'Diesel'}
+                            </span>
+                          )}
+                          {profile.is4x4 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                              4x4
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

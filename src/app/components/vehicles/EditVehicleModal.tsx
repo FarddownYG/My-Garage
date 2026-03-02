@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -27,7 +27,7 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
     mileage: vehicle.mileage.toString(),
     photo: vehicle.photo || '',
     fuelType: vehicle.fuelType || 'essence' as 'essence' | 'diesel',
-    driveType: vehicle.driveType || '4x2' as '4x2' | '4x4',
+    is4x4: vehicle.driveType === '4x4',
   });
   const [photoPreview, setPhotoPreview] = useState<string>(vehicle.photo || '');
   const [isUploading, setIsUploading] = useState(false);
@@ -35,7 +35,7 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { alert('Veuillez sélectionner une image'); return; }
+    if (!file.type.startsWith('image/')) { alert('Veuillez selectionner une image'); return; }
     if (file.size > 5 * 1024 * 1024) { alert('L\'image est trop volumineuse (max 5MB)'); return; }
     setIsUploading(true);
     try {
@@ -53,7 +53,8 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
       name: formData.name, brand: formData.brand, model: formData.model,
       year: formData.year ? parseInt(formData.year) : undefined,
       licensePlate: formData.licensePlate, mileage: parseInt(formData.mileage) || 0,
-      photo: formData.photo, fuelType: formData.fuelType, driveType: formData.driveType,
+      photo: formData.photo, fuelType: formData.fuelType,
+      driveType: formData.is4x4 ? '4x4' : '4x2',
     });
     onClose();
   };
@@ -77,16 +78,49 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
           <div>
             <Label htmlFor="name" className={labelClass}>{t('vehicles.name')} *</Label>
-            <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Ma BMW Série 3" className={inputClass} required />
+            <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Ma BMW Serie 3" className={inputClass} required />
           </div>
           <div>
             <Label htmlFor="fuelType" className={labelClass}>{t('vehicles.fuelType')} *</Label>
-            <CustomSelect id="fuelType" value={formData.fuelType} onChange={(value) => setFormData({ ...formData, fuelType: value as any })} options={[{ value: 'essence', label: t('common.gasoline'), icon: '⛽' }, { value: 'diesel', label: t('common.diesel'), icon: '💧' }]} required />
+            <CustomSelect id="fuelType" value={formData.fuelType} onChange={(value) => setFormData({ ...formData, fuelType: value as any })} options={[{ value: 'essence', label: t('common.gasoline'), icon: '\u26FD' }, { value: 'diesel', label: t('common.diesel'), icon: '\u{1F4A7}' }]} required />
           </div>
+
+          {/* Checkbox 4x4 */}
           <div>
-            <Label htmlFor="driveType" className={labelClass}>{t('vehicles.driveType')} *</Label>
-            <CustomSelect id="driveType" value={formData.driveType} onChange={(value) => setFormData({ ...formData, driveType: value as any })} options={[{ value: '4x2', label: '4x2 (2 roues motrices)', icon: '🚗' }, { value: '4x4', label: '4x4 (4 roues motrices)', icon: '🚙' }]} required />
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, is4x4: !formData.is4x4 })}
+              className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${
+                formData.is4x4
+                  ? 'bg-cyan-500/20 border-cyan-500'
+                  : isDark
+                    ? 'bg-[#1a1a2e] border-white/[0.06] hover:border-white/20'
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  formData.is4x4 ? 'bg-cyan-500/30' : isDark ? 'bg-white/5' : 'bg-gray-200'
+                }`}>
+                  <span className="text-lg">{'\u{1F699}'}</span>
+                </div>
+                <div className="text-left">
+                  <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Transmission 4x4</div>
+                  <div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                    Active les entretiens 4x4 (ponts, transfert...)
+                  </div>
+                </div>
+              </div>
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                formData.is4x4
+                  ? 'bg-cyan-500 border-cyan-500'
+                  : isDark ? 'border-white/20' : 'border-gray-300'
+              }`}>
+                {formData.is4x4 && <Check className="w-4 h-4 text-white" />}
+              </div>
+            </button>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="brand" className={labelClass}>{t('vehicles.brand')}</Label>
@@ -94,7 +128,7 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
             </div>
             <div>
               <Label htmlFor="model" className={labelClass}>{t('vehicles.model')}</Label>
-              <Input id="model" value={formData.model} onChange={(e) => setFormData({ ...formData, model: e.target.value })} placeholder="Série 3" className={inputClass} />
+              <Input id="model" value={formData.model} onChange={(e) => setFormData({ ...formData, model: e.target.value })} placeholder="Serie 3" className={inputClass} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -116,14 +150,14 @@ export function EditVehicleModal({ vehicle, onClose }: EditVehicleModalProps) {
             <div className="space-y-3">
               {photoPreview && (
                 <div className={`relative w-full h-40 rounded-lg overflow-hidden ${isDark ? 'bg-[#1a1a2e]' : 'bg-gray-100'}`}>
-                  <img src={photoPreview} alt="Aperçu" className="w-full h-full object-cover" />
+                  <img src={photoPreview} alt="Apercu" className="w-full h-full object-cover" />
                   <button type="button" onClick={() => { setPhotoPreview(''); setFormData({ ...formData, photo: '' }); }} className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><X className="w-4 h-4" /></button>
                 </div>
               )}
               {!photoPreview && (
                 <label htmlFor="photo-upload" className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDark ? 'border-white/10 bg-[#1a1a2e]/50 hover:bg-[#1a1a2e]' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
                   <div className="flex flex-col items-center justify-center gap-2">
-                    {isUploading ? (<><div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div><p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Upload en cours...</p></>) : (<><Upload className={`w-8 h-8 ${isDark ? 'text-slate-500' : 'text-gray-400'}`} /><p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}><span className="text-cyan-500 font-medium">Choisir une photo</span></p><p className={`text-xs ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>PNG, JPG jusqu'à 5MB</p></>)}
+                    {isUploading ? (<><div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div><p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Upload en cours...</p></>) : (<><Upload className={`w-8 h-8 ${isDark ? 'text-slate-500' : 'text-gray-400'}`} /><p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}><span className="text-cyan-500 font-medium">Choisir une photo</span></p><p className={`text-xs ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>PNG, JPG jusqu'a 5MB</p></>)}
                   </div>
                   <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={isUploading} />
                 </label>

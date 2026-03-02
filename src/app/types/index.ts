@@ -73,6 +73,8 @@ export interface MaintenanceProfile {
   vehicleIds: string[]; // Liste des IDs des véhicules associés
   ownerId: string; // Propriétaire du profil (utilisateur)
   isCustom: boolean; // true = entretiens personnalisés, false = basé sur templates
+  fuelType?: 'essence' | 'diesel'; // Motorisation du profil (essence ou diesel)
+  is4x4?: boolean; // true = profil 4x4
   createdAt: string;
 }
 

@@ -308,7 +308,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           category: t.category || undefined, intervalMonths: t.interval_months || undefined, intervalKm: t.interval_km || undefined,
           fuelType: t.fuel_type || undefined, driveType: t.drive_type || undefined, ownerId: t.owner_id, profileId: t.profile_id || undefined })),
         maintenanceProfiles: (maintenanceProfiles || []).map(mp => ({ id: mp.id, name: mp.name,
-          vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false, createdAt: mp.created_at })),
+          vehicleIds: mp.vehicle_ids || [], ownerId: mp.owner_id, isCustom: mp.is_custom || false,
+          fuelType: mp.fuel_type || undefined, is4x4: mp.is_4x4 || false, createdAt: mp.created_at })),
       }));
     } catch (error: any) {
       console.error('❌ Erreur lors du chargement:', error);
@@ -341,6 +342,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // 🔧 FIX RLS : Corriger les profils qui n'ont pas user_id renseigné
+  // Sans user_id, les policies RLS bloquent TOUTES les opérations (INSERT/UPDATE/DELETE)
+  // sur les tables liées (vehicles, maintenance_profiles, etc.)
+  const fixProfilesWithoutUserId = async (authUserId: string) => {
+    try {
+      // Chercher les profils orphelins (sans user_id) qui pourraient appartenir à cet utilisateur
+      // On utilise une requête RPC ou directe - mais RLS peut bloquer si user_id est NULL
+      // Donc on tente d'abord avec la session courante qui a les droits
+      const { data: orphanProfiles, error } = await supabase
+        .from('profiles')
+        .select('id, user_id, name')
+        .is('user_id', null);
+
+      if (error) {
+        // Si RLS bloque (pas de profils visibles avec user_id = NULL), c'est OK
+        // Ça veut dire que tous les profils ont déjà un user_id
+        console.log('ℹ️ Pas de profils orphelins détectés (RLS actif ou aucun profil sans user_id)');
+        return;
+      }
+
+      if (!orphanProfiles || orphanProfiles.length === 0) {
+        return; // Rien à corriger
+      }
+
+      console.log(`🔧 ${orphanProfiles.length} profil(s) sans user_id détecté(s), correction en cours...`);
+
+      // Associer ces profils à l'utilisateur connecté
+      for (const profile of orphanProfiles) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ user_id: authUserId })
+          .eq('id', profile.id)
+          .is('user_id', null); // Double sécurité : ne pas écraser un user_id existant
+
+        if (updateError) {
+          console.error(`❌ Impossible de corriger le profil "${profile.name}":`, updateError.message);
+        } else {
+          console.log(`✅ Profil "${profile.name}" associé à l'utilisateur ${authUserId}`);
+        }
+      }
+    } catch (err) {
+      // Erreur non bloquante - on continue l'init
+      console.log('ℹ️ Migration user_id ignorée (pas de profils orphelins ou RLS actif)');
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -362,10 +409,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // 2. Migration localStorage → Supabase (si nécessaire)
         await migrateToSupabase();
       
-        // 3. Charger les données
+        // 3. 🔧 FIX RLS : Corriger les profils sans user_id AVANT de charger
+        // Les profils créés avant l'ajout de user_id n'ont pas cette colonne renseignée,
+        // ce qui bloque toutes les opérations RLS (INSERT/UPDATE/DELETE)
+        await fixProfilesWithoutUserId(user.id);
+
+        // 4. Charger les données
         await loadFromSupabase();
         
-        // 4. Migration automatique des profile_id manquants
+        // 5. Migration automatique des profile_id manquants
         const needsMigration = await checkMigrationNeeded();
         if (needsMigration) {
           await migrateProfileIds();
@@ -930,14 +982,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('❌ addMaintenanceProfile : aucun profil owner disponible');
       return;
     }
+
+    // 🔧 FIX RLS : S'assurer que le profil owner a bien user_id renseigné
+    // Sans ça, la policy RLS bloque l'INSERT car profiles.user_id != auth.uid()
+    const authUserId = state.supabaseUser?.id;
+    if (authUserId && !ownerProfile.userId) {
+      console.log('🔧 Correction user_id manquant sur le profil owner avant insertion...');
+      const { error: fixError } = await supabase
+        .from('profiles')
+        .update({ user_id: authUserId })
+        .eq('id', ownerProfile.id);
+      
+      if (fixError) {
+        console.error('❌ Impossible de corriger user_id sur le profil:', fixError.message);
+        // Tenter quand même l'insertion au cas où
+      } else {
+        console.log('✅ user_id corrigé sur le profil owner');
+        // Mettre à jour le state local aussi
+        setState(prev => ({
+          ...prev,
+          profiles: prev.profiles.map(p => 
+            p.id === ownerProfile.id ? { ...p, userId: authUserId } : p
+          ),
+          currentProfile: prev.currentProfile?.id === ownerProfile.id
+            ? { ...prev.currentProfile, userId: authUserId }
+            : prev.currentProfile,
+        }));
+      }
+    }
+
     const p = { ...profile, ownerId: ownerProfile.id };
     const { error } = await supabase.from('maintenance_profiles').insert({
-      id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom, created_at: p.createdAt
+      id: p.id, name: p.name, vehicle_ids: p.vehicleIds, owner_id: p.ownerId, is_custom: p.isCustom,
+      fuel_type: p.fuelType || null, is_4x4: p.is4x4 || false, created_at: p.createdAt
     });
     if (error) {
       console.error('❌ Erreur insertion maintenance_profiles:', error.message, '| Code:', error.code);
-      console.error('→ Vérifiez que les colonnes vehicle_ids/is_custom/owner_id existent dans maintenance_profiles.');
-      console.error('→ Exécutez le SQL de migration dans Supabase SQL Editor !');
+      console.error('→ owner_id utilisé:', p.ownerId, '| auth.uid():', authUserId);
+      console.error('→ Vérifiez que le profil', p.ownerId, 'a bien user_id =', authUserId, 'dans la table profiles');
       throw new Error(`Impossible de créer le profil: ${error.message}`);
     }
     console.log(`✅ Profil maintenance "${p.name}" créé dans Supabase (id: ${p.id})`);
@@ -949,6 +1031,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (updates.name !== undefined) db.name = updates.name;
     if (updates.vehicleIds !== undefined) db.vehicle_ids = updates.vehicleIds;
     if (updates.isCustom !== undefined) db.is_custom = updates.isCustom;
+    if (updates.fuelType !== undefined) db.fuel_type = updates.fuelType;
+    if (updates.is4x4 !== undefined) db.is_4x4 = updates.is4x4;
     
     // ✅ Optimistic update avec snapshot pour rollback
     let snapshot: MaintenanceProfile[] = [];

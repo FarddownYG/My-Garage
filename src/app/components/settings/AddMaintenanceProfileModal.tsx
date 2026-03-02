@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { X, Car, Check, Wrench, FileText } from 'lucide-react';
+import { X, Wrench, FileText, Fuel, Check } from 'lucide-react';
 import type { MaintenanceProfile } from '../../types';
 import { defaultMaintenanceTemplates } from '../../data/defaultMaintenanceTemplates';
 
@@ -11,26 +11,17 @@ interface AddMaintenanceProfileModalProps {
 }
 
 export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceProfileModalProps) {
-  const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, profiles, addMaintenanceTemplate, maintenanceTemplates, getUserVehicles } = useApp();
+  const { addMaintenanceProfile, updateMaintenanceProfile, currentProfile, profiles, addMaintenanceTemplate } = useApp();
   const { isDark } = useTheme();
   
   const [name, setName] = useState(profile?.name || '');
-  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(profile?.vehicleIds || []);
-  const [profileType, setProfileType] = useState<'custom' | 'essence' | 'diesel'>(
-    profile?.isCustom ? 'custom' : 'essence'
+  const [profileType, setProfileType] = useState<'custom' | 'prefilled'>(
+    profile ? (profile.isCustom ? 'custom' : 'prefilled') : 'custom'
   );
+  const [fuelType, setFuelType] = useState<'essence' | 'diesel'>(profile?.fuelType || 'essence');
+  const [is4x4, setIs4x4] = useState(profile?.is4x4 || false);
   const [error, setError] = useState('');
-
-  // 🔧 CORRECTION CRITIQUE : Utiliser getUserVehicles() pour filtrer par user_id
-  const userVehicles = getUserVehicles();
-
-  const handleToggleVehicle = (vehicleId: string) => {
-    setSelectedVehicleIds(prev => 
-      prev.includes(vehicleId)
-        ? prev.filter(id => id !== vehicleId)
-        : [...prev, vehicleId]
-    );
-  };
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,88 +32,65 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
       return;
     }
 
-    if (selectedVehicleIds.length === 0) {
-      setError('Sélectionnez au moins un véhicule');
+    const ownerProfile = currentProfile || profiles.find((p: any) => !p.isAdmin);
+    if (!ownerProfile) {
+      setError('Aucun profil utilisateur trouve');
       return;
     }
 
-    // ✅ FIX : utiliser currentProfile OU le premier profil non-admin disponible
-    const ownerProfile = currentProfile || profiles.find((p: any) => !p.isAdmin);
-    if (!ownerProfile) {
-      setError('Aucun profil utilisateur trouvé');
-      return;
-    }
+    setSaving(true);
 
     try {
       if (profile) {
-        // Mode édition
+        // Mode edition
         await updateMaintenanceProfile(profile.id, {
           name: name.trim(),
-          vehicleIds: selectedVehicleIds,
           isCustom: profileType === 'custom',
+          fuelType,
+          is4x4,
         });
       } else {
-        // Mode création
+        // Mode creation - vehicleIds vide, on ajoutera les vehicules apres
         const newProfile: MaintenanceProfile = {
           id: `profile-${Date.now()}`,
           name: name.trim(),
-          vehicleIds: selectedVehicleIds,
+          vehicleIds: [],
           ownerId: ownerProfile.id,
           isCustom: profileType === 'custom',
+          fuelType,
+          is4x4,
           createdAt: new Date().toISOString(),
         };
 
         await addMaintenanceProfile(newProfile);
 
-        // Si c'est un profil pré-rempli, créer les templates par défaut
-        if (profileType !== 'custom') {
-          const selectedVehicles = userVehicles.filter(v => selectedVehicleIds.includes(v.id));
-          
-          // Détecter les types de carburant et transmission des véhicules sélectionnés
-          const fuelTypes = new Set(selectedVehicles.map(v => v.fuelType).filter(Boolean));
-          const driveTypes = new Set(selectedVehicles.map(v => v.driveType).filter(Boolean));
-          
-          // Si aucun type n'est défini, inclure tous les templates
-          const shouldIncludeAll = fuelTypes.size === 0 && driveTypes.size === 0;
-          
-          // Créer un Set pour éviter les doublons de templates
+        // Si profil pre-rempli, creer les templates par defaut selon fuelType/is4x4
+        if (profileType === 'prefilled') {
           const addedTemplates = new Set<string>();
           const templatesToAdd: any[] = [];
-          
-          // Parcourir tous les templates par défaut
+
           defaultMaintenanceTemplates.forEach((template, index) => {
-            // Vérifier si ce template correspond à au moins un véhicule
-            const isApplicable = shouldIncludeAll || selectedVehicles.some(vehicle => {
-              const vehicleFuelType = vehicle.fuelType;
-              const vehicleDriveType = vehicle.driveType;
-              
-              // Vérifier correspondance motorisation
-              const fuelMatch = !template.fuelType || 
-                template.fuelType === 'both' || 
-                template.fuelType === vehicleFuelType;
-              
-              // Vérifier correspondance transmission
-              const driveMatch = !template.driveType || 
-                template.driveType === 'both' || 
-                template.driveType === vehicleDriveType;
-              
-              return fuelMatch && driveMatch;
-            });
-            
-            // Ajouter le template s'il est applicable et pas déjà ajouté
-            if (isApplicable && !addedTemplates.has(template.name)) {
+            // Verifier compatibilite motorisation
+            const fuelMatch = !template.fuelType ||
+              template.fuelType === 'both' ||
+              template.fuelType === fuelType;
+
+            // Verifier compatibilite transmission
+            const driveMatch = !template.driveType ||
+              template.driveType === 'both' ||
+              (is4x4 ? template.driveType === '4x4' : template.driveType === '4x2');
+
+            if (fuelMatch && driveMatch && !addedTemplates.has(template.name)) {
               templatesToAdd.push({
                 ...template,
                 id: `${template.id}-${newProfile.id}-${index}`,
                 ownerId: ownerProfile.id,
                 profileId: newProfile.id,
               });
-              
               addedTemplates.add(template.name);
             }
           });
-          
-          // Ajouter tous les templates en séquence
+
           for (const template of templatesToAdd) {
             await addMaintenanceTemplate(template);
           }
@@ -133,11 +101,9 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
     } catch (err: any) {
       console.error('Erreur lors de la sauvegarde:', err);
       const msg = err?.message || 'Une erreur est survenue lors de la sauvegarde';
-      if (msg.includes('column') || msg.includes('relation') || msg.includes('policy')) {
-        setError(`${msg}\n\n💡 Exécutez le SQL de migration dans Supabase SQL Editor pour créer les colonnes manquantes.`);
-      } else {
-        setError(msg);
-      }
+      setError(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -176,7 +142,7 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Entretien Sportif, Entretien Ville..."
+              placeholder="Ex: Entretien Ville, Entretien Sportif..."
               className={`w-full ${inputBg} rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300`}
               autoFocus
             />
@@ -190,17 +156,17 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setProfileType('essence')}
+                onClick={() => setProfileType('prefilled')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  profileType === 'essence'
+                  profileType === 'prefilled'
                     ? 'bg-cyan-500/20 border-cyan-500 shadow-glow-blue'
                     : `${cardBg} ${cardBorder} border ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
                 }`}
               >
-                <FileText className={`w-6 h-6 mx-auto mb-2 ${profileType === 'essence' ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
-                <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Pré-rempli</div>
+                <FileText className={`w-6 h-6 mx-auto mb-2 ${profileType === 'prefilled' ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Pre-rempli</div>
                 <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Templates par défaut selon motorisation
+                  Templates par defaut
                 </div>
               </button>
 
@@ -214,111 +180,123 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
                 }`}
               >
                 <Wrench className={`w-6 h-6 mx-auto mb-2 ${profileType === 'custom' ? 'text-violet-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
-                <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Personnalisé</div>
+                <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Personnalise</div>
                 <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Créez vos propres entretiens
+                  Creez vos propres entretiens
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Sélection des véhicules */}
+          {/* Motorisation */}
           <div>
             <label className={`block text-sm ${labelColor} mb-3`}>
-              Véhicules Associés * ({selectedVehicleIds.length} sélectionné{selectedVehicleIds.length > 1 ? 's' : ''})
+              Motorisation *
             </label>
-            
-            {userVehicles.length === 0 ? (
-              <div className={`${cardBg} border ${cardBorder} rounded-xl p-6 text-center`}>
-                <Car className={`w-10 h-10 mx-auto mb-2 ${isDark ? 'text-slate-600' : 'text-gray-400'}`} />
-                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Aucun véhicule disponible. Ajoutez d'abord un véhicule.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {userVehicles.map((vehicle) => {
-                  const isSelected = selectedVehicleIds.includes(vehicle.id);
-                  
-                  return (
-                    <button
-                      key={vehicle.id}
-                      type="button"
-                      onClick={() => handleToggleVehicle(vehicle.id)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-cyan-500/20 border-cyan-500 shadow-lg'
-                          : `${cardBg} border ${cardBorder} ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Car className={`w-5 h-5 ${isSelected ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
-                        <div className="text-left">
-                          <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{vehicle.name}</div>
-                          <div className={`text-xs flex items-center gap-2 mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                            {vehicle.fuelType && (
-                              <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
-                                {vehicle.fuelType}
-                              </span>
-                            )}
-                            {vehicle.driveType && (
-                              <span className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-gray-200'}`}>
-                                {vehicle.driveType}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {isSelected && (
-                        <div className="w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFuelType('essence')}
+                className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                  fuelType === 'essence'
+                    ? 'bg-emerald-500/20 border-emerald-500'
+                    : `${cardBg} ${cardBorder} border ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
+                  fuelType === 'essence' ? 'bg-emerald-500/30' : isDark ? 'bg-white/5' : 'bg-gray-200'
+                }`}>
+                  <Fuel className={`w-5 h-5 ${fuelType === 'essence' ? 'text-emerald-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                </div>
+                <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Essence</div>
+                {fuelType === 'essence' && (
+                  <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFuelType('diesel')}
+                className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                  fuelType === 'diesel'
+                    ? 'bg-amber-500/20 border-amber-500'
+                    : `${cardBg} ${cardBorder} border ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
+                  fuelType === 'diesel' ? 'bg-amber-500/30' : isDark ? 'bg-white/5' : 'bg-gray-200'
+                }`}>
+                  <Fuel className={`w-5 h-5 ${fuelType === 'diesel' ? 'text-amber-400' : isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                </div>
+                <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Diesel</div>
+                {fuelType === 'diesel' && (
+                  <div className="w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Info sur le type de profil */}
-          {selectedVehicleIds.length > 0 && (
-            <div className={`p-4 rounded-xl border ${
-              profileType === 'custom'
-                ? 'bg-violet-500/10 border-violet-500/30'
-                : 'bg-cyan-500/10 border-cyan-500/30'
-            }`}>
-              <div className="flex gap-3">
-                {profileType === 'custom' ? (
-                  <Wrench className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                ) : (
-                  <FileText className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                )}
-                <div className="text-sm">
-                  {profileType === 'custom' ? (
-                    <p className="text-purple-300">
-                      Profil personnalisé : Vous pourrez ajouter vos propres types d'entretien après la création.
-                    </p>
-                  ) : (
-                    <p className="text-blue-300">
-                      Profil pré-rempli : Les templates d'entretien seront automatiquement créés selon la motorisation ({
-                        userVehicles
-                          .filter(v => selectedVehicleIds.includes(v.id))
-                          .map(v => v.fuelType)
-                          .filter((v, i, a) => v && a.indexOf(v) === i)
-                          .join(', ') || 'non définie'
-                      }) de vos véhicules.
-                    </p>
-                  )}
+          {/* Checkbox 4x4 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setIs4x4(!is4x4)}
+              className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${
+                is4x4
+                  ? 'bg-cyan-500/20 border-cyan-500'
+                  : `${cardBg} border ${cardBorder} ${isDark ? 'hover:border-white/20' : 'hover:border-gray-300'}`
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  is4x4 ? 'bg-cyan-500/30' : isDark ? 'bg-white/5' : 'bg-gray-200'
+                }`}>
+                  <span className="text-lg">&#x1F699;</span>
+                </div>
+                <div className="text-left">
+                  <div className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Transmission 4x4</div>
+                  <div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                    Active les entretiens specifiques 4x4 (ponts, transfert...)
+                  </div>
                 </div>
               </div>
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                is4x4
+                  ? 'bg-cyan-500 border-cyan-500'
+                  : isDark ? 'border-white/20' : 'border-gray-300'
+              }`}>
+                {is4x4 && <Check className="w-4 h-4 text-white" />}
+              </div>
+            </button>
+          </div>
+
+          {/* Info resume */}
+          <div className={`p-4 rounded-xl border ${
+            isDark ? 'bg-cyan-500/5 border-cyan-500/20' : 'bg-blue-50 border-blue-200'
+          }`}>
+            <div className="flex gap-3">
+              <Wrench className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-cyan-400' : 'text-blue-500'}`} />
+              <div className={`text-sm ${isDark ? 'text-cyan-300/80' : 'text-blue-700'}`}>
+                <p>
+                  Profil <strong>{fuelType === 'essence' ? 'Essence' : 'Diesel'}</strong>
+                  {is4x4 ? ' - 4x4' : ' - 4x2'} 
+                  {profileType === 'custom' ? ' (personnalise)' : ' (pre-rempli)'}.
+                </p>
+                <p className="mt-1 opacity-80">
+                  Vous pourrez ajouter des vehicules compatibles apres la creation.
+                  Les vehicules incompatibles (mauvaise motorisation) seront bloques.
+                </p>
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Error */}
           {error && (
-            <div className="bg-red-600/20 border border-red-600/30 rounded-xl p-4 text-red-400 text-sm animate-fade-in">
+            <div className="bg-red-600/20 border border-red-600/30 rounded-xl p-4 text-red-400 text-sm animate-fade-in whitespace-pre-line">
               {error}
             </div>
           )}
@@ -335,10 +313,10 @@ export function AddMaintenanceProfileModal({ profile, onClose }: AddMaintenanceP
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!name.trim() || selectedVehicleIds.length === 0}
+            disabled={!name.trim() || saving}
             className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {profile ? 'Enregistrer' : 'Créer le Profil'}
+            {saving ? 'Enregistrement...' : profile ? 'Enregistrer' : 'Creer le Profil'}
           </button>
         </div>
       </div>

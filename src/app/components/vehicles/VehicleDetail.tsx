@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Wrench, Image as ImageIcon, Gauge, Edit, Trash2, Edit2, FileText, Download, Fuel } from 'lucide-react';
 import type { Vehicle } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -135,6 +135,28 @@ export function VehicleDetail({ vehicle, onBack, prefilledMaintenanceType }: Veh
             <div>
               <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.mileage')}</p>
               <p className={isDark ? 'text-white' : 'text-gray-900'}>{vehicle.mileage.toLocaleString()} km</p>
+            </div>
+            {/* Motorisation & Transmission */}
+            <div>
+              <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.fuelType')}</p>
+              <span className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-0.5 rounded-full ${
+                (vehicle.fuelType || vehicle.engineType) === 'diesel'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+              }`}>
+                <Fuel className="w-3 h-3" />
+                {(vehicle.fuelType === 'diesel' || vehicle.engineType === 'diesel') ? 'Diesel' : 'Essence'}
+              </span>
+            </div>
+            <div>
+              <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>{t('vehicles.driveType')}</p>
+              <span className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-0.5 rounded-full ${
+                vehicle.driveType === '4x4'
+                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
+                  : isDark ? 'bg-white/5 text-slate-400 border border-white/[0.06]' : 'bg-gray-100 text-gray-500 border border-gray-200'
+              }`}>
+                {vehicle.driveType === '4x4' ? '🚙 4x4' : '🚗 4x2'}
+              </span>
             </div>
           </div>
         </Card>

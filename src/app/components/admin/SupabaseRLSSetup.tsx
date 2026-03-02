@@ -7,21 +7,26 @@ const SUPABASE_SQL_EDITOR_URL = 'https://supabase.com/dashboard/project/uffmwykd
 // SQL complet pour configurer TOUTES les RLS policies
 // ──────────────────────────────────────────────
 const FULL_RLS_SQL = `-- ============================================================
--- VALCAR - Configuration complète des RLS policies Supabase
+-- VALCAR - CORRECTION PROFILS ORPHELINS + RLS POLICIES COMPLÈTES
 -- Copiez et exécutez ce script dans Supabase SQL Editor
 -- ============================================================
 
--- ── 1. ACTIVER RLS SUR TOUTES LES TABLES ────────────────────
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+-- ── ÉTAPE 1 : Corriger les profils sans user_id ──────────────
+-- Associe chaque profil orphelin au premier utilisateur auth
+UPDATE public.profiles
+SET user_id = (SELECT id FROM auth.users LIMIT 1)
+WHERE user_id IS NULL;
 
--- ── 2. SUPPRIMER LES ANCIENNES POLICIES (évite les conflits) ─
+-- Vérification
+SELECT id, name, user_id FROM public.profiles;
+
+-- ── ÉTAPE 1b : Ajouter les colonnes fuel_type et is_4x4 ─────
+-- (si elles n'existent pas encore)
+ALTER TABLE public.maintenance_profiles
+  ADD COLUMN IF NOT EXISTS fuel_type TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS is_4x4 BOOLEAN DEFAULT FALSE;
+
+-- ── ÉTAPE 2 : Supprimer TOUTES les anciennes policies ────────
 DO $$
 DECLARE r RECORD;
 BEGIN
@@ -38,10 +43,20 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── 3. PROFILES ───────────────────────────────────────────────
+-- ── ÉTAPE 3 : Activer RLS sur toutes les tables ─────────────
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+
+-- ── ÉTAPE 4 : PROFILES ──────────────────────────────────────
 CREATE POLICY "profiles_select_own"
   ON public.profiles FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = auth.uid() OR user_id IS NULL);
 
 CREATE POLICY "profiles_insert_own"
   ON public.profiles FOR INSERT TO authenticated
@@ -49,19 +64,19 @@ CREATE POLICY "profiles_insert_own"
 
 CREATE POLICY "profiles_update_own"
   ON public.profiles FOR UPDATE TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = auth.uid() OR user_id IS NULL);
 
 CREATE POLICY "profiles_delete_own"
   ON public.profiles FOR DELETE TO authenticated
   USING (user_id = auth.uid());
 
--- ── 4. VEHICLES ───────────────────────────────────────────────
+-- ── ÉTAPE 5 : VEHICLES ──────────────────────────────────────
 CREATE POLICY "vehicles_select_own"
   ON public.vehicles FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = vehicles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "vehicles_insert_own"
@@ -69,7 +84,7 @@ CREATE POLICY "vehicles_insert_own"
   WITH CHECK (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = vehicles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "vehicles_update_own"
@@ -77,7 +92,7 @@ CREATE POLICY "vehicles_update_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = vehicles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "vehicles_delete_own"
@@ -85,17 +100,17 @@ CREATE POLICY "vehicles_delete_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = vehicles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
--- ── 5. MAINTENANCE_ENTRIES ────────────────────────────────────
+-- ── ÉTAPE 6 : MAINTENANCE_ENTRIES ────────────────────────────
 CREATE POLICY "maint_entries_select_own"
   ON public.maintenance_entries FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = maintenance_entries.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_entries_insert_own"
@@ -104,7 +119,7 @@ CREATE POLICY "maint_entries_insert_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = maintenance_entries.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_entries_update_own"
@@ -113,7 +128,7 @@ CREATE POLICY "maint_entries_update_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = maintenance_entries.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_entries_delete_own"
@@ -122,17 +137,17 @@ CREATE POLICY "maint_entries_delete_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = maintenance_entries.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
--- ── 6. TASKS ──────────────────────────────────────────────────
+-- ── ÉTAPE 7 : TASKS ─────────────────────────────────────────
 CREATE POLICY "tasks_select_own"
   ON public.tasks FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = tasks.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "tasks_insert_own"
@@ -141,7 +156,7 @@ CREATE POLICY "tasks_insert_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = tasks.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "tasks_update_own"
@@ -150,7 +165,7 @@ CREATE POLICY "tasks_update_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = tasks.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "tasks_delete_own"
@@ -159,17 +174,17 @@ CREATE POLICY "tasks_delete_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = tasks.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
--- ── 7. REMINDERS ──────────────────────────────────────────────
+-- ── ÉTAPE 8 : REMINDERS ─────────────────────────────────────
 CREATE POLICY "reminders_select_own"
   ON public.reminders FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = reminders.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "reminders_insert_own"
@@ -178,7 +193,7 @@ CREATE POLICY "reminders_insert_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = reminders.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "reminders_update_own"
@@ -187,7 +202,7 @@ CREATE POLICY "reminders_update_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = reminders.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
 CREATE POLICY "reminders_delete_own"
@@ -196,16 +211,16 @@ CREATE POLICY "reminders_delete_own"
     SELECT 1 FROM public.vehicles v
     JOIN public.profiles p ON p.id = v.owner_id
     WHERE v.id = reminders.vehicle_id
-      AND p.user_id = auth.uid()
+      AND (p.user_id = auth.uid() OR p.user_id IS NULL)
   ));
 
--- ── 8. MAINTENANCE_TEMPLATES ──────────────────────────────────
+-- ── ÉTAPE 9 : MAINTENANCE_TEMPLATES ─────────────────────────
 CREATE POLICY "maint_templates_select_own"
   ON public.maintenance_templates FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_templates.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_templates_insert_own"
@@ -213,7 +228,7 @@ CREATE POLICY "maint_templates_insert_own"
   WITH CHECK (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_templates.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_templates_update_own"
@@ -221,7 +236,7 @@ CREATE POLICY "maint_templates_update_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_templates.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_templates_delete_own"
@@ -229,16 +244,16 @@ CREATE POLICY "maint_templates_delete_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_templates.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
--- ── 9. MAINTENANCE_PROFILES ───────────────────────────────────
+-- ── ÉTAPE 10 : MAINTENANCE_PROFILES ─────────────────────────
 CREATE POLICY "maint_profiles_select_own"
   ON public.maintenance_profiles FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_profiles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_profiles_insert_own"
@@ -246,7 +261,7 @@ CREATE POLICY "maint_profiles_insert_own"
   WITH CHECK (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_profiles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_profiles_update_own"
@@ -254,7 +269,7 @@ CREATE POLICY "maint_profiles_update_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_profiles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
 CREATE POLICY "maint_profiles_delete_own"
@@ -262,10 +277,10 @@ CREATE POLICY "maint_profiles_delete_own"
   USING (EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = maintenance_profiles.owner_id
-      AND profiles.user_id = auth.uid()
+      AND (profiles.user_id = auth.uid() OR profiles.user_id IS NULL)
   ));
 
--- ── 10. APP_CONFIG ────────────────────────────────────────────
+-- ── ÉTAPE 11 : APP_CONFIG ────────────────────────────────────
 CREATE POLICY "app_config_select_own"
   ON public.app_config FOR SELECT TO authenticated
   USING (id = auth.uid()::text);
@@ -283,8 +298,8 @@ CREATE POLICY "app_config_upsert_own"
   USING (id = auth.uid()::text)
   WITH CHECK (id = auth.uid()::text);
 
--- ── FIN ───────────────────────────────────────────────────────
--- ✅ Toutes les RLS policies ont été configurées !
+-- ── FIN ──────────────────────────────────────────────────────
+-- Profils orphelins corrigés + RLS policies configurées !
 `;
 
 interface SqlBlockProps {

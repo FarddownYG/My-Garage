@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, Database, ChevronRight, Wrench, User, Type, Link as LinkIcon, Bell, Sun, Moon, Globe } from 'lucide-react';
+import { Users, Shield, ChevronRight, Wrench, User, Type, Bell, Sun, Moon, Globe } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -10,7 +10,6 @@ import { MaintenanceSettings } from './MaintenanceSettings';
 import { CustomMaintenanceProfiles } from './CustomMaintenanceProfiles';
 import { MaintenanceProfileDetail } from './MaintenanceProfileDetail';
 import { EditProfileModal } from './EditProfileModal';
-import { LinkProfileModal } from './LinkProfileModal';
 import { AlertThresholdSettings } from './AlertThresholdSettings';
 import { Footer } from '../shared/Footer';
 
@@ -19,7 +18,7 @@ interface SettingsProps {
 }
 
 export function Settings({ onLogout }: SettingsProps) {
-  const { currentProfile, resetData, updateFontSize } = useApp();
+  const { currentProfile, updateFontSize } = useApp();
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme, isDark } = useTheme();
   const [showProfileManagement, setShowProfileManagement] = useState(false);
@@ -28,21 +27,9 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showCustomProfiles, setShowCustomProfiles] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-  const [showLinkProfileModal, setShowLinkProfileModal] = useState(false);
   const [showAlertThresholds, setShowAlertThresholds] = useState(false);
   
   const fontSize = currentProfile?.fontSize || 50;
-
-  const handleResetData = () => {
-    if (!currentProfile) return;
-    const message = `⚠️ Cette action supprimera TOUTES les données du profil "${currentProfile.name}" :\n\n• Tous les véhicules\n• Tous les entretiens\n• Toutes les tâches\n• Tous les rappels\n• Les templates personnalisés\n\nLe profil lui-même sera conservé.\n\nÊtes-vous sûr ?`;
-    if (confirm(message)) {
-      if (confirm(`Dernière confirmation : toutes les données de "${currentProfile.name}" seront perdues définitivement.`)) {
-        resetData();
-        alert('✅ Données du profil réinitialisées avec succès !');
-      }
-    }
-  };
 
   if (showAlertThresholds) return <AlertThresholdSettings onBack={() => setShowAlertThresholds(false)} />;
   if (showProfileManagement) return <ProfileManagement onBack={() => setShowProfileManagement(false)} />;
@@ -95,21 +82,6 @@ export function Settings({ onLogout }: SettingsProps) {
                     <div>
                       <p className={titleColor}>{t('settings.adminPin')}</p>
                       <p className={subtitleColor}>{t('settings.security')}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
-                </div>
-              </Card>
-
-              <Card className={cardClass} onClick={() => setShowLinkProfileModal(true)}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10">
-                      <LinkIcon className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <p className={titleColor}>{t('settings.linkOldProfile')}</p>
-                      <p className={subtitleColor}>{t('settings.recoverData')}</p>
                     </div>
                   </div>
                   <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
@@ -238,12 +210,12 @@ export function Settings({ onLogout }: SettingsProps) {
             <Card className={cardClass} onClick={() => setShowCustomProfiles(true)}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-orange-500/15 to-amber-500/15 rounded-xl border border-orange-500/10">
-                    <Wrench className="w-5 h-5 text-orange-400" />
+                  <div className="p-2 bg-gradient-to-br from-violet-500/15 to-purple-500/15 rounded-xl border border-violet-500/10">
+                    <Wrench className="w-5 h-5 text-violet-400" />
                   </div>
                   <div>
                     <p className={titleColor}>{t('settings.customProfiles')}</p>
-                    <p className={subtitleColor}>{t('settings.typesAndIntervals')}</p>
+                    <p className={subtitleColor}>Profils personnalises essence/diesel/4x4</p>
                   </div>
                 </div>
                 <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
@@ -266,41 +238,6 @@ export function Settings({ onLogout }: SettingsProps) {
           </div>
         </div>
 
-        {/* Data */}
-        <div>
-          <h2 className={sectionTitle}>{t('settings.data')}</h2>
-          <div className="space-y-2">
-            <Card className={cardClass} onClick={() => setShowLinkProfileModal(true)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-amber-500/15 to-orange-500/15 rounded-xl border border-amber-500/10">
-                    <LinkIcon className="w-5 h-5 text-amber-400" />
-                  </div>
-                  <div>
-                    <p className={titleColor}>{t('settings.linkOldProfile')}</p>
-                    <p className={subtitleColor}>{t('settings.recoverOldData')}</p>
-                  </div>
-                </div>
-                <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
-              </div>
-            </Card>
-            <Card className={cardClass} onClick={handleResetData}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-red-500/15 to-rose-500/15 rounded-xl border border-red-500/10">
-                    <Database className="w-5 h-5 text-red-400" />
-                  </div>
-                  <div>
-                    <p className={titleColor}>{t('settings.resetData')}</p>
-                    <p className={subtitleColor}>{t('settings.resetDataDesc')}</p>
-                  </div>
-                </div>
-                <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
-              </div>
-            </Card>
-          </div>
-        </div>
-
         {/* App Info */}
         <div className="pt-8 text-center">
           <p className={`text-sm mb-1 ${isDark ? 'text-slate-600' : 'text-gray-500'}`}>Valcar</p>
@@ -310,7 +247,6 @@ export function Settings({ onLogout }: SettingsProps) {
 
       {showAdminPinModal && <AdminPinModal onClose={() => setShowAdminPinModal(false)} />}
       {showEditProfileModal && currentProfile && <EditProfileModal profile={currentProfile} onClose={() => setShowEditProfileModal(false)} />}
-      {showLinkProfileModal && <LinkProfileModal onClose={() => setShowLinkProfileModal(false)} />}
       <Footer />
     </div>
   );
