@@ -1307,6 +1307,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔄 Refresh auth après connexion...');
       
+      // ✅ CRITIQUE : Afficher le LoadingScreen pendant le chargement des données
+      setIsLoading(true);
+      
       // Vérifier la session avec getUser() (appel API)
       const { data: { user: authUser }, error } = await supabase.auth.getUser();
       

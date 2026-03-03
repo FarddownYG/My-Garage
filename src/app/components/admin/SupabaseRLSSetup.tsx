@@ -338,8 +338,35 @@ BEGIN
   END IF;
 END $$;
 
+-- == ETAPE 13 : Corriger search_path mutable sur fonctions ==
+-- Supabase Linter: function_search_path_mutable (WARN x2)
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.check_email_not_banned()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.banned_emails WHERE email = NEW.email) THEN
+    RAISE EXCEPTION 'This email address is banned';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
 -- == FIN =====================================================
 -- Profils orphelins corriges + RLS policies optimisees !
+-- Functions search_path securisees !
 `;
 
 // ──────────────────────────────────────────────
@@ -577,6 +604,8 @@ export function SupabaseRLSSetup() {
             { level: 'WARN', color: 'amber', count: 34, desc: 'auth.uid() sans (select ...) -- reevaluation par ligne' },
             { level: 'WARN', color: 'amber', count: 3, desc: 'Policies permissives multiples sur app_config' },
             { level: 'WARN', color: 'amber', count: 7, desc: 'Index dupliques sur 5 tables' },
+            { level: 'WARN', color: 'amber', count: 2, desc: 'function_search_path_mutable (update_updated_at_column, check_email_not_banned)' },
+            { level: 'WARN', color: 'amber', count: 1, desc: 'auth_leaked_password_protection (activer dans Dashboard > Auth > Settings)' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-3 text-xs">
               <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold ${
@@ -872,6 +901,17 @@ ORDER BY column_name;
           Si vous voyez <code className="bg-amber-500/20 px-1 rounded font-mono">maintenance_templates_profile_id_fkey</code>, executez le script
           "FIX: Foreign Key profile_id" ci-dessus. Il rend <code className="bg-amber-500/20 px-1 rounded font-mono">profile_id</code> nullable
           (les templates globaux n'ont pas de profil d'entretien associe) et recree la FK avec <code className="bg-amber-500/20 px-1 rounded font-mono">ON DELETE CASCADE</code>.
+        </p>
+      </div>
+
+      {/* Note leaked password protection */}
+      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-300/80 leading-relaxed">
+        <p className="font-semibold text-red-300 mb-1">{'\u26a0\ufe0f'} Leaked Password Protection (Dashboard)</p>
+        <p>
+          Ce warning ne peut PAS {'\u00ea'}tre corrig{'\u00e9'} par SQL. Allez dans{' '}
+          <strong>Supabase Dashboard {'\u2192'} Authentication {'\u2192'} Settings {'\u2192'} Password Security</strong> et activez{' '}
+          <code className="bg-red-500/20 px-1 rounded font-mono">Leaked password protection</code>.
+          Cela v{'\u00e9'}rifie les mots de passe contre HaveIBeenPwned.org pour emp{'\u00ea'}cher l'utilisation de mots de passe compromis.
         </p>
       </div>
 
