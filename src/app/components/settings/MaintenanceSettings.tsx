@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Plus, Trash2, Edit2, User } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Card } from '../ui/card';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -13,6 +14,7 @@ interface MaintenanceSettingsProps {
 
 export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: MaintenanceSettingsProps) {
   const { maintenanceTemplates, addMaintenanceTemplate, deleteMaintenanceTemplate, updateMaintenanceTemplate } = useApp();
+  const { t } = useI18n();
   const { isDark } = useTheme();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -102,10 +104,10 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
           className={`flex items-center gap-2 ${textMuted} hover:${textMain} transition-colors mb-6`}
         >
           <ArrowLeft className="w-5 h-5" />
-          <span>Retour</span>
+          <span>{t('maintSettings.back')}</span>
         </button>
-        <h1 className={`text-3xl ${textMain} mb-2`}>Parametres d'entretien</h1>
-        <p className={textDimmed}>Intervalles par type de motorisation</p>
+        <h1 className={`text-3xl ${textMain} mb-2`}>{t('maintSettings.title')}</h1>
+        <p className={textDimmed}>{t('maintSettings.subtitle')}</p>
       </div>
 
       <div className="px-6 py-6 space-y-6">
@@ -116,8 +118,8 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
             className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white p-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl animate-fade-in"
           >
             <User className="w-5 h-5" />
-            <span>Entretiens Perso</span>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Nouveau</span>
+            <span>{t('maintSettings.customProfiles')}</span>
+            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">{t('maintSettings.new')}</span>
           </button>
         )}
 
@@ -131,7 +133,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                 : isDark ? 'bg-[#12121a] border border-white/[0.06] text-slate-400 hover:border-white/20' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
             }`}
           >
-            {'\u26FD'} Essence
+            {'\u26FD'} {t('maintSettings.gasoline')}
           </button>
           <button
             onClick={() => setSelectedFuelType('diesel')}
@@ -141,7 +143,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                 : isDark ? 'bg-[#12121a] border border-white/[0.06] text-slate-400 hover:border-white/20' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
             }`}
           >
-            {'\u{1F4A7}'} Diesel
+            {'\u{1F4A7}'} {t('maintSettings.diesel')}
           </button>
         </div>
 
@@ -151,7 +153,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
           className="w-full bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white p-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 active:scale-95"
         >
           <Plus className="w-5 h-5" />
-          <span>Ajouter un type d'entretien</span>
+          <span>{t('maintSettings.addType')}</span>
         </button>
 
         {/* Add/Edit form */}
@@ -159,7 +161,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
           <Card className={`${cardBg} p-4`}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className={`text-sm ${textMuted} mb-2 block`}>Nom *</label>
+                <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.name')}</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -171,7 +173,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
               </div>
 
               <div>
-                <label className={`text-sm ${textMuted} mb-2 block`}>Icone</label>
+                <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.icon')}</label>
                 <div className="grid grid-cols-6 gap-2">
                   {availableIcons.map((icon) => (
                     <button
@@ -191,34 +193,34 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
               </div>
 
               <div>
-                <label className={`text-sm ${textMuted} mb-2 block`}>Motorisation</label>
+                <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.engine')}</label>
                 <CustomSelect
                   value={formData.fuelType}
                   onChange={(value) => setFormData({ ...formData, fuelType: value as 'essence' | 'diesel' | 'both' })}
                   options={[
-                    { value: 'both', label: 'Essence + Diesel', icon: '\u{1F527}' },
-                    { value: 'essence', label: 'Essence', icon: '\u26FD' },
-                    { value: 'diesel', label: 'Diesel', icon: '\u{1F4A7}' },
+                    { value: 'both', label: t('maintSettings.engineBoth'), icon: '\\\\u{1F527}' },
+                    { value: 'essence', label: t('maintSettings.gasoline'), icon: '\\\\u26FD' },
+                    { value: 'diesel', label: t('maintSettings.diesel'), icon: '\\\\u{1F4A7}' },
                   ]}
                 />
               </div>
 
               <div>
-                <label className={`text-sm ${textMuted} mb-2 block`}>Type de traction</label>
+                <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.driveType')}</label>
                 <CustomSelect
                   value={formData.driveType}
                   onChange={(value) => setFormData({ ...formData, driveType: value as '4x2' | '4x4' | 'both' })}
                   options={[
-                    { value: 'both', label: '4x2 + 4x4', icon: '\u{1F527}' },
-                    { value: '4x2', label: '4x2', icon: '\u2699\uFE0F' },
-                    { value: '4x4', label: '4x4', icon: '\u{1F699}' },
+                    { value: 'both', label: t('maintSettings.driveBoth'), icon: '\\\\u{1F527}' },
+                    { value: '4x2', label: '4x2', icon: '\\\\u2699\\\\uFE0F' },
+                    { value: '4x4', label: '4x4', icon: '\\\\u{1F699}' },
                   ]}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`text-sm ${textMuted} mb-2 block`}>Intervalle (mois)</label>
+                  <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.intervalMonths')}</label>
                   <input
                     type="number"
                     value={formData.intervalMonths}
@@ -228,7 +230,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                   />
                 </div>
                 <div>
-                  <label className={`text-sm ${textMuted} mb-2 block`}>Intervalle (km)</label>
+                  <label className={`text-sm ${textMuted} mb-2 block`}>{t('maintSettings.intervalKm')}</label>
                   <input
                     type="number"
                     value={formData.intervalKm}
@@ -245,13 +247,13 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                   onClick={handleCancel}
                   className={`flex-1 py-2 rounded-lg transition-colors ${isDark ? 'bg-[#1a1a2e] hover:bg-white/10 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                 >
-                  Annuler
+                  {t('maintSettings.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white py-2 rounded-lg transition-colors"
                 >
-                  {editingId ? 'Enregistrer' : 'Ajouter'}
+                  {editingId ? t('maintSettings.save') : t('maintSettings.add')}
                 </button>
               </div>
             </form>
@@ -261,7 +263,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
         {/* Info box */}
         <div className={`border rounded-xl p-4 ${isDark ? 'bg-cyan-500/5 border-cyan-500/20' : 'bg-blue-50 border-blue-200'}`}>
           <p className={`text-sm ${isDark ? 'text-cyan-300/80' : 'text-blue-700'}`}>
-            <strong>{selectedFuelType === 'essence' ? 'Motorisation essence' : 'Motorisation diesel'}</strong> - Ces intervalles s'appliqueront automatiquement lors de l'ajout d'un entretien.
+            <strong>{selectedFuelType === 'essence' ? t('maintSettings.engineGasoline') : t('maintSettings.engineDiesel')}</strong> - {t('maintSettings.engineInfo')}
           </p>
         </div>
 
@@ -289,7 +291,7 @@ export function MaintenanceSettings({ onBack, onOpenCustomProfiles }: Maintenanc
                           {template.intervalMonths ? `${template.intervalMonths} mois` : ''}
                           {template.intervalMonths && template.intervalKm ? ' \u2022 ' : ''}
                           {template.intervalKm ? `${template.intervalKm.toLocaleString()} km` : ''}
-                          {!template.intervalMonths && !template.intervalKm ? 'Aucun intervalle defini' : ''}
+                          {!template.intervalMonths && !template.intervalKm ? t('maintSettings.noInterval') : ''}
                         </p>
                       </div>
                     </div>

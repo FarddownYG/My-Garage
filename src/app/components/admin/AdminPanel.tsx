@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Shield, Mail, Trash2, Ban, RefreshCw, UserX, CheckCircle, AlertTriangle, X, Lock, Users, Activity, ChevronLeft, Database } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';

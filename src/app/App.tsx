@@ -13,18 +13,19 @@ import type { UpcomingAlert } from './types';
 import { initializeSecurity } from './utils/security';
 import { calculateUpcomingAlerts } from './utils/alerts';
 import { pageTransitions } from './utils/animations';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 import './utils/hotReloadHandler'; // 🔥 Import hot-reload handler
 
 // 🔇 SÉCURITÉ : Silencer console en production IMMÉDIATEMENT (avant tout log)
 import { silenceConsoleInProduction } from './utils/security';
 silenceConsoleInProduction();
 
-// 🚀 Lazy load heavy components for better performance
-const VehicleList = lazy(() => import('./components/vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
-const VehicleDetail = lazy(() => import('./components/vehicles/VehicleDetail').then(m => ({ default: m.VehicleDetail })));
-const UpcomingMaintenance = lazy(() => import('./components/maintenance/UpcomingMaintenance').then(m => ({ default: m.UpcomingMaintenance })));
-const TaskList = lazy(() => import('./components/tasks/TaskList').then(m => ({ default: m.TaskList })));
-const Settings = lazy(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })));
+// 🚀 Lazy load heavy components for better performance (with retry on chunk load failure)
+const VehicleList = lazyWithRetry(() => import('./components/vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
+const VehicleDetail = lazyWithRetry(() => import('./components/vehicles/VehicleDetail').then(m => ({ default: m.VehicleDetail })));
+const UpcomingMaintenance = lazyWithRetry(() => import('./components/maintenance/UpcomingMaintenance').then(m => ({ default: m.UpcomingMaintenance })));
+const TaskList = lazyWithRetry(() => import('./components/tasks/TaskList').then(m => ({ default: m.TaskList })));
+const Settings = lazyWithRetry(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })));
 
 // v1.2.0 - Supabase Auth Only (plus de sélection de profils)
 type AppTab = 'home' | 'vehicles' | 'tasks' | 'settings';

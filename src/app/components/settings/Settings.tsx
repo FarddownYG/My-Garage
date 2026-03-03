@@ -215,7 +215,7 @@ export function Settings({ onLogout }: SettingsProps) {
                   </div>
                   <div>
                     <p className={titleColor}>{t('settings.customProfiles')}</p>
-                    <p className={subtitleColor}>Profils personnalises essence/diesel/4x4</p>
+                    <p className={subtitleColor}>{t('settings.customProfilesDesc')}</p>
                   </div>
                 </div>
                 <ChevronRight className={`w-5 h-5 ${chevronColor}`} />
